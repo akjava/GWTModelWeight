@@ -37,6 +37,8 @@ import com.google.gwt.http.client.RequestCallback;
 import com.google.gwt.http.client.RequestException;
 import com.google.gwt.http.client.Response;
 import com.google.gwt.http.client.URL;
+import com.google.gwt.json.client.JSONArray;
+import com.google.gwt.json.client.JSONObject;
 import com.google.gwt.user.client.Window;
 import com.google.gwt.user.client.ui.Panel;
 
@@ -49,7 +51,9 @@ public class GWTModelWeight extends SimpleDemoEntryPoint{
 	@Override
 	protected void beforeUpdate(WebGLRenderer renderer) {
 		long delta=clock.delta();
-		AnimationHandler.update(delta);
+		//log(""+animation.getCurrentTime());
+		double v=(double)delta/1000;
+		AnimationHandler.update(v);
 	}
 
 	private Clock clock=new Clock();
@@ -91,15 +95,17 @@ public class GWTModelWeight extends SimpleDemoEntryPoint{
 		*/
 		
 		//loadBVH("14_08.bvh");
-		/*
+		
 		JSONLoader loader=THREE.JSONLoader();
 		loader.load("buffalo.js", new LoadHandler() {
 			
 			@Override
 			public void loaded(Geometry geometry) {
 				AnimationHandler.add(geometry.getAnimation());
-				
-				log(geometry);
+				log(geometry.getBones());
+				log(geometry.getAnimation());
+				//JSONObject test=new JSONObject(geometry.getAnimation());
+				//log(test.toString());
 				
 				Geometry cube=THREE.CubeGeometry(1, 1, 1);
 				JsArray<Vector4> indices=(JsArray<Vector4>) JsArray.createArray();
@@ -122,13 +128,15 @@ public class GWTModelWeight extends SimpleDemoEntryPoint{
 				SkinnedMesh mesh=THREE.SkinnedMesh(cube, THREE.MeshLambertMaterial().skinning(true).color(0xff0000).build());
 				scene.add(mesh);
 				GWT.log("l2.5");
-				Animation animation = THREE.Animation( mesh, "take_001" );
-				animation.play();
+				//Animation animation = THREE.Animation( mesh, "take_001" );
+				//log(animation);
+				//animation.play(); //buffalo
 				GWT.log("l3");
 				
 			}
-		});*/
+		});
 		
+		loadBVH("14_08.bvh");
 	}
 	
 	
@@ -182,15 +190,20 @@ public void onError(Request request, Throwable exception) {
 			}
 	}
 	private BVH bvh;
+	private Animation animation;
 	private void parseBVH(String bvhText){
 		final BVHParser parser=new BVHParser();
 		
 		parser.parseAsync(bvhText, new ParserListener() {
 			
+			
+
 			@Override
 			public void onSuccess(BVH bv) {
+				
+				
 				bvh=bv;
-				bvh.setSkips(100);
+				//bvh.setSkips(10);
 				//bvh.setSkips(skipFrames);
 				GWT.log("parsed");
 				AnimationBoneConverter converter=new AnimationBoneConverter();
@@ -205,8 +218,9 @@ public void onError(Request request, Throwable exception) {
 				int  keyIndex=5;
 				AnimationDataConverter dataConverter=new AnimationDataConverter();
 				AnimationData data=dataConverter.convertJsonAnimation(bvh);
-				log(data);
+				
 				JsArray<AnimationHierarchyItem> hitem=data.getHierarchy();
+				/*
 				for(int i=0;i<hitem.length();i++){
 					AnimationHierarchyItem item=hitem.get(i);
 					
@@ -238,7 +252,50 @@ public void onError(Request request, Throwable exception) {
 					rotV.setRotationFromMatrix(rot);
 					mesh.setRotation(rotV);
 					
+				
+				
 				}
+				*/
+				
+				
+				Geometry cube=THREE.CubeGeometry(1, 1, 1);
+				JsArray<Vector4> indices=(JsArray<Vector4>) JsArray.createArray();
+				JsArray<Vector4> weight=(JsArray<Vector4>) JsArray.createArray();
+				for(int i=0;i<cube.vertices().length();i++){
+					Vector4 v4=THREE.Vector4();
+					v4.set(0, 0, 0, 0);
+					indices.push(v4);
+					
+					Vector4 v4w=THREE.Vector4();
+					v4w.set(1, 0, 0, 0);
+					weight.push(v4w);
+				}
+				
+				cube.setSkinIndices(indices);
+				cube.setSkinWeight(weight);
+				
+				cube.setBones(bones);
+				AnimationHandler.add(data);
+				log(data);
+				log(bones);
+				
+				JSONArray array=new JSONArray(bones);
+				//log(array.toString());
+				
+				JSONObject test=new JSONObject(data);
+				//log(test.toString());
+				
+				
+				log("before create");
+				SkinnedMesh mesh=THREE.SkinnedMesh(cube, THREE.MeshLambertMaterial().skinning(true).color(0xff0000).build());
+				log("create-mesh");
+				scene.add(mesh);
+				
+				animation = THREE.Animation( mesh, data.getName() );
+				log(animation);
+				animation.play();
+				
+				
 			}
 			
 			@Override
