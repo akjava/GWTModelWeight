@@ -10,19 +10,21 @@ import com.akjava.gwt.three.client.core.Geometry;
 import com.akjava.gwt.three.client.core.Matrix4;
 import com.akjava.gwt.three.client.core.Quaternion;
 import com.akjava.gwt.three.client.core.Vector3;
-import com.akjava.gwt.three.client.extras.GeometryUtils;
+import com.akjava.gwt.three.client.core.Vector4;
+import com.akjava.gwt.three.client.extras.animation.Animation;
+import com.akjava.gwt.three.client.extras.animation.AnimationHandler;
 import com.akjava.gwt.three.client.extras.loaders.JSONLoader;
 import com.akjava.gwt.three.client.extras.loaders.JSONLoader.LoadHandler;
+import com.akjava.gwt.three.client.gwt.Clock;
 import com.akjava.gwt.three.client.gwt.SimpleDemoEntryPoint;
 import com.akjava.gwt.three.client.gwt.animation.AnimationBone;
 import com.akjava.gwt.three.client.gwt.animation.AnimationData;
 import com.akjava.gwt.three.client.gwt.animation.AnimationHierarchyItem;
 import com.akjava.gwt.three.client.gwt.animation.AnimationKey;
 import com.akjava.gwt.three.client.gwt.animation.AnimationUtils;
-import com.akjava.gwt.three.client.gwt.model.JSONModelFile;
-import com.akjava.gwt.three.client.gwt.model.MetaData;
 import com.akjava.gwt.three.client.lights.Light;
 import com.akjava.gwt.three.client.objects.Mesh;
+import com.akjava.gwt.three.client.objects.SkinnedMesh;
 import com.akjava.gwt.three.client.renderers.WebGLRenderer;
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.core.client.JsArray;
@@ -35,7 +37,6 @@ import com.google.gwt.http.client.RequestCallback;
 import com.google.gwt.http.client.RequestException;
 import com.google.gwt.http.client.Response;
 import com.google.gwt.http.client.URL;
-import com.google.gwt.json.client.JSONObject;
 import com.google.gwt.user.client.Window;
 import com.google.gwt.user.client.ui.Panel;
 
@@ -47,13 +48,17 @@ public class GWTModelWeight extends SimpleDemoEntryPoint{
 
 	@Override
 	protected void beforeUpdate(WebGLRenderer renderer) {
-		// TODO Auto-generated method stub
-		
+		long delta=clock.delta();
+		AnimationHandler.update(delta);
 	}
 
+	private Clock clock=new Clock();
 	@Override
 	protected void initializeOthers(WebGLRenderer renderer) {
-
+		Light pointLight = THREE.PointLight(0xffffff);
+		pointLight.setPosition(0, 10, 300);
+		scene.add(pointLight);
+		/*
 		//write test
 		Geometry g=THREE.CubeGeometry(1, 1, 1);
 		log(g);
@@ -83,18 +88,46 @@ public class GWTModelWeight extends SimpleDemoEntryPoint{
 		Light pointLight = THREE.PointLight(0xffffff);
 		pointLight.setPosition(0, 10, 300);
 		scene.add(pointLight);
+		*/
 		
 		//loadBVH("14_08.bvh");
+		/*
 		JSONLoader loader=THREE.JSONLoader();
-		loader.load("test.json", new LoadHandler() {
+		loader.load("buffalo.js", new LoadHandler() {
 			
 			@Override
 			public void loaded(Geometry geometry) {
+				AnimationHandler.add(geometry.getAnimation());
+				
 				log(geometry);
-				Mesh mesh=THREE.Mesh(geometry, THREE.MeshLambertMaterial().color(0xff0000).build());
+				
+				Geometry cube=THREE.CubeGeometry(1, 1, 1);
+				JsArray<Vector4> indices=(JsArray<Vector4>) JsArray.createArray();
+				JsArray<Vector4> weight=(JsArray<Vector4>) JsArray.createArray();
+				for(int i=0;i<cube.vertices().length();i++){
+					Vector4 v4=THREE.Vector4();
+					v4.set(0, 0, 0, 0);
+					indices.push(v4);
+					
+					Vector4 v4w=THREE.Vector4();
+					v4w.set(1, 0, 0, 0);
+					weight.push(v4w);
+				}
+				
+				cube.setSkinIndices(indices);
+				cube.setSkinWeight(weight);
+				
+				cube.setBones(geometry.getBones());
+				
+				SkinnedMesh mesh=THREE.SkinnedMesh(cube, THREE.MeshLambertMaterial().skinning(true).color(0xff0000).build());
 				scene.add(mesh);
+				GWT.log("l2.5");
+				Animation animation = THREE.Animation( mesh, "take_001" );
+				animation.play();
+				GWT.log("l3");
+				
 			}
-		});
+		});*/
 		
 	}
 	
