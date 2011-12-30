@@ -12,9 +12,13 @@ import com.akjava.bvh.client.BVHParser;
 import com.akjava.bvh.client.BVHParser.ParserListener;
 import com.akjava.gwt.html5.client.HTML5InputRange;
 import com.akjava.gwt.html5.client.extra.HTML5Builder;
+import com.akjava.gwt.modelweight.client.resorces.Bundles;
+import com.akjava.gwt.modelweight.client.weight.WeighDataParser;
+import com.akjava.gwt.modelweight.client.weight.GWTWeightData;
 import com.akjava.gwt.three.client.THREE;
 import com.akjava.gwt.three.client.core.Geometry;
 import com.akjava.gwt.three.client.core.Intersect;
+import com.akjava.gwt.three.client.core.Matrix4;
 import com.akjava.gwt.three.client.core.Object3D;
 import com.akjava.gwt.three.client.core.Projector;
 import com.akjava.gwt.three.client.core.Vector3;
@@ -23,6 +27,8 @@ import com.akjava.gwt.three.client.extras.GeometryUtils;
 import com.akjava.gwt.three.client.extras.ImageUtils;
 import com.akjava.gwt.three.client.extras.animation.Animation;
 import com.akjava.gwt.three.client.extras.animation.AnimationHandler;
+import com.akjava.gwt.three.client.extras.loaders.ColladaLoader;
+import com.akjava.gwt.three.client.extras.loaders.ColladaLoader.ColladaLoadHandler;
 import com.akjava.gwt.three.client.extras.loaders.JSONLoader;
 import com.akjava.gwt.three.client.extras.loaders.JSONLoader.LoadHandler;
 import com.akjava.gwt.three.client.gwt.Clock;
@@ -31,6 +37,7 @@ import com.akjava.gwt.three.client.gwt.SimpleDemoEntryPoint;
 import com.akjava.gwt.three.client.gwt.animation.AnimationBone;
 import com.akjava.gwt.three.client.gwt.animation.AnimationData;
 import com.akjava.gwt.three.client.gwt.animation.AnimationHierarchyItem;
+import com.akjava.gwt.three.client.gwt.collada.ColladaData;
 import com.akjava.gwt.three.client.lights.Light;
 import com.akjava.gwt.three.client.materials.Material;
 import com.akjava.gwt.three.client.objects.Mesh;
@@ -38,6 +45,7 @@ import com.akjava.gwt.three.client.objects.SkinnedMesh;
 import com.akjava.gwt.three.client.renderers.WebGLRenderer;
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.core.client.JsArray;
+import com.google.gwt.core.client.JsArrayString;
 import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
 import com.google.gwt.event.dom.client.MouseMoveEvent;
@@ -51,6 +59,7 @@ import com.google.gwt.json.client.JSONArray;
 import com.google.gwt.json.client.JSONObject;
 import com.google.gwt.user.client.Window;
 import com.google.gwt.user.client.ui.Button;
+import com.google.gwt.user.client.ui.CheckBox;
 import com.google.gwt.user.client.ui.HorizontalPanel;
 import com.google.gwt.user.client.ui.Label;
 import com.google.gwt.user.client.ui.Panel;
@@ -77,12 +86,15 @@ public class GWTModelWeight extends SimpleDemoEntryPoint{
 		long delta=clock.delta();
 		//log(""+animation.getCurrentTime());
 		double v=(double)delta/1000;
-		if(!paused){
+		if(!paused && animation!=null){
 			AnimationHandler.update(v);
+			currentTime=animation.getCurrentTime();
 		}
 		//
 	}
 
+	double currentTime;
+	
 	private Clock clock=new Clock();
 	@Override
 	protected void initializeOthers(WebGLRenderer renderer) {
@@ -91,6 +103,10 @@ public class GWTModelWeight extends SimpleDemoEntryPoint{
 		Light pointLight = THREE.DirectionalLight(0xffffff,1);
 		pointLight.setPosition(0, 10, 300);
 		scene.add(pointLight);
+		
+		Light pointLight2 = THREE.DirectionalLight(0xffffff,1);//for fix back side dark problem
+		pointLight2.setPosition(0, 10, -300);
+		scene.add(pointLight2);
 		
 		/*
 		//write test
@@ -162,11 +178,11 @@ public class GWTModelWeight extends SimpleDemoEntryPoint{
 				//scene.add(root);
 				//SkinnedMesh mesh=THREE.SkinnedMesh(cube, THREE.MeshLambertMaterial().skinning(true).color(0xff0000).build());
 				//scene.add(mesh);
-				GWT.log("l2.5");
+				
 				//Animation animation = THREE.Animation( mesh, "take_001" );
 				//log(animation);
 				//animation.play(); //buffalo
-				GWT.log("l3");
+				
 				
 			}
 		});
@@ -222,7 +238,7 @@ public class GWTModelWeight extends SimpleDemoEntryPoint{
 			return;
 		}*/
 		
-		JsArray<Intersect> intersects=projector.pickIntersects(event.getX(), event.getY(), screenWidth, screenHeight, camera,scene);
+		JsArray<Intersect> intersects=projector.gwtPickIntersects(event.getX(), event.getY(), screenWidth, screenHeight, camera,scene);
 		
 		for(int i=0;i<intersects.length();i++){
 			Intersect sect=intersects.get(i);
@@ -230,6 +246,9 @@ public class GWTModelWeight extends SimpleDemoEntryPoint{
 			Object3D target=sect.getObject();
 			if(!target.getName().isEmpty()){
 				if(target.getName().startsWith("point:")){
+					if(!target.getVisible()){
+						continue;
+					}
 					String[] pv=target.getName().split(":");
 					int at=Integer.parseInt(pv[1]);
 					Vector4 in=bodyIndices.get(at);
@@ -237,7 +256,8 @@ public class GWTModelWeight extends SimpleDemoEntryPoint{
 					
 					indexWeightEditor.setValue(at, in, we);
 					//createSkinnedMesh();
-					log("created:");
+					log("raw-weight:");
+					log(rawCollada.getWeights().get(at));
 					//debugLabel.setText(in.getX()+":"+in.getY()+","+we.getX()+":"+we.getY());
 				}else{
 				select(target);
@@ -269,7 +289,7 @@ public class GWTModelWeight extends SimpleDemoEntryPoint{
 			if(index.getX()==selected || index.getY()==selected){
 				mesh.setVisible(true);
 				Vector4 weight=bodyWeight.get(i);
-				log(weight.getX()+","+weight.getY());
+				//log(weight.getX()+","+weight.getY());
 			}else{
 				mesh.setVisible(false);
 			}
@@ -300,8 +320,8 @@ public class GWTModelWeight extends SimpleDemoEntryPoint{
 			mouseDownY=event.getY();
 			
 			if(event.isShiftKeyDown()){
-			posX+=diffX;
-			posY-=diffY;
+			posX+=diffX/2;
+			posY-=diffY/2;
 			}else{
 				rotX=(rotX+diffY);
 				rotY=(rotY+diffX);
@@ -444,9 +464,14 @@ HorizontalPanel h1=new HorizontalPanel();
 				
 				log("new-ind-weight:"+in.getX()+","+in.getY()+","+we.getX()+","+we.getY());
 				createSkinnedMesh();
+				selectVertex(selectionBoneIndex);
 			}
 		});
 		parent.add(update);
+		
+		useBasicMaterial = new CheckBox();
+		useBasicMaterial.setText("Use Basic Material");
+		parent.add(useBasicMaterial);
 		
 		showControl();
 	}
@@ -497,6 +522,7 @@ public void onError(Request request, Throwable exception) {
 	private JsArray<AnimationBone> bones;
 	private SkinnedMesh skinnedMesh;
 	
+	private ColladaData rawCollada;
 	private void parseBVH(String bvhText){
 		final BVHParser parser=new BVHParser();
 		
@@ -507,7 +533,7 @@ public void onError(Request request, Throwable exception) {
 			
 
 			
-
+			
 			@Override
 			public void onSuccess(BVH bv) {
 				
@@ -519,6 +545,9 @@ public void onError(Request request, Throwable exception) {
 				bones = converter.convertJsonBone(bvh);
 				
 				indexWeightEditor.setBones(bones);
+				for(int i=0;i<bones.length();i++){
+				//	log(i+":"+bones.get(i).getName());
+				}
 				GWT.log("parsed");
 				/*
 				
@@ -649,6 +678,7 @@ public void onError(Request request, Throwable exception) {
 				scene.add(root);
 				
 				boneAndVertex = THREE.Object3D();
+				boneAndVertex.setPosition(-15, 0, 0);
 				scene.add(boneAndVertex);
 				Object3D bo=boneToCube(bones);
 				//bo.setPosition(-30, 0, 0);
@@ -662,16 +692,40 @@ public void onError(Request request, Throwable exception) {
 				
 				
 				
-				
+				ColladaLoader loader=THREE.ColladaLoader();
+				loader.load("box.dae#1", new  ColladaLoadHandler() {
+					
+					
+					
+					public void colladaReady(ColladaData collada) {
+						rawCollada=collada;
+						log(collada);
+						boneNameMaps=new HashMap<String,Integer>();
+						for(int i=0;i<bones.length();i++){
+							boneNameMaps.put(bones.get(i).getName(), i);
+							log(i+":"+bones.get(i).getName());
+						}
+						
+						Geometry geometry=collada.getGeometry();
+						colladaJoints=collada.getJoints();
+						
+						Vector3 xup=THREE.Vector3(Math.toRadians(-90),0,0);
+						Matrix4 mx=THREE.Matrix4();
+						mx.setRotationFromEuler(xup, "XYZ");
+						geometry.applyMatrix(mx);
+				/*
 				JSONLoader loader=THREE.JSONLoader();
-				loader.load("men3.js", new  LoadHandler() {
-					
-
-
-					
-
+				loader.load("men3smart.js", new  LoadHandler() {
+				//loader.load("men3smart.js", new  LoadHandler() {
 					@Override
 					public void loaded(Geometry geometry) {
+					//	SubdivisionModifier modifier=THREE.SubdivisionModifier(3);
+					//	modifier.modify(geometry);
+						log(geometry);
+						*/
+						
+						//findIndex(geometry);
+						
 						loadedGeometry=geometry;
 						bodyGeometry=GeometryUtils.clone(geometry);
 						bodyIndices = (JsArray<Vector4>) JsArray.createArray();
@@ -688,8 +742,11 @@ public void onError(Request request, Throwable exception) {
 							weight.push(v4w);
 							*/
 							//Vector4 ret=findNearDouble(bonePositions,geometry.vertices().get(i).getPosition(),1.2);
+							
 							//Vector4 ret=findNearParent(bonePositions,geometry.vertices().get(i).getPosition(),bones);
-							Vector4 ret=findNearParentAndChildren(bonePositions,geometry.vertices().get(i).getPosition(),bones);
+							//Vector4 ret=findNearParentAndChildren(bonePositions,geometry.vertices().get(i).getPosition(),bones);
+							Vector4 ret= convertWeight(i,collada);
+							
 							
 							Vector4 v4=THREE.Vector4();
 							v4.set(ret.getX(), ret.getY(), 0, 0);
@@ -722,6 +779,35 @@ public void onError(Request request, Throwable exception) {
 							vertexs.add(point);
 						}
 					}
+
+					/*
+				private void findIndex(Geometry geometry) {
+					List<String> lines=LineSplitter.splitLines(Bundles.INSTANCE.vertex().getText());
+					for(int i=0;i<lines.size();i++){
+						String[] vs=lines.get(i).split(",");
+						int x=(int) (Double.parseDouble(vs[0])*100);
+						int y=(int) (Double.parseDouble(vs[1])*100);
+						int z=(int) (Double.parseDouble(vs[2])*100);
+						
+						int mutch=-1;
+						for(int j=0;j<geometry.vertices().length();j++){
+							Vector3 vec=geometry.vertices().get(j).getPosition();
+							int vx=(int) (vec.getX()*100);
+							int vy=(int) (vec.getY()*100);
+							int vz=(int) (vec.getZ()*100);
+							if(vx==x && vy==y&&vz==z){
+								mutch=j;break;
+							}
+						}
+						if(mutch!=-1){
+							log("find:"+i+","+mutch);
+						}else{
+							log("not found:"+i);
+						}
+					}
+					
+				}*/
+				
 				});
 			}
 			
@@ -733,6 +819,8 @@ public void onError(Request request, Throwable exception) {
 	}
 	private String animationName;
 	private Geometry loadedGeometry;
+	
+	
 	private void createSkinnedMesh(){
 		Geometry newgeo=GeometryUtils.clone(loadedGeometry);
 		newgeo.setSkinIndices(bodyIndices);
@@ -741,14 +829,21 @@ public void onError(Request request, Throwable exception) {
 		if(skinnedMesh!=null){
 			root.remove(skinnedMesh);
 		}
-		skinnedMesh = THREE.SkinnedMesh(newgeo, THREE.MeshBasicMaterial().skinning(true).color(0xffffff).map(ImageUtils.loadTexture("men3_anime_texture.png")).build());
+		Material material=null;
+		if(useBasicMaterial.getValue()){
+			material=THREE.MeshBasicMaterial().skinning(true).color(0xffffff).map(ImageUtils.loadTexture("men3smart_underware_texture.png")).build();
+			
+		}else{
+			material=THREE.MeshLambertMaterial().skinning(true).color(0xffffff).map(ImageUtils.loadTexture("men3smart_underware_texture.png")).build();
+		}
+		skinnedMesh = THREE.SkinnedMesh(newgeo, material);
 		root.add(skinnedMesh);
 		
 		if(animation!=null){
 			AnimationHandler.removeFromUpdate(animation);
 		}
 		animation = THREE.Animation( skinnedMesh, animationName );
-		animation.play();
+		animation.play(true,currentTime);
 	}
 	
 	private List<Mesh> vertexs=new ArrayList<Mesh>();
@@ -791,6 +886,57 @@ public void onError(Request request, Throwable exception) {
 			}
 		}
 		return childMap;
+	}
+	
+	List<List<GWTWeightData>> wdatas;
+	
+	
+	/*
+	 * some point totally wrong?or only work on multiple weight points
+	 * 
+	 */
+	JsArrayString colladaJoints;
+	Map<String,Integer> boneNameMaps;
+
+	private CheckBox useBasicMaterial;
+	
+	private Vector4 convertWeight(int index,ColladaData collada){
+		if(wdatas==null){
+			//wdatas=new WeighDataParser().parse(Bundles.INSTANCE.weight().getText());
+			wdatas=new WeighDataParser().convert(collada.getWeights());
+			for(List<GWTWeightData> wd:wdatas){
+				String log="";
+				for(GWTWeightData w:wd){
+					log+=w.getBoneIndex()+":"+w.getWeight()+",";
+				}
+				//log(log);
+			}
+		}
+		List<GWTWeightData> wd=wdatas.get(index);
+		if(wd.size()<2){
+			int id=wd.get(0).getBoneIndex();
+			String fname=colladaJoints.get(id);
+			id=boneNameMaps.get(fname);
+			
+			return THREE.Vector4(id,id,1,0);
+		}else{
+			int fid=wd.get(0).getBoneIndex();
+			int sid=wd.get(1).getBoneIndex();
+			String fname=colladaJoints.get(fid);
+			fid=boneNameMaps.get(fname);
+			
+			String sname=colladaJoints.get(sid);
+			sid=boneNameMaps.get(sname);
+			
+			
+			double fw=wd.get(0).getWeight();
+			double sw=wd.get(1).getWeight();
+			//log(fid+":"+fw+","+sid+":"+sw);
+			
+			//fw=1;
+			
+			return THREE.Vector4(fid,sid,fw,sw);
+		}
 	}
 	private Vector4 findNearParentAndChildren(List<Vector3> bonePositions, Vector3 pos,JsArray<AnimationBone> bones){
 		
