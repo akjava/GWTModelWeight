@@ -195,7 +195,7 @@ public class GWTModelWeight extends SimpleDemoEntryPoint{
 		Object3D group=THREE.Object3D();
 		for(int i=0;i<bones.length();i++){
 			AnimationBone bone=bones.get(i);
-			Geometry cube=THREE.CubeGeometry(.2, .2, .2);
+			Geometry cube=THREE.CubeGeometry(.3, .3, .3);
 			int color=0xff0000;
 			if(i==0){
 				//color=0x00ff00;
@@ -205,8 +205,7 @@ public class GWTModelWeight extends SimpleDemoEntryPoint{
 			Vector3 pos=AnimationBone.jsArrayToVector3(bone.getPos());
 			
 			if(bone.getParent()!=-1){
-				Vector3 relatePos=pos.clone().normalize();
-				relatePos.multiplyScalar(.5);
+				
 				Vector3 half=pos.clone().multiplyScalar(.5);
 				
 				
@@ -215,16 +214,14 @@ public class GWTModelWeight extends SimpleDemoEntryPoint{
 				
 				half.addSelf(ppos);
 				
-				//start position move .5
-				relatePos.addSelf(ppos);
-				Mesh startMesh=THREE.Mesh(THREE.CubeGeometry(.4, .4, .4), THREE.MeshLambertMaterial().color(0x00ff00).build());
-				startMesh.setPosition(relatePos);
-				group.add(startMesh);
+				double length=ppos.clone().subSelf(pos).length();
 				
 				//half
-				Mesh halfMesh=THREE.Mesh(THREE.CubeGeometry(.3, .3, .3), THREE.MeshLambertMaterial().color(0xffff00).build());
+				Mesh halfMesh=THREE.Mesh(THREE.CubeGeometry(.2, .2, length), THREE.MeshLambertMaterial().color(0xaaaaaa).build());
 				group.add(halfMesh);
 				halfMesh.setPosition(half);
+				halfMesh.lookAt(pos);
+				halfMesh.setName(bones.get(bone.getParent()).getName());
 				
 			}
 			mesh.setPosition(pos);
@@ -270,12 +267,12 @@ public class GWTModelWeight extends SimpleDemoEntryPoint{
 				Mesh mesh=THREE.Mesh(THREE.CubeGeometry(.2, .2, .2), THREE.MeshLambertMaterial().color(0x00ff00).build());
 				mesh.setName(parentName);
 				mesh.setPosition(endPos);
-				boneAndVertex.add(mesh);
+				//boneAndVertex.add(mesh);
 				
 				Mesh mesh2=THREE.Mesh(THREE.CubeGeometry(.3, .3, .2), THREE.MeshLambertMaterial().color(0x00ff00).build());
 				mesh2.setName(parentName);
 				mesh2.setPosition(half);
-				boneAndVertex.add(mesh2);
+				//boneAndVertex.add(mesh2);
 				}else{
 					
 				}
@@ -290,11 +287,11 @@ public class GWTModelWeight extends SimpleDemoEntryPoint{
 			Mesh mesh=THREE.Mesh(THREE.CubeGeometry(.5, .5, .5), THREE.MeshLambertMaterial().color(0x00ff00).build());
 			mesh.setName(bone.getName());
 			mesh.setPosition(pos);
-			boneAndVertex.add(mesh);
+			//boneAndVertex.add(mesh);
 			
 			if(parentPos!=null){
 				Mesh line=GWTGeometryUtils.createLineMesh(parentPos, pos, 0xff0000);
-				boneAndVertex.add(line);
+				//boneAndVertex.add(line);
 			}
 			
 			
@@ -760,7 +757,7 @@ public void onError(Request request, Throwable exception) {
 				scene.add(boneAndVertex);
 				Object3D bo=boneToCube(bones);
 				//bo.setPosition(-30, 0, 0);
-				//boneAndVertex.add(bo);
+				boneAndVertex.add(bo);
 				
 				
 				//log("before create");
@@ -795,7 +792,7 @@ public void onError(Request request, Throwable exception) {
 						*/
 				
 				JSONLoader loader=THREE.JSONLoader();
-				loader.load("men3smart.js", new  LoadHandler() {
+				loader.load("men3tmp.js", new  LoadHandler() {
 				//loader.load("men3smart.js", new  LoadHandler() {
 					@Override
 					public void loaded(Geometry geometry) {
@@ -829,9 +826,9 @@ public void onError(Request request, Throwable exception) {
 							//Vector4 ret=findNearParent(bonePositions,geometry.vertices().get(i).getPosition(),bones);
 							//Vector4 ret=findNearParentAndChildren(bonePositions,geometry.vertices().get(i).getPosition(),bones);
 							//Vector4 ret= convertWeight(i,collada);
-							//Vector4 ret=findNearBone(nameAndPositions,geometry.vertices().get(i).getPosition(),bones);
-							//Vector4 ret=findNearThreeBone(nameAndPositions,geometry.vertices().get(i).getPosition(),bones);
-							Vector4 ret=findNearSpecial(nameAndPositions,geometry.vertices().get(i).getPosition(),bones,i);
+							Vector4 ret=findNearBoneAggresive(nameAndPositions,geometry.vertices().get(i).getPosition(),bones);
+							//Vector4 ret=findNearThreeBone(nameAndPositions,geometry.vertices().get(i).getPosition(),bones,i);
+							//Vector4 ret=findNearSpecial(nameAndPositions,geometry.vertices().get(i).getPosition(),bones,i);
 							//Vector4 ret=findNearSingleBone(nameAndPositions,geometry.vertices().get(i).getPosition(),bones);
 							Vector4 v4=THREE.Vector4();
 							v4.set(ret.getX(), ret.getY(), 0, 0);
@@ -1128,19 +1125,15 @@ private Vector4 findNearSpecial(List<NameAndPosition> nameAndPositions,Vector3 p
 	}
 
 	
-	private Vector4 findNearThreeBone(List<NameAndPosition> nameAndPositions,Vector3 pos,JsArray<AnimationBone> bones){
+	private Vector4 findNearThreeBone(List<NameAndPosition> nameAndPositions,Vector3 pos,JsArray<AnimationBone> bones,int vindex){
 		
 		
 		Map<Integer,Double> totalLength=new HashMap<Integer,Double>();
 		Map<Integer,Integer> totalIndex=new HashMap<Integer,Integer>();
 		
-		//zero is largest
-		Vector3 rootNear=nameAndPositions.get(0).getPosition().clone();
-		rootNear.subSelf(pos);
-		double rootLength=rootNear.length();
-		totalLength.put(0, rootLength*3);//root always only one
 		
-		for(int i=1;i<nameAndPositions.size();i++){
+		log("find-near:"+vindex);
+		for(int i=0;i<nameAndPositions.size();i++){
 			int index=nameAndPositions.get(i).getIndex();
 			Vector3 near=nameAndPositions.get(i).getPosition().clone();
 			near.subSelf(pos);
@@ -1181,6 +1174,7 @@ private Vector4 findNearSpecial(List<NameAndPosition> nameAndPositions,Vector3 p
 		double near1=totalLength.get(keys[0]);
 		int index2=0;
 		double near2=totalLength.get(keys[0]);
+		
 		for(int i=1;i<keys.length;i++){
 			double l=totalLength.get(keys[i]);
 			if(l<near1){
@@ -1202,13 +1196,14 @@ private Vector4 findNearSpecial(List<NameAndPosition> nameAndPositions,Vector3 p
 			return THREE.Vector4(index1,index1,1,0);
 		}else{
 			double total=near1+near2;
+			log("xx:"+index1+","+index2);
 			return THREE.Vector4(index1,index2,(total-near1)/total,(total-near2)/total);
 		}
 	}
 	
 	
 	//use start,center and end position,choose near 2point
-	private Vector4 findNearBone(List<NameAndPosition> nameAndPositions,Vector3 pos,JsArray<AnimationBone> bones){
+	private Vector4 findNearBoneAggresive(List<NameAndPosition> nameAndPositions,Vector3 pos,JsArray<AnimationBone> bones){
 		Vector3 pt=nameAndPositions.get(0).getPosition().clone();
 		Vector3 near=pt.subSelf(pos);
 		int index1=nameAndPositions.get(0).getIndex();
@@ -1235,11 +1230,12 @@ private Vector4 findNearSpecial(List<NameAndPosition> nameAndPositions,Vector3 p
 				near2=l;
 			}
 		}
-		near1*=near1;
-		near2*=near2;
+		near1*=near1*near1*near1;
+		near2*=near2*near2*near2;
 		if(index1==index2){
 			return THREE.Vector4(index1,index1,1,0);
 		}else{
+			
 			double total=near1+near2;
 			return THREE.Vector4(index1,index2,(total-near1)/total,(total-near2)/total);
 		}
