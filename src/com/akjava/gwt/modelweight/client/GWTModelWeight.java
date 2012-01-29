@@ -4,15 +4,18 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
-import com.akjava.bvh.client.AnimationBoneConverter;
-import com.akjava.bvh.client.AnimationDataConverter;
 import com.akjava.bvh.client.BVH;
 import com.akjava.bvh.client.BVHParser;
 import com.akjava.bvh.client.BVHParser.ParserListener;
+import com.akjava.bvh.client.threejs.AnimationBoneConverter;
+import com.akjava.bvh.client.threejs.AnimationDataConverter;
 import com.akjava.gwt.html5.client.HTML5InputRange;
 import com.akjava.gwt.html5.client.extra.HTML5Builder;
+import com.akjava.gwt.html5.client.file.File;
+import com.akjava.gwt.html5.client.file.FileHandler;
+import com.akjava.gwt.html5.client.file.FileReader;
+import com.akjava.gwt.html5.client.file.FileUtils;
 import com.akjava.gwt.modelweight.client.weight.GWTWeightData;
 import com.akjava.gwt.modelweight.client.weight.WeighDataParser;
 import com.akjava.gwt.three.client.THREE;
@@ -34,6 +37,7 @@ import com.akjava.gwt.three.client.gwt.SimpleDemoEntryPoint;
 import com.akjava.gwt.three.client.gwt.animation.AnimationBone;
 import com.akjava.gwt.three.client.gwt.animation.AnimationData;
 import com.akjava.gwt.three.client.gwt.animation.AnimationHierarchyItem;
+import com.akjava.gwt.three.client.gwt.animation.WeightBuilder;
 import com.akjava.gwt.three.client.gwt.collada.ColladaData;
 import com.akjava.gwt.three.client.lights.Light;
 import com.akjava.gwt.three.client.materials.Material;
@@ -43,6 +47,8 @@ import com.akjava.gwt.three.client.renderers.WebGLRenderer;
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.core.client.JsArray;
 import com.google.gwt.core.client.JsArrayString;
+import com.google.gwt.event.dom.client.ChangeEvent;
+import com.google.gwt.event.dom.client.ChangeHandler;
 import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
 import com.google.gwt.event.dom.client.MouseMoveEvent;
@@ -54,9 +60,12 @@ import com.google.gwt.http.client.Response;
 import com.google.gwt.http.client.URL;
 import com.google.gwt.json.client.JSONArray;
 import com.google.gwt.json.client.JSONObject;
+import com.google.gwt.json.client.JSONParser;
+import com.google.gwt.json.client.JSONValue;
 import com.google.gwt.user.client.Window;
 import com.google.gwt.user.client.ui.Button;
 import com.google.gwt.user.client.ui.CheckBox;
+import com.google.gwt.user.client.ui.FileUpload;
 import com.google.gwt.user.client.ui.HorizontalPanel;
 import com.google.gwt.user.client.ui.Label;
 import com.google.gwt.user.client.ui.Panel;
@@ -105,6 +114,7 @@ public class GWTModelWeight extends SimpleDemoEntryPoint{
 		pointLight2.setPosition(0, 10, -300);
 		scene.add(pointLight2);
 		
+		projector=THREE.Projector();
 		/*
 		//write test
 		Geometry g=THREE.CubeGeometry(1, 1, 1);
@@ -190,7 +200,7 @@ public class GWTModelWeight extends SimpleDemoEntryPoint{
 	Object3D root;
 	
 	List<Mesh> tmp=new ArrayList<Mesh>();
-	private Object3D boneToCube(JsArray<AnimationBone> bones){
+	private Object3D boneToSkelton(JsArray<AnimationBone> bones){
 		tmp.clear();
 		Object3D group=THREE.Object3D();
 		for(int i=0;i<bones.length();i++){
@@ -301,7 +311,7 @@ public class GWTModelWeight extends SimpleDemoEntryPoint{
 	}
 	
 	
-	final Projector projector=THREE.Projector();
+	private Projector projector;
 	Label debugLabel;
 	@Override
 	public void onMouseClick(ClickEvent event) {
@@ -544,9 +554,32 @@ HorizontalPanel h1=new HorizontalPanel();
 		});
 		parent.add(update);
 		
+		
 		useBasicMaterial = new CheckBox();
 		useBasicMaterial.setText("Use Basic Material");
 		parent.add(useBasicMaterial);
+		
+		parent.add(new Label("BVH Bone"));
+		FileUpload bvhUpload=new FileUpload();
+		parent.add(bvhUpload);
+		bvhUpload.addChangeHandler(new ChangeHandler() {
+			
+			@Override
+			public void onChange(ChangeEvent event) {
+				JsArray<File> files = FileUtils.toFile(event.getNativeEvent());
+				
+				final FileReader reader=FileReader.createFileReader();
+				reader.setOnLoad(new FileHandler() {
+					@Override
+					public void onLoad() {
+						//log("load:"+Benchmark.end("load"));
+						//GWT.log(reader.getResultAsString());
+						parseBVH(reader.getResultAsString());
+					}
+				});
+				reader.readAsText(files.get(0),"utf-8");
+			}
+		});
 		
 		showControl();
 	}
@@ -609,6 +642,8 @@ public void onError(Request request, Throwable exception) {
 
 			
 			
+			private AnimationData animationData;
+
 			@Override
 			public void onSuccess(BVH bv) {
 				
@@ -637,9 +672,9 @@ public void onError(Request request, Throwable exception) {
 				
 				
 				AnimationDataConverter dataConverter=new AnimationDataConverter();
-				final AnimationData data=dataConverter.convertJsonAnimation(bvh);
-				animationName=data.getName();
-				 JsArray<AnimationHierarchyItem> hitem=data.getHierarchy();
+				animationData = dataConverter.convertJsonAnimation(bones,bvh);
+				animationName=animationData.getName();
+				 JsArray<AnimationHierarchyItem> hitem=animationData.getHierarchy();
 				/*
 				for(int i=0;i<hitem.length();i++){
 					AnimationHierarchyItem item=hitem.get(i);
@@ -739,14 +774,15 @@ public void onError(Request request, Throwable exception) {
 					bonePositions.add(pos);
 				}
 				
-				AnimationHandler.add(data);
+				//overwrite same name
+				AnimationHandler.add(animationData);
 				//log(data);
 				//log(bones);
 				
 				JSONArray array=new JSONArray(bones);
 				//log(array.toString());
 				
-				JSONObject test=new JSONObject(data);
+				JSONObject test=new JSONObject(animationData);
 				//log(test.toString());
 				
 				root=THREE.Object3D();
@@ -755,11 +791,44 @@ public void onError(Request request, Throwable exception) {
 				boneAndVertex = THREE.Object3D();
 				boneAndVertex.setPosition(-15, 0, 0);
 				scene.add(boneAndVertex);
-				Object3D bo=boneToCube(bones);
+				Object3D bo=boneToSkelton(bones);
 				//bo.setPosition(-30, 0, 0);
 				boneAndVertex.add(bo);
 				
-				
+				loadModel("miku.js",
+				new  LoadHandler() {
+					//loader.load("men3smart.js", new  LoadHandler() {
+						@Override
+						public void loaded(Geometry geometry) {
+						
+						//	SubdivisionModifier modifier=THREE.SubdivisionModifier(3);
+						//	modifier.modify(geometry);
+							log(geometry);
+							
+							for(int i=0;i<bones.length();i++){
+								if(bones.get(i).getParent()!=-1)
+								log(bones.get(i).getName()+",parent="+bones.get(bones.get(i).getParent()).getName());
+							}
+							//findIndex(geometry);
+							
+							//auto weight
+							loadedGeometry=geometry;
+							
+							
+						
+							autoWeight();
+						
+							
+							//log(bodyIndices);
+							//log(bodyWeight);
+							
+							createSkinnedMesh();
+							
+							createWireBody();
+							
+						}
+					
+					});
 				//log("before create");
 				//Mesh mesh=THREE.Mesh(cube, THREE.MeshLambertMaterial().skinning(false).color(0xff0000).build());
 				//log("create-mesh");
@@ -791,107 +860,6 @@ public void onError(Request request, Throwable exception) {
 						geometry.applyMatrix(mx);
 						*/
 				
-				JSONLoader loader=THREE.JSONLoader();
-				loader.load("men3tmp.js", new  LoadHandler() {
-				//loader.load("men3smart.js", new  LoadHandler() {
-					@Override
-					public void loaded(Geometry geometry) {
-					//	SubdivisionModifier modifier=THREE.SubdivisionModifier(3);
-					//	modifier.modify(geometry);
-						log(geometry);
-						
-						
-						//findIndex(geometry);
-						
-						loadedGeometry=geometry;
-						bodyGeometry=GeometryUtils.clone(geometry);
-						bodyIndices = (JsArray<Vector4>) JsArray.createArray();
-						bodyWeight = (JsArray<Vector4>) JsArray.createArray();
-						
-						List<NameAndPosition> nameAndPositions=boneToNameAndWeight(bones);
-						
-						for(int i=0;i<geometry.vertices().length();i++){
-							/*
-							int index=findNear(bonePositions,geometry.vertices().get(i).getPosition());
-							Vector4 v4=THREE.Vector4();
-							v4.set(index, index, 0, 0);
-							indices.push(v4);
-							
-							Vector4 v4w=THREE.Vector4();
-							v4w.set(1, 0, 0, 0);
-							weight.push(v4w);
-							*/
-							//Vector4 ret=findNearDouble(bonePositions,geometry.vertices().get(i).getPosition(),1.2);
-							
-							//Vector4 ret=findNearParent(bonePositions,geometry.vertices().get(i).getPosition(),bones);
-							//Vector4 ret=findNearParentAndChildren(bonePositions,geometry.vertices().get(i).getPosition(),bones);
-							//Vector4 ret= convertWeight(i,collada);
-							Vector4 ret=findNearBoneAggresive(nameAndPositions,geometry.vertices().get(i).getPosition(),bones);
-							//Vector4 ret=findNearThreeBone(nameAndPositions,geometry.vertices().get(i).getPosition(),bones,i);
-							//Vector4 ret=findNearSpecial(nameAndPositions,geometry.vertices().get(i).getPosition(),bones,i);
-							//Vector4 ret=findNearSingleBone(nameAndPositions,geometry.vertices().get(i).getPosition(),bones);
-							Vector4 v4=THREE.Vector4();
-							v4.set(ret.getX(), ret.getY(), 0, 0);
-							bodyIndices.push(v4);
-							
-							Vector4 v4w=THREE.Vector4();
-							v4w.set(ret.getZ(), ret.getW(), 0, 0);
-							bodyWeight.push(v4w);
-						}
-						
-						//log(bodyIndices);
-						//log(bodyWeight);
-						
-						createSkinnedMesh();
-						
-						
-						Mesh wireBody=THREE.Mesh(bodyGeometry, THREE.MeshBasicMaterial().wireFrame(true).color(0xffffff).build());
-						boneAndVertex.add(wireBody);
-						
-						selectVertex=THREE.Object3D();
-						vertexs.clear();
-						boneAndVertex.add(selectVertex);
-						Geometry cube=THREE.CubeGeometry(.3, .3, .3);
-						Material mt=THREE.MeshBasicMaterial().color(0xffff00).build();
-						for(int i=0;i<bodyGeometry.vertices().length();i++){
-							Vector3 vx=bodyGeometry.vertices().get(i).getPosition();
-							Mesh point=THREE.Mesh(cube, mt);
-							point.setName("point:"+i);
-							point.setPosition(vx);
-							selectVertex.add(point);
-							vertexs.add(point);
-						}
-					}
-
-					/*
-				private void findIndex(Geometry geometry) {
-					List<String> lines=LineSplitter.splitLines(Bundles.INSTANCE.vertex().getText());
-					for(int i=0;i<lines.size();i++){
-						String[] vs=lines.get(i).split(",");
-						int x=(int) (Double.parseDouble(vs[0])*100);
-						int y=(int) (Double.parseDouble(vs[1])*100);
-						int z=(int) (Double.parseDouble(vs[2])*100);
-						
-						int mutch=-1;
-						for(int j=0;j<geometry.vertices().length();j++){
-							Vector3 vec=geometry.vertices().get(j).getPosition();
-							int vx=(int) (vec.getX()*100);
-							int vy=(int) (vec.getY()*100);
-							int vz=(int) (vec.getZ()*100);
-							if(vx==x && vy==y&&vz==z){
-								mutch=j;break;
-							}
-						}
-						if(mutch!=-1){
-							log("find:"+i+","+mutch);
-						}else{
-							log("not found:"+i);
-						}
-					}
-					
-				}*/
-				
-				});
 			}
 			
 			@Override
@@ -903,6 +871,74 @@ public void onError(Request request, Throwable exception) {
 	private String animationName;
 	private Geometry loadedGeometry;
 	
+	private void createWireBody(){
+		bodyGeometry=GeometryUtils.clone(loadedGeometry);
+		Mesh wireBody=THREE.Mesh(bodyGeometry, THREE.MeshBasicMaterial().wireFrame(true).color(0xffffff).build());
+		boneAndVertex.add(wireBody);
+		
+		selectVertex=THREE.Object3D();
+		vertexs.clear();
+		boneAndVertex.add(selectVertex);
+		Geometry cube=THREE.CubeGeometry(.3, .3, .3);
+		Material mt=THREE.MeshBasicMaterial().color(0xffff00).build();
+		for(int i=0;i<bodyGeometry.vertices().length();i++){
+			Vector3 vx=bodyGeometry.vertices().get(i).getPosition();
+			Mesh point=THREE.Mesh(cube, mt);
+			point.setVisible(false);
+			point.setName("point:"+i);
+			point.setPosition(vx);
+			selectVertex.add(point);
+			vertexs.add(point);
+		}
+	}
+	private void autoWeight(){
+		bodyIndices = (JsArray<Vector4>) JsArray.createArray();
+		bodyWeight = (JsArray<Vector4>) JsArray.createArray();
+		WeightBuilder.autoWeight(loadedGeometry, bones, WeightBuilder.MODE_NearParentAndChildren, bodyIndices, bodyWeight);
+	}
+	
+	private void loadJsonModel(String jsonText,LoadHandler handler){
+		JSONLoader loader=THREE.JSONLoader();
+		JSONValue jsonValue=JSONParser.parseLenient(jsonText);
+		JSONObject object=jsonValue.isObject();
+		if(object==null){
+			log("invalid-json object");
+		}
+		log(object.getJavaScriptObject());
+		loader.createModel(object.getJavaScriptObject(), handler, "");
+		loader.onLoadComplete();
+		
+	}
+	
+	private void loadModel(String path,final LoadHandler handler){
+		
+		RequestBuilder builder = new RequestBuilder(RequestBuilder.GET, URL.encode(path));
+			try {
+				builder.sendRequest(null, new RequestCallback() {
+					
+					@Override
+					public void onResponseReceived(Request request, Response response) {
+						
+						loadJsonModel(response.getText(),handler);
+					}
+					
+					
+					
+
+@Override
+public void onError(Request request, Throwable exception) {
+				Window.alert("load faild:");
+}
+				});
+			} catch (RequestException e) {
+				log(e.getMessage());
+				e.printStackTrace();
+			}
+		
+		
+	}
+		
+		
 	
 	private void createSkinnedMesh(){
 		Geometry newgeo=GeometryUtils.clone(loadedGeometry);
