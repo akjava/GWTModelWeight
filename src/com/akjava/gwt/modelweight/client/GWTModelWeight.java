@@ -1,5 +1,6 @@
 package com.akjava.gwt.modelweight.client;
 
+import java.awt.Checkbox;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -46,6 +47,7 @@ import com.akjava.gwt.three.client.objects.SkinnedMesh;
 import com.akjava.gwt.three.client.renderers.WebGLRenderer;
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.core.client.JsArray;
+import com.google.gwt.core.client.JsArrayNumber;
 import com.google.gwt.core.client.JsArrayString;
 import com.google.gwt.event.dom.client.ChangeEvent;
 import com.google.gwt.event.dom.client.ChangeHandler;
@@ -95,6 +97,13 @@ public class GWTModelWeight extends SimpleDemoEntryPoint{
 		if(!paused && animation!=null){
 			AnimationHandler.update(v);
 			currentTime=animation.getCurrentTime();
+			//log(""+currentTime+","+delta);
+			if(currentTime<0.25){
+				//AnimationHandler.update(100);
+				//skinnedMesh.setVisible(false);
+			}else{
+				skinnedMesh.setVisible(true);
+			}
 		}
 		//
 	}
@@ -148,7 +157,7 @@ public class GWTModelWeight extends SimpleDemoEntryPoint{
 		*/
 		
 		//loadBVH("14_08.bvh");
-		
+		/*
 		JSONLoader loader=THREE.JSONLoader();
 		loader.load("buffalo.js", new LoadHandler() {
 			
@@ -192,9 +201,9 @@ public class GWTModelWeight extends SimpleDemoEntryPoint{
 				
 				
 			}
-		});
+		});*/
 		
-		loadBVH("14_01.bvh");
+		loadBVH("pose.bvh");
 		//loadBVH("14_08.bvh");
 	}
 	Object3D root;
@@ -332,6 +341,7 @@ public class GWTModelWeight extends SimpleDemoEntryPoint{
 			if(!target.getName().isEmpty()){
 				if(target.getName().startsWith("point:")){
 					if(!target.getVisible()){
+						//not selected bone
 						continue;
 					}
 					String[] pv=target.getName().split(":");
@@ -344,6 +354,9 @@ public class GWTModelWeight extends SimpleDemoEntryPoint{
 					//log("raw-weight:");
 					//log(rawCollada.getWeights().get(at));
 					//debugLabel.setText(in.getX()+":"+in.getY()+","+we.getX()+":"+we.getY());
+					selectionMesh.setVisible(true);
+					selectionMesh.setPosition(target.getPosition());
+					return;
 				}else{
 				select(target);
 				break;
@@ -352,6 +365,7 @@ public class GWTModelWeight extends SimpleDemoEntryPoint{
 			}
 			
 		}
+		selectionMesh.setVisible(false);
 	}
 	
 
@@ -513,7 +527,7 @@ HorizontalPanel h1=new HorizontalPanel();
 		h6.add(reset6);
 		
 		positionYRange.setValue(-13);
-		positionXRange.setValue(20);
+		positionXRange.setValue(-13);
 		
 		Button bt=new Button("Pause/Play");
 		parent.add(bt);
@@ -581,12 +595,103 @@ HorizontalPanel h1=new HorizontalPanel();
 			}
 		});
 		
+		parent.add(new Label("Mesh"));
+		FileUpload meshUpload=new FileUpload();
+		parent.add(meshUpload);
+		meshUpload.addChangeHandler(new ChangeHandler() {
+			
+			@Override
+			public void onChange(ChangeEvent event) {
+				JsArray<File> files = FileUtils.toFile(event.getNativeEvent());
+				
+				final FileReader reader=FileReader.createFileReader();
+				reader.setOnLoad(new FileHandler() {
+					@Override
+					public void onLoad() {
+						//log("load:"+Benchmark.end("load"));
+						//GWT.log(reader.getResultAsString());
+						loadJsonModel(reader.getResultAsString(),new LoadHandler() {
+							
+							@Override
+							public void loaded(Geometry geometry) {
+								
+								initializeObject();
+								
+								loadedGeometry=geometry;
+								
+								
+								
+								autoWeight();
+							
+								
+								//log(bodyIndices);
+								//log(bodyWeight);
+								
+								createSkinnedMesh();
+								
+								createWireBody();
+							}
+						});
+					}
+				});
+				reader.readAsText(files.get(0),"utf-8");
+			}
+		});
+		
+		HorizontalPanel exports=new HorizontalPanel();
+		parent.add(exports);
+		Button json=new Button("json export");
+		json.addClickHandler(new ClickHandler() {
+			
+			@Override
+			public void onClick(ClickEvent event) {
+				exportAsJson();
+			}
+		});
+		exports.add(json);
+		withAnimation = new CheckBox("with Animation");
+		withAnimation.setValue(true);
+		exports.add(withAnimation);
+		
 		showControl();
 	}
 	
+	private void exportAsJson(){
+		//set bone
+		JSONArray arrays=new JSONArray(bones);
+		lastJsonObject.put("bones", arrays);
+		
+		if(withAnimation.getValue()){
+			lastJsonObject.put("animation", new JSONObject(rawAnimationData));
+		}
+		//private JsArray<Vector4> bodyIndices;
+		//private JsArray<Vector4> bodyWeight;
+		
+		JsArrayNumber indices=(JsArrayNumber) JsArrayNumber.createArray();
+		for(int i=0;i<bodyIndices.length();i++){
+			indices.push(bodyIndices.get(i).getX());
+			indices.push(bodyIndices.get(i).getY());
+		}
+		lastJsonObject.put("skinIndices", new JSONArray(indices));
+		
+		JsArrayNumber weights=(JsArrayNumber) JsArrayNumber.createArray();
+		for(int i=0;i<bodyWeight.length();i++){
+			weights.push(bodyWeight.get(i).getX());
+			weights.push(bodyWeight.get(i).getY());
+		}
+		lastJsonObject.put("skinWeights", new JSONArray(weights));
+		
+		exportTextChrome(lastJsonObject.toString(),"WeightTool"+exportIndex);
+		exportIndex++;
+	}
 	
+	int exportIndex;
+	public native final void exportTextChrome(String text,String wname)/*-{
+	win = $wnd.open("", wname)
+	win.document.body.innerText =""+text+"";
+	}-*/;
 	
-	private boolean paused;
+	private boolean paused=true;
 	private void loadBVH(String path){
 	
 		RequestBuilder builder = new RequestBuilder(RequestBuilder.GET, URL.encode(path));
@@ -631,6 +736,7 @@ public void onError(Request request, Throwable exception) {
 	private SkinnedMesh skinnedMesh;
 	
 	private ColladaData rawCollada;
+	private AnimationData rawAnimationData;
 	private void parseBVH(String bvhText){
 		final BVHParser parser=new BVHParser();
 		
@@ -642,6 +748,7 @@ public void onError(Request request, Throwable exception) {
 
 			
 			
+			
 			private AnimationData animationData;
 
 			@Override
@@ -649,6 +756,7 @@ public void onError(Request request, Throwable exception) {
 				
 				
 				bvh=bv;
+				
 				//bvh.setSkips(10);
 				//bvh.setSkips(skipFrames);
 				AnimationBoneConverter converter=new AnimationBoneConverter();
@@ -672,7 +780,12 @@ public void onError(Request request, Throwable exception) {
 				
 				
 				AnimationDataConverter dataConverter=new AnimationDataConverter();
+				if(bvh.getFrames()==1){
+					dataConverter.setSkipFirst(false);
+				}
+				
 				animationData = dataConverter.convertJsonAnimation(bones,bvh);
+				rawAnimationData=dataConverter.convertJsonAnimation(bones,bvh);//for json
 				animationName=animationData.getName();
 				 JsArray<AnimationHierarchyItem> hitem=animationData.getHierarchy();
 				/*
@@ -785,16 +898,10 @@ public void onError(Request request, Throwable exception) {
 				JSONObject test=new JSONObject(animationData);
 				//log(test.toString());
 				
-				root=THREE.Object3D();
-				scene.add(root);
 				
-				boneAndVertex = THREE.Object3D();
-				boneAndVertex.setPosition(-15, 0, 0);
-				scene.add(boneAndVertex);
-				Object3D bo=boneToSkelton(bones);
-				//bo.setPosition(-30, 0, 0);
-				boneAndVertex.add(bo);
+				initializeObject();
 				
+				if(loadedGeometry==null){//initial load
 				loadModel("miku.js",
 				new  LoadHandler() {
 					//loader.load("men3smart.js", new  LoadHandler() {
@@ -829,6 +936,12 @@ public void onError(Request request, Throwable exception) {
 						}
 					
 					});
+				}else{
+					
+					autoWeight();
+					createSkinnedMesh();
+					createWireBody();
+				}
 				//log("before create");
 				//Mesh mesh=THREE.Mesh(cube, THREE.MeshLambertMaterial().skinning(false).color(0xff0000).build());
 				//log("create-mesh");
@@ -870,7 +983,38 @@ public void onError(Request request, Throwable exception) {
 	}
 	private String animationName;
 	private Geometry loadedGeometry;
+
+	private Mesh selectionMesh;
 	
+	private void initializeObject(){
+
+		currentTime=0;
+		//for skinned mesh
+		if(root!=null){
+			scene.remove(root);
+		}
+		root=THREE.Object3D();
+		scene.add(root);
+		
+			
+		
+		
+		if(boneAndVertex!=null){
+			scene.remove(boneAndVertex);
+		}
+		
+		boneAndVertex = THREE.Object3D();
+		boneAndVertex.setPosition(-15, 0, 0);
+		scene.add(boneAndVertex);
+		Object3D bo=boneToSkelton(bones);
+		//bo.setPosition(-30, 0, 0);
+		boneAndVertex.add(bo);
+		
+		selectionMesh=THREE.Mesh(THREE.CubeGeometry(.5, .5, .5), THREE.MeshBasicMaterial().color(0x00ff00).wireFrame(true).build());
+		boneAndVertex.add(selectionMesh);
+		selectionMesh.setVisible(false);	
+		
+	}
 	private void createWireBody(){
 		bodyGeometry=GeometryUtils.clone(loadedGeometry);
 		Mesh wireBody=THREE.Mesh(bodyGeometry, THREE.MeshBasicMaterial().wireFrame(true).color(0xffffff).build());
@@ -894,16 +1038,23 @@ public void onError(Request request, Throwable exception) {
 	private void autoWeight(){
 		bodyIndices = (JsArray<Vector4>) JsArray.createArray();
 		bodyWeight = (JsArray<Vector4>) JsArray.createArray();
-		WeightBuilder.autoWeight(loadedGeometry, bones, WeightBuilder.MODE_NearParentAndChildren, bodyIndices, bodyWeight);
+		if(loadedGeometry.getSkinIndices().length()!=0 && loadedGeometry.getSkinWeight().length()!=0){
+			log("auto-weight from geometry:");
+			WeightBuilder.autoWeight(loadedGeometry, bones, WeightBuilder.MODE_FROM_GEOMETRY, bodyIndices, bodyWeight);
+		}else{
+			//TODO support multiple autoWeight
+			WeightBuilder.autoWeight(loadedGeometry, bones, WeightBuilder.MODE_NearParentAndChildren, bodyIndices, bodyWeight);
+			}
 	}
 	
 	private void loadJsonModel(String jsonText,LoadHandler handler){
 		JSONLoader loader=THREE.JSONLoader();
-		JSONValue jsonValue=JSONParser.parseLenient(jsonText);
-		JSONObject object=jsonValue.isObject();
+		JSONValue lastJsonValue = JSONParser.parseLenient(jsonText);
+		JSONObject object=lastJsonValue.isObject();
 		if(object==null){
 			log("invalid-json object");
 		}
+		lastJsonObject=object;
 		log(object.getJavaScriptObject());
 		loader.createModel(object.getJavaScriptObject(), handler, "");
 		loader.onLoadComplete();
@@ -941,6 +1092,7 @@ public void onError(Request request, Throwable exception) {
 		
 	
 	private void createSkinnedMesh(){
+		
 		Geometry newgeo=GeometryUtils.clone(loadedGeometry);
 		newgeo.setSkinIndices(bodyIndices);
 		newgeo.setSkinWeight(bodyWeight);
@@ -1018,6 +1170,10 @@ public void onError(Request request, Throwable exception) {
 	Map<String,Integer> boneNameMaps;
 
 	private CheckBox useBasicMaterial;
+
+	private JSONObject lastJsonObject;
+
+	private CheckBox withAnimation;
 	
 	private Vector4 convertWeight(int index,ColladaData collada){
 		if(wdatas==null){
