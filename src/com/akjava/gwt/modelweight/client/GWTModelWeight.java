@@ -545,7 +545,7 @@ HorizontalPanel h1=new HorizontalPanel();
 		positionYRange.setValue(-13);
 		positionXRange.setValue(-13);
 		
-		Button bt=new Button("Pause/Play");
+		Button bt=new Button("Pause/Play SkinnedMesh");
 		parent.add(bt);
 		bt.addClickHandler(new ClickHandler() {
 			
@@ -860,12 +860,15 @@ public void onError(Request request, Throwable exception) {
 				AnimationBoneConverter converter=new AnimationBoneConverter();
 				bones = converter.convertJsonBone(bvh);
 				updateBoneListBox();
-				
 				indexWeightEditor.setBones(bones);
+				
+				/*
 				for(int i=0;i<bones.length();i++){
 				//	log(i+":"+bones.get(i).getName());
 				}
 				GWT.log("parsed");
+				*/
+				
 				/*
 				
 				
