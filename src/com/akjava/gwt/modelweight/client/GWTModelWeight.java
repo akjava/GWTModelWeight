@@ -1,6 +1,5 @@
 package com.akjava.gwt.modelweight.client;
 
-import java.awt.Checkbox;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -49,6 +48,7 @@ import com.google.gwt.core.client.GWT;
 import com.google.gwt.core.client.JsArray;
 import com.google.gwt.core.client.JsArrayNumber;
 import com.google.gwt.core.client.JsArrayString;
+import com.google.gwt.dom.client.Style.Unit;
 import com.google.gwt.event.dom.client.ChangeEvent;
 import com.google.gwt.event.dom.client.ChangeHandler;
 import com.google.gwt.event.dom.client.ClickEvent;
@@ -70,7 +70,10 @@ import com.google.gwt.user.client.ui.CheckBox;
 import com.google.gwt.user.client.ui.FileUpload;
 import com.google.gwt.user.client.ui.HorizontalPanel;
 import com.google.gwt.user.client.ui.Label;
+import com.google.gwt.user.client.ui.ListBox;
 import com.google.gwt.user.client.ui.Panel;
+import com.google.gwt.user.client.ui.StackLayoutPanel;
+import com.google.gwt.user.client.ui.VerticalPanel;
 
 
 /**
@@ -97,13 +100,20 @@ public class GWTModelWeight extends SimpleDemoEntryPoint{
 		if(!paused && animation!=null){
 			AnimationHandler.update(v);
 			currentTime=animation.getCurrentTime();
-			//log(""+currentTime+","+delta);
+			log(""+currentTime+","+delta);
+			String check=""+currentTime;
+			if(check.equals("NaN")){
+				currentTime=0;
+			}
 			if(currentTime<0.25){
 				//AnimationHandler.update(100);
 				//skinnedMesh.setVisible(false);
 			}else{
 				skinnedMesh.setVisible(true);
 			}
+		}else{
+			currentTime=animation.getCurrentTime();
+			
 		}
 		//
 	}
@@ -346,19 +356,12 @@ public class GWTModelWeight extends SimpleDemoEntryPoint{
 					}
 					String[] pv=target.getName().split(":");
 					int at=Integer.parseInt(pv[1]);
-					Vector4 in=bodyIndices.get(at);
-					Vector4 we=bodyWeight.get(at);
 					
-					indexWeightEditor.setValue(at, in, we);
-					//createSkinnedMesh();
-					//log("raw-weight:");
-					//log(rawCollada.getWeights().get(at));
-					//debugLabel.setText(in.getX()+":"+in.getY()+","+we.getX()+":"+we.getY());
-					selectionMesh.setVisible(true);
-					selectionMesh.setPosition(target.getPosition());
+					selectVertex(at);
+					
 					return;
 				}else{
-				select(target);
+				selectBone(target);
 				break;
 				}
 				
@@ -372,20 +375,23 @@ public class GWTModelWeight extends SimpleDemoEntryPoint{
 	private Mesh selection;
 	private int selectionBoneIndex;
 	private Object3D selectVertex;
-	private void select(Object3D target) {
+	private void selectBone(Object3D target) {
 		if(selection==null){
 			selection=THREE.Mesh(THREE.CubeGeometry(1, 1, 1), THREE.MeshLambertMaterial().color(0x00ff00).build());
 			boneAndVertex.add(selection);
 		}
 		selection.setPosition(target.getPosition());
 		selectionBoneIndex=findBoneIndex(target.getName());
-		selectVertex(selectionBoneIndex);
+		
+		boneListBox.setSelectedIndex(selectionBoneIndex);
+		selectVertexsByBone(selectionBoneIndex);
 	}
-	private void selectVertex(int selected) {
+	private void selectVertexsByBone(int selectedBoneIndex) {
+		log("selectVertexsByBone");
 		for(int i=0;i<bodyGeometry.vertices().length();i++){
 			Vector4 index=bodyIndices.get(i);
-			Mesh mesh=vertexs.get(i);
-			if(index.getX()==selected || index.getY()==selected){
+			Mesh mesh=vertexMeshs.get(i);
+			if(index.getX()==selectedBoneIndex || index.getY()==selectedBoneIndex){
 				mesh.setVisible(true);
 				Vector4 weight=bodyWeight.get(i);
 				//log(weight.getX()+","+weight.getY());
@@ -439,11 +445,21 @@ public class GWTModelWeight extends SimpleDemoEntryPoint{
 	public void createControl(Panel parent) {
 		debugLabel=new Label();
 		parent.add(debugLabel);
+		
+		stackPanel = new StackLayoutPanel(Unit.PX);
+		stackPanel.setSize("200px","400px");
+		parent.add(stackPanel);
+		
+		VerticalPanel modelPositionAndRotation=new VerticalPanel();
+		modelPositionAndRotation.setWidth("100%");
+		
+		stackPanel.add(modelPositionAndRotation,"Model Postion&Rotation",30);
+		
 HorizontalPanel h1=new HorizontalPanel();
 		
 		rotationRange = new HTML5InputRange(-180,180,0);
-		parent.add(HTML5Builder.createRangeLabel("X-Rotate:", rotationRange));
-		parent.add(h1);
+		modelPositionAndRotation.add(HTML5Builder.createRangeLabel("X-Rotate:", rotationRange));
+		modelPositionAndRotation.add(h1);
 		h1.add(rotationRange);
 		Button reset=new Button("Reset");
 		reset.addClickHandler(new ClickHandler() {
@@ -457,8 +473,8 @@ HorizontalPanel h1=new HorizontalPanel();
 		HorizontalPanel h2=new HorizontalPanel();
 		
 		rotationYRange = new HTML5InputRange(-180,180,0);
-		parent.add(HTML5Builder.createRangeLabel("Y-Rotate:", rotationYRange));
-		parent.add(h2);
+		modelPositionAndRotation.add(HTML5Builder.createRangeLabel("Y-Rotate:", rotationYRange));
+		modelPositionAndRotation.add(h2);
 		h2.add(rotationYRange);
 		Button reset2=new Button("Reset");
 		reset2.addClickHandler(new ClickHandler() {
@@ -472,8 +488,8 @@ HorizontalPanel h1=new HorizontalPanel();
 		
 		HorizontalPanel h3=new HorizontalPanel();
 		rotationZRange = new HTML5InputRange(-180,180,0);
-		parent.add(HTML5Builder.createRangeLabel("Z-Rotate:", rotationZRange));
-		parent.add(h3);
+		modelPositionAndRotation.add(HTML5Builder.createRangeLabel("Z-Rotate:", rotationZRange));
+		modelPositionAndRotation.add(h3);
 		h3.add(rotationZRange);
 		Button reset3=new Button("Reset");
 		reset3.addClickHandler(new ClickHandler() {
@@ -486,8 +502,8 @@ HorizontalPanel h1=new HorizontalPanel();
 		
 		HorizontalPanel h4=new HorizontalPanel();
 		positionXRange = new HTML5InputRange(-50,50,0);
-		parent.add(HTML5Builder.createRangeLabel("X-Position:", positionXRange));
-		parent.add(h4);
+		modelPositionAndRotation.add(HTML5Builder.createRangeLabel("X-Position:", positionXRange));
+		modelPositionAndRotation.add(h4);
 		h4.add(positionXRange);
 		Button reset4=new Button("Reset");
 		reset4.addClickHandler(new ClickHandler() {
@@ -500,8 +516,8 @@ HorizontalPanel h1=new HorizontalPanel();
 		
 		HorizontalPanel h5=new HorizontalPanel();
 		positionYRange = new HTML5InputRange(-50,50,0);
-		parent.add(HTML5Builder.createRangeLabel("Y-Position:", positionYRange));
-		parent.add(h5);
+		modelPositionAndRotation.add(HTML5Builder.createRangeLabel("Y-Position:", positionYRange));
+		modelPositionAndRotation.add(h5);
 		h5.add(positionYRange);
 		Button reset5=new Button("Reset");
 		reset5.addClickHandler(new ClickHandler() {
@@ -514,8 +530,8 @@ HorizontalPanel h1=new HorizontalPanel();
 		
 		HorizontalPanel h6=new HorizontalPanel();
 		positionZRange = new HTML5InputRange(-50,50,0);
-		parent.add(HTML5Builder.createRangeLabel("Z-Position:", positionZRange));
-		parent.add(h6);
+		modelPositionAndRotation.add(HTML5Builder.createRangeLabel("Z-Position:", positionZRange));
+		modelPositionAndRotation.add(h6);
 		h6.add(positionZRange);
 		Button reset6=new Button("Reset");
 		reset6.addClickHandler(new ClickHandler() {
@@ -525,7 +541,7 @@ HorizontalPanel h1=new HorizontalPanel();
 			}
 		});
 		h6.add(reset6);
-		
+		//move left-side
 		positionYRange.setValue(-13);
 		positionXRange.setValue(-13);
 		
@@ -541,11 +557,42 @@ HorizontalPanel h1=new HorizontalPanel();
 		
 		//editor
 		
+		VerticalPanel boneAndWeight=new VerticalPanel();
+		stackPanel.add(boneAndWeight,"Bone & Weight",30);
+		
+		boneListBox = new ListBox();
+		boneAndWeight.add(boneListBox);
+		boneListBox.addChangeHandler(new ChangeHandler() {
+			@Override
+			public void onChange(ChangeEvent event) {
+				selectVertexsByBone(boneListBox.getSelectedIndex());
+			}
+		});
+		
+		HorizontalPanel prevAndNext=new HorizontalPanel();
+		boneAndWeight.add(prevAndNext);
+		Button prev=new Button("Prev");
+		prev.addClickHandler(new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+				selectPrevVertex();
+			}
+		});
+		prevAndNext.add(prev);
+		
+		Button next=new Button("Next");
+		next.addClickHandler(new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+				selectNextVertex();
+			}
+		});
+		prevAndNext.add(next);
 		
 		indexWeightEditor = new IndexAndWeightEditor();
-		parent.add(indexWeightEditor);
+		boneAndWeight.add(indexWeightEditor);
 		
-		Button update=new Button("Update");
+		Button update=new Button("Update Weight");
 		update.addClickHandler(new ClickHandler() {
 			
 			@Override
@@ -563,19 +610,22 @@ HorizontalPanel h1=new HorizontalPanel();
 				
 				//log("new-ind-weight:"+in.getX()+","+in.getY()+","+we.getX()+","+we.getY());
 				createSkinnedMesh();
-				selectVertex(selectionBoneIndex);
+				selectVertexsByBone(selectionBoneIndex);
 			}
 		});
-		parent.add(update);
+		boneAndWeight.add(update);
 		
-		
+		//DONT need?
 		useBasicMaterial = new CheckBox();
 		useBasicMaterial.setText("Use Basic Material");
-		parent.add(useBasicMaterial);
+		//parent.add(useBasicMaterial);
 		
-		parent.add(new Label("BVH Bone"));
+		VerticalPanel loadAndExport=new VerticalPanel();
+		stackPanel.add(loadAndExport,"Load & Export",30);
+		
+		loadAndExport.add(new Label("BVH Bone"));
 		FileUpload bvhUpload=new FileUpload();
-		parent.add(bvhUpload);
+		loadAndExport.add(bvhUpload);
 		bvhUpload.addChangeHandler(new ChangeHandler() {
 			
 			@Override
@@ -595,9 +645,9 @@ HorizontalPanel h1=new HorizontalPanel();
 			}
 		});
 		
-		parent.add(new Label("Mesh"));
+		loadAndExport.add(new Label("Mesh"));
 		FileUpload meshUpload=new FileUpload();
-		parent.add(meshUpload);
+		loadAndExport.add(meshUpload);
 		meshUpload.addChangeHandler(new ChangeHandler() {
 			
 			@Override
@@ -639,7 +689,7 @@ HorizontalPanel h1=new HorizontalPanel();
 		});
 		
 		HorizontalPanel exports=new HorizontalPanel();
-		parent.add(exports);
+		loadAndExport.add(exports);
 		Button json=new Button("json export");
 		json.addClickHandler(new ClickHandler() {
 			
@@ -656,6 +706,47 @@ HorizontalPanel h1=new HorizontalPanel();
 		showControl();
 	}
 	
+	protected void selectPrevVertex() {
+		int currentSelection=indexWeightEditor.getArrayIndex();
+		for(int i=currentSelection-1;i>=0;i--){
+			if(vertexMeshs.get(i).getVisible()){
+				selectVertex(i);
+				return;
+			}
+		}
+		for(int i=vertexMeshs.size()-1;i>currentSelection;i--){
+			if(vertexMeshs.get(i).getVisible()){
+				selectVertex(i);
+				return;
+			}
+		}
+	}
+	protected void selectNextVertex() {
+		int currentSelection=indexWeightEditor.getArrayIndex();
+		for(int i=currentSelection+1;i<vertexMeshs.size();i++){
+			if(vertexMeshs.get(i).getVisible()){
+				selectVertex(i);
+				return;
+			}
+		}
+		for(int i=0;i<currentSelection;i++){
+			if(vertexMeshs.get(i).getVisible()){
+				selectVertex(i);
+				return;
+			}
+		}
+	}
+	private void selectVertex(int index){
+		Vector4 in=bodyIndices.get(index);
+		Vector4 we=bodyWeight.get(index);
+		
+		indexWeightEditor.setValue(index, in, we);
+		
+		selectionMesh.setVisible(true);
+		selectionMesh.setPosition(vertexMeshs.get(index).getPosition());
+		stackPanel.showWidget(1);
+	}
+
 	private void exportAsJson(){
 		//set bone
 		JSONArray arrays=new JSONArray(bones);
@@ -737,6 +828,13 @@ public void onError(Request request, Throwable exception) {
 	
 	private ColladaData rawCollada;
 	private AnimationData rawAnimationData;
+	
+	private void updateBoneListBox(){
+		boneListBox.clear();
+		for(int i=0;i<bones.length();i++){
+			boneListBox.addItem(bones.get(i).getName());
+		}
+	}
 	private void parseBVH(String bvhText){
 		final BVHParser parser=new BVHParser();
 		
@@ -761,6 +859,7 @@ public void onError(Request request, Throwable exception) {
 				//bvh.setSkips(skipFrames);
 				AnimationBoneConverter converter=new AnimationBoneConverter();
 				bones = converter.convertJsonBone(bvh);
+				updateBoneListBox();
 				
 				indexWeightEditor.setBones(bones);
 				for(int i=0;i<bones.length();i++){
@@ -1010,7 +1109,7 @@ public void onError(Request request, Throwable exception) {
 		//bo.setPosition(-30, 0, 0);
 		boneAndVertex.add(bo);
 		
-		selectionMesh=THREE.Mesh(THREE.CubeGeometry(.5, .5, .5), THREE.MeshBasicMaterial().color(0x00ff00).wireFrame(true).build());
+		selectionMesh=THREE.Mesh(THREE.CubeGeometry(.5, .5, .5), THREE.MeshBasicMaterial().color(0xccffcc).wireFrame(true).build());
 		boneAndVertex.add(selectionMesh);
 		selectionMesh.setVisible(false);	
 		
@@ -1021,7 +1120,7 @@ public void onError(Request request, Throwable exception) {
 		boneAndVertex.add(wireBody);
 		
 		selectVertex=THREE.Object3D();
-		vertexs.clear();
+		vertexMeshs.clear();
 		boneAndVertex.add(selectVertex);
 		Geometry cube=THREE.CubeGeometry(.3, .3, .3);
 		Material mt=THREE.MeshBasicMaterial().color(0xffff00).build();
@@ -1032,7 +1131,7 @@ public void onError(Request request, Throwable exception) {
 			point.setName("point:"+i);
 			point.setPosition(vx);
 			selectVertex.add(point);
-			vertexs.add(point);
+			vertexMeshs.add(point);
 		}
 	}
 	private void autoWeight(){
@@ -1117,7 +1216,7 @@ public void onError(Request request, Throwable exception) {
 		animation.play(true,currentTime);
 	}
 	
-	private List<Mesh> vertexs=new ArrayList<Mesh>();
+	private List<Mesh> vertexMeshs=new ArrayList<Mesh>();
 
 	private IndexAndWeightEditor indexWeightEditor;
 	
@@ -1174,6 +1273,10 @@ public void onError(Request request, Throwable exception) {
 	private JSONObject lastJsonObject;
 
 	private CheckBox withAnimation;
+
+	private StackLayoutPanel stackPanel;
+
+	private ListBox boneListBox;
 	
 	private Vector4 convertWeight(int index,ColladaData collada){
 		if(wdatas==null){
