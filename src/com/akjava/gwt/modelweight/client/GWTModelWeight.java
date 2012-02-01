@@ -33,6 +33,7 @@ import com.akjava.gwt.three.client.extras.loaders.JSONLoader;
 import com.akjava.gwt.three.client.extras.loaders.JSONLoader.LoadHandler;
 import com.akjava.gwt.three.client.gwt.Clock;
 import com.akjava.gwt.three.client.gwt.GWTGeometryUtils;
+import com.akjava.gwt.three.client.gwt.GWTThreeUtils;
 import com.akjava.gwt.three.client.gwt.SimpleDemoEntryPoint;
 import com.akjava.gwt.three.client.gwt.animation.AnimationBone;
 import com.akjava.gwt.three.client.gwt.animation.AnimationData;
@@ -44,7 +45,6 @@ import com.akjava.gwt.three.client.materials.Material;
 import com.akjava.gwt.three.client.objects.Mesh;
 import com.akjava.gwt.three.client.objects.SkinnedMesh;
 import com.akjava.gwt.three.client.renderers.WebGLRenderer;
-import com.google.gwt.core.client.GWT;
 import com.google.gwt.core.client.JsArray;
 import com.google.gwt.core.client.JsArrayNumber;
 import com.google.gwt.core.client.JsArrayString;
@@ -106,7 +106,8 @@ public class GWTModelWeight extends SimpleDemoEntryPoint{
 				currentTime=0;
 			}
 			if(currentTime<0.25){
-				//AnimationHandler.update(100);
+				//animation.setCurrentTime(0.25);
+				//AnimationHandler.update(v);
 				//skinnedMesh.setVisible(false);
 			}else{
 				skinnedMesh.setVisible(true);
@@ -332,6 +333,7 @@ public class GWTModelWeight extends SimpleDemoEntryPoint{
 	
 	private Projector projector;
 	Label debugLabel;
+	List<Integer> selections=new ArrayList<Integer>();
 	@Override
 	public void onMouseClick(ClickEvent event) {
 		int x=event.getX();
@@ -357,10 +359,43 @@ public class GWTModelWeight extends SimpleDemoEntryPoint{
 					String[] pv=target.getName().split(":");
 					int at=Integer.parseInt(pv[1]);
 					
-					selectVertex(at);
+					if(event.isShiftKeyDown()){
+						if(selections.contains(at)){
+							selections.remove(new Integer(at));
+							vertexMeshs.get(at).getMaterial().getColor().setHex(defaultColor);
+							//??
+							if(lastSelection==at){
+								if(selections.size()>0){
+									//select last
+									selectVertex(selections.get(selections.size()-1));
+								}else{
+									indexWeightEditor.setAvailable(false);
+									updateWeightButton.setEnabled(false);
+								}
+							}
+						}else{
+							//plus
+							selections.add(lastSelection);
+							selectVertex(at);
+						}
+						for(int index:selections){
+							vertexMeshs.get(index).getMaterial().getColor().setHex(selectColor);
+						}
+					}else{
+						//clear cache
+						clearSelections();
+						
+						
+						selectVertex(at);
+					}
+					
 					
 					return;
 				}else{
+					if(event.isShiftKeyDown()){
+						continue;
+					}
+				clearSelections();
 				selectBone(target);
 				break;
 				}
@@ -368,7 +403,13 @@ public class GWTModelWeight extends SimpleDemoEntryPoint{
 			}
 			
 		}
-		selectionMesh.setVisible(false);
+		//selectionMesh.setVisible(false);
+	}
+	private void clearSelections(){
+		for(int index:selections){
+			vertexMeshs.get(index).getMaterial().getColor().setHex(defaultColor);
+		}
+		selections.clear();
 	}
 	
 
@@ -385,6 +426,13 @@ public class GWTModelWeight extends SimpleDemoEntryPoint{
 		
 		boneListBox.setSelectedIndex(selectionBoneIndex);
 		selectVertexsByBone(selectionBoneIndex);
+		
+		int selectionIndex=indexWeightEditor.getArrayIndex();
+		if(selectionIndex!=-1 && !vertexMeshs.get(selectionIndex).getVisible()){
+			indexWeightEditor.setAvailable(false);
+			updateWeightButton.setEnabled(false);
+			selectionMesh.setVisible(false);
+		}
 	}
 	private void selectVertexsByBone(int selectedBoneIndex) {
 		log("selectVertexsByBone");
@@ -397,6 +445,7 @@ public class GWTModelWeight extends SimpleDemoEntryPoint{
 				//log(weight.getX()+","+weight.getY());
 			}else{
 				mesh.setVisible(false);
+				mesh.getMaterial().getColor().setHex(defaultColor);
 			}
 		}
 	}
@@ -413,8 +462,8 @@ public class GWTModelWeight extends SimpleDemoEntryPoint{
 
 	int rotX;
 	int rotY;
-	int posX;
-	int posY;
+	double posX;
+	double posY;
 	@Override
 	public void onMouseMove(MouseMoveEvent event) {
 		if(mouseDown){
@@ -424,9 +473,9 @@ public class GWTModelWeight extends SimpleDemoEntryPoint{
 			mouseDownX=event.getX();
 			mouseDownY=event.getY();
 			
-			if(event.isShiftKeyDown()){
-			posX+=diffX/2;
-			posY-=diffY/2;
+			if(event.isAltKeyDown()){
+			posX+=(double)diffX/2;
+			posY-=(double)diffY/2;
 			}else{
 				rotX=(rotX+diffY);
 				rotY=(rotY+diffX);
@@ -592,8 +641,8 @@ HorizontalPanel h1=new HorizontalPanel();
 		indexWeightEditor = new IndexAndWeightEditor();
 		boneAndWeight.add(indexWeightEditor);
 		
-		Button update=new Button("Update Weight");
-		update.addClickHandler(new ClickHandler() {
+		updateWeightButton = new Button("Update Weight");
+		updateWeightButton.addClickHandler(new ClickHandler() {
 			
 			@Override
 			public void onClick(ClickEvent event) {
@@ -601,6 +650,7 @@ HorizontalPanel h1=new HorizontalPanel();
 				if(index==-1){
 					return;
 				}
+				
 				Vector4 in=bodyIndices.get(index);
 				Vector4 we=bodyWeight.get(index);
 				in.setX(indexWeightEditor.getIndex1());
@@ -608,12 +658,23 @@ HorizontalPanel h1=new HorizontalPanel();
 				we.setX(indexWeightEditor.getWeight1());
 				we.setY(indexWeightEditor.getWeight2());
 				
+				if(selections.size()>0){
+					for(int selectedIndex:selections){
+					in=bodyIndices.get(selectedIndex);
+					we=bodyWeight.get(selectedIndex);
+					in.setX(indexWeightEditor.getIndex1());
+					in.setY(indexWeightEditor.getIndex2());
+					we.setX(indexWeightEditor.getWeight1());
+					we.setY(indexWeightEditor.getWeight2());
+					}
+				}
+				
 				//log("new-ind-weight:"+in.getX()+","+in.getY()+","+we.getX()+","+we.getY());
 				createSkinnedMesh();
 				selectVertexsByBone(selectionBoneIndex);
 			}
 		});
-		boneAndWeight.add(update);
+		boneAndWeight.add(updateWeightButton);
 		
 		//DONT need?
 		useBasicMaterial = new CheckBox();
@@ -688,6 +749,31 @@ HorizontalPanel h1=new HorizontalPanel();
 			}
 		});
 		
+		
+		loadAndExport.add(new Label("Texture Image"));
+		FileUpload textureUpload=new FileUpload();
+		loadAndExport.add(textureUpload);
+		textureUpload.addChangeHandler(new ChangeHandler() {
+			
+			@Override
+			public void onChange(ChangeEvent event) {
+				JsArray<File> files = FileUtils.toFile(event.getNativeEvent());
+				
+				final FileReader reader=FileReader.createFileReader();
+				reader.setOnLoad(new FileHandler() {
+					@Override
+					public void onLoad() {
+						//log("load:"+Benchmark.end("load"));
+						//GWT.log(reader.getResultAsString());
+						textureUrl=reader.getResultAsString();
+						createSkinnedMesh();
+					}
+				});
+				reader.readAsDataURL(files.get(0));
+			}
+		});
+		loadAndExport.add(textureUpload);
+		
 		HorizontalPanel exports=new HorizontalPanel();
 		loadAndExport.add(exports);
 		Button json=new Button("json export");
@@ -700,7 +786,7 @@ HorizontalPanel h1=new HorizontalPanel();
 		});
 		exports.add(json);
 		withAnimation = new CheckBox("with Animation");
-		withAnimation.setValue(true);
+		withAnimation.setValue(false);	//dont work collectly
 		exports.add(withAnimation);
 		
 		showControl();
@@ -736,22 +822,34 @@ HorizontalPanel h1=new HorizontalPanel();
 			}
 		}
 	}
+	private int lastSelection=-1;
 	private void selectVertex(int index){
+		if(lastSelection!=-1){
+			vertexMeshs.get(lastSelection).getMaterial().getColor().setHex(defaultColor);
+		}
 		Vector4 in=bodyIndices.get(index);
 		Vector4 we=bodyWeight.get(index);
+		
+		vertexMeshs.get(index).getMaterial().getColor().setHex(selectColor);
+		
+		indexWeightEditor.setAvailable(true);
+		updateWeightButton.setEnabled(true);
 		
 		indexWeightEditor.setValue(index, in, we);
 		
 		selectionMesh.setVisible(true);
 		selectionMesh.setPosition(vertexMeshs.get(index).getPosition());
 		stackPanel.showWidget(1);
+		lastSelection=index;
 	}
 
 	private void exportAsJson(){
 		//set bone
-		JSONArray arrays=new JSONArray(bones);
-		lastJsonObject.put("bones", arrays);
 		
+		JsArray<AnimationBone> clonedBone=cloneBones(bones);
+		JSONArray arrays=new JSONArray(clonedBone);
+		lastJsonObject.put("bones", arrays);
+		//AnimationBoneConverter.setBoneAngles(clonedBone, rawAnimationData, 0); //TODO
 		if(withAnimation.getValue()){
 			lastJsonObject.put("animation", new JSONObject(rawAnimationData));
 		}
@@ -834,6 +932,31 @@ public void onError(Request request, Throwable exception) {
 		for(int i=0;i<bones.length();i++){
 			boneListBox.addItem(bones.get(i).getName());
 		}
+	}
+	
+	public JsArray<AnimationBone>  cloneBones(JsArray<AnimationBone> bones){
+		JsArray<AnimationBone> array=(JsArray<AnimationBone>) JsArray.createArray();
+		for(int i=0;i<bones.length();i++){
+			AnimationBone bone=bones.get(i);
+			
+			AnimationBone cloned=(AnimationBone) AnimationBone.createObject();
+			cloned.setName(bone.getName());
+			cloned.setParent(bone.getParent());
+			if(bone.getPos()!=null){
+			cloned.setPos(GWTThreeUtils.clone(bone.getPos()));
+			}
+			if(bone.getRotq()!=null){
+				cloned.setRotq(GWTThreeUtils.clone(bone.getRotq()));
+				}
+			if(bone.getRot()!=null){
+				cloned.setRot(GWTThreeUtils.clone(bone.getRot()));
+				}
+			if(bone.getScl()!=null){
+				cloned.setScl(GWTThreeUtils.clone(bone.getScl()));
+				}
+			array.push(cloned);
+		}
+		return array;
 	}
 	private void parseBVH(String bvhText){
 		final BVHParser parser=new BVHParser();
@@ -1112,11 +1235,13 @@ public void onError(Request request, Throwable exception) {
 		//bo.setPosition(-30, 0, 0);
 		boneAndVertex.add(bo);
 		
-		selectionMesh=THREE.Mesh(THREE.CubeGeometry(.5, .5, .5), THREE.MeshBasicMaterial().color(0xccffcc).wireFrame(true).build());
+		selectionMesh=THREE.Mesh(THREE.CubeGeometry(.5, .5, .5), THREE.MeshBasicMaterial().color(selectColor).wireFrame(true).build());
 		boneAndVertex.add(selectionMesh);
 		selectionMesh.setVisible(false);	
 		
 	}
+	private int selectColor=0xccffcc;
+	private int defaultColor=0xffff00;
 	private void createWireBody(){
 		bodyGeometry=GeometryUtils.clone(loadedGeometry);
 		Mesh wireBody=THREE.Mesh(bodyGeometry, THREE.MeshBasicMaterial().wireFrame(true).color(0xffffff).build());
@@ -1126,8 +1251,9 @@ public void onError(Request request, Throwable exception) {
 		vertexMeshs.clear();
 		boneAndVertex.add(selectVertex);
 		Geometry cube=THREE.CubeGeometry(.3, .3, .3);
-		Material mt=THREE.MeshBasicMaterial().color(0xffff00).build();
+		
 		for(int i=0;i<bodyGeometry.vertices().length();i++){
+			Material mt=THREE.MeshBasicMaterial().color(defaultColor).build();
 			Vector3 vx=bodyGeometry.vertices().get(i).getPosition();
 			Mesh point=THREE.Mesh(cube, mt);
 			point.setVisible(false);
@@ -1192,22 +1318,26 @@ public void onError(Request request, Throwable exception) {
 	}
 		
 		
+	private String textureUrl="female_texture1.png";
 	
 	private void createSkinnedMesh(){
-		
+		log(bones);
+		JsArray<AnimationBone> clonedBone=cloneBones(bones);
+		//AnimationBoneConverter.setBoneAngles(clonedBone, rawAnimationData, 0);
+		log(clonedBone);
 		Geometry newgeo=GeometryUtils.clone(loadedGeometry);
 		newgeo.setSkinIndices(bodyIndices);
 		newgeo.setSkinWeight(bodyWeight);
-		newgeo.setBones(bones);
+		newgeo.setBones(clonedBone);
 		if(skinnedMesh!=null){
 			root.remove(skinnedMesh);
 		}
 		Material material=null;
 		if(useBasicMaterial.getValue()){
-			material=THREE.MeshBasicMaterial().skinning(true).color(0xffffff).map(ImageUtils.loadTexture("men3smart_underware_texture.png")).build();
+			material=THREE.MeshBasicMaterial().skinning(true).color(0xffffff).map(ImageUtils.loadTexture(textureUrl)).build();
 			
 		}else{
-			material=THREE.MeshLambertMaterial().skinning(true).color(0xffffff).map(ImageUtils.loadTexture("men3smart_underware_texture.png")).build();
+			material=THREE.MeshLambertMaterial().skinning(true).color(0xffffff).map(ImageUtils.loadTexture(textureUrl)).build();
 		}
 		skinnedMesh = THREE.SkinnedMesh(newgeo, material);
 		root.add(skinnedMesh);
@@ -1280,6 +1410,8 @@ public void onError(Request request, Throwable exception) {
 	private StackLayoutPanel stackPanel;
 
 	private ListBox boneListBox;
+
+	private Button updateWeightButton;
 	
 	private Vector4 convertWeight(int index,ColladaData collada){
 		if(wdatas==null){

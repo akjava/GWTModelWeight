@@ -40,7 +40,11 @@ public class IndexAndWeightEditor extends VerticalPanel{
 			index2.addItem(bones.get(i).getName());
 		}
 	}
-	
+	public void setAvailable(boolean bool){
+		index1.setEnabled(bool);
+		index2.setEnabled(bool);
+		balance.setEnabled(bool);
+	}
 	public void setValue(int ind,Vector4 index,Vector4 weight){
 		nameLabel.setText(""+ind);
 		this.ind=ind;
