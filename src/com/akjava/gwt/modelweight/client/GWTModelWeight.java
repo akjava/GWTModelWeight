@@ -100,7 +100,7 @@ public class GWTModelWeight extends SimpleDemoEntryPoint{
 		if(!paused && animation!=null){
 			AnimationHandler.update(v);
 			currentTime=animation.getCurrentTime();
-			log(""+currentTime+","+delta);
+			//log(""+currentTime+","+delta);
 			String check=""+currentTime;
 			if(check.equals("NaN")){
 				currentTime=0;
@@ -591,7 +591,7 @@ HorizontalPanel h1=new HorizontalPanel();
 		});
 		h6.add(reset6);
 		//move left-side
-		positionYRange.setValue(-13);
+		//positionYRange.setValue(-13);
 		positionXRange.setValue(-13);
 		
 		Button bt=new Button("Pause/Play SkinnedMesh");
@@ -1010,6 +1010,12 @@ public void onError(Request request, Throwable exception) {
 				}
 				
 				animationData = dataConverter.convertJsonAnimation(bones,bvh);
+				//for(int i=0;i<animationData.getHierarchy().length();i++){
+					AnimationHierarchyItem item=animationData.getHierarchy().get(0);
+					for(int j=0;j<item.getKeys().length();j++){
+						item.getKeys().get(j).setPos(0, 0, 0);//dont move;
+					}
+				//}
 				rawAnimationData=dataConverter.convertJsonAnimation(bones,bvh);//for json
 				animationName=animationData.getName();
 				 JsArray<AnimationHierarchyItem> hitem=animationData.getHierarchy();
@@ -1323,7 +1329,8 @@ public void onError(Request request, Throwable exception) {
 	private void createSkinnedMesh(){
 		log(bones);
 		JsArray<AnimationBone> clonedBone=cloneBones(bones);
-		//AnimationBoneConverter.setBoneAngles(clonedBone, rawAnimationData, 0);
+		//this is not work fine.just remove root moving to decrese flicking
+		AnimationBoneConverter.setBoneAngles(clonedBone, rawAnimationData, 0);
 		log(clonedBone);
 		Geometry newgeo=GeometryUtils.clone(loadedGeometry);
 		newgeo.setSkinIndices(bodyIndices);
