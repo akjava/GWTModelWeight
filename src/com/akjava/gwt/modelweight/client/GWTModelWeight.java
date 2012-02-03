@@ -8,14 +8,17 @@ import java.util.Map;
 import com.akjava.bvh.client.BVH;
 import com.akjava.bvh.client.BVHParser;
 import com.akjava.bvh.client.BVHParser.ParserListener;
-import com.akjava.bvh.client.threejs.AnimationBoneConverter;
-import com.akjava.bvh.client.threejs.AnimationDataConverter;
+import com.akjava.gwt.bvh.client.threejs.AnimationBoneConverter;
+import com.akjava.gwt.bvh.client.threejs.AnimationDataConverter;
 import com.akjava.gwt.html5.client.HTML5InputRange;
 import com.akjava.gwt.html5.client.extra.HTML5Builder;
 import com.akjava.gwt.html5.client.file.File;
 import com.akjava.gwt.html5.client.file.FileHandler;
 import com.akjava.gwt.html5.client.file.FileReader;
+import com.akjava.gwt.html5.client.file.FileUploadForm;
 import com.akjava.gwt.html5.client.file.FileUtils;
+import com.akjava.gwt.lib.client.StorageControler;
+import com.akjava.gwt.lib.client.StorageDataList;
 import com.akjava.gwt.modelweight.client.weight.GWTWeightData;
 import com.akjava.gwt.modelweight.client.weight.WeighDataParser;
 import com.akjava.gwt.three.client.THREE;
@@ -67,7 +70,6 @@ import com.google.gwt.json.client.JSONValue;
 import com.google.gwt.user.client.Window;
 import com.google.gwt.user.client.ui.Button;
 import com.google.gwt.user.client.ui.CheckBox;
-import com.google.gwt.user.client.ui.FileUpload;
 import com.google.gwt.user.client.ui.HorizontalPanel;
 import com.google.gwt.user.client.ui.Label;
 import com.google.gwt.user.client.ui.ListBox;
@@ -121,9 +123,14 @@ public class GWTModelWeight extends SimpleDemoEntryPoint{
 
 	double currentTime;
 	
+	private StorageControler storageControler;
 	private Clock clock=new Clock();
 	@Override
 	protected void initializeOthers(WebGLRenderer renderer) {
+		storageControler = new StorageControler();
+		
+		
+		
 		scene.add(THREE.AmbientLight(0xffffff));
 		
 		Light pointLight = THREE.DirectionalLight(0xffffff,1);
@@ -375,7 +382,9 @@ public class GWTModelWeight extends SimpleDemoEntryPoint{
 							}
 						}else{
 							//plus
-							selections.add(lastSelection);
+							if(lastSelection!=-1){
+								selections.add(lastSelection);
+								}
 							selectVertex(at);
 						}
 						for(int index:selections){
@@ -417,6 +426,7 @@ public class GWTModelWeight extends SimpleDemoEntryPoint{
 	private int selectionBoneIndex;
 	private Object3D selectVertex;
 	private void selectBone(Object3D target) {
+		lastSelection=-1;
 		if(selection==null){
 			selection=THREE.Mesh(THREE.CubeGeometry(1, 1, 1), THREE.MeshLambertMaterial().color(0x00ff00).build());
 			boneAndVertex.add(selection);
@@ -685,9 +695,9 @@ HorizontalPanel h1=new HorizontalPanel();
 		stackPanel.add(loadAndExport,"Load & Export",30);
 		
 		loadAndExport.add(new Label("BVH Bone"));
-		FileUpload bvhUpload=new FileUpload();
+		final FileUploadForm bvhUpload=new FileUploadForm();
 		loadAndExport.add(bvhUpload);
-		bvhUpload.addChangeHandler(new ChangeHandler() {
+		bvhUpload.getFileUpload().addChangeHandler(new ChangeHandler() {
 			
 			@Override
 			public void onChange(ChangeEvent event) {
@@ -703,13 +713,14 @@ HorizontalPanel h1=new HorizontalPanel();
 					}
 				});
 				reader.readAsText(files.get(0),"utf-8");
+				bvhUpload.reset();
 			}
 		});
 		
 		loadAndExport.add(new Label("Mesh"));
-		FileUpload meshUpload=new FileUpload();
+		final FileUploadForm meshUpload=new FileUploadForm();
 		loadAndExport.add(meshUpload);
-		meshUpload.addChangeHandler(new ChangeHandler() {
+		meshUpload.getFileUpload().addChangeHandler(new ChangeHandler() {
 			
 			@Override
 			public void onChange(ChangeEvent event) {
@@ -746,14 +757,15 @@ HorizontalPanel h1=new HorizontalPanel();
 					}
 				});
 				reader.readAsText(files.get(0),"utf-8");
+				meshUpload.reset();
 			}
 		});
 		
 		
 		loadAndExport.add(new Label("Texture Image"));
-		FileUpload textureUpload=new FileUpload();
+		final FileUploadForm textureUpload=new FileUploadForm();
 		loadAndExport.add(textureUpload);
-		textureUpload.addChangeHandler(new ChangeHandler() {
+		textureUpload.getFileUpload().addChangeHandler(new ChangeHandler() {
 			
 			@Override
 			public void onChange(ChangeEvent event) {
@@ -770,13 +782,14 @@ HorizontalPanel h1=new HorizontalPanel();
 					}
 				});
 				reader.readAsDataURL(files.get(0));
+				textureUpload.reset();
 			}
 		});
 		loadAndExport.add(textureUpload);
 		
 		HorizontalPanel exports=new HorizontalPanel();
 		loadAndExport.add(exports);
-		Button json=new Button("json export");
+		Button json=new Button("Export as Json");
 		json.addClickHandler(new ClickHandler() {
 			
 			@Override
@@ -785,13 +798,35 @@ HorizontalPanel h1=new HorizontalPanel();
 			}
 		});
 		exports.add(json);
-		withAnimation = new CheckBox("with Animation");
+		withAnimation = new CheckBox("+Animation");
 		withAnimation.setValue(false);	//dont work collectly
 		exports.add(withAnimation);
 		
+		
+		loadAndExport.add(exports);
+		
+		Button webstorage=new Button("Export in WebStorage");
+		webstorage.addClickHandler(new ClickHandler() {
+			
+			@Override
+			public void onClick(ClickEvent event) {
+				exportWebStorage();
+			}
+		});
+		loadAndExport.add(webstorage);
+		
+		loadAndExport.add(new Label("Dont export large BVH.large(10M?) text data crash browser"));
 		showControl();
 	}
 	
+	protected void exportWebStorage() {
+		StorageDataList modelControler=new StorageDataList(storageControler, "MODEL");
+		String title=Window.prompt("FileName", "Skinning-Exported");
+		String text=toJsonText();
+		modelControler.setDataValue(title, text);
+		int id=modelControler.incrementId();
+	}
+
 	protected void selectPrevVertex() {
 		int currentSelection=indexWeightEditor.getArrayIndex();
 		for(int i=currentSelection-1;i>=0;i--){
@@ -843,9 +878,7 @@ HorizontalPanel h1=new HorizontalPanel();
 		lastSelection=index;
 	}
 
-	private void exportAsJson(){
-		//set bone
-		
+	public String toJsonText(){
 		JsArray<AnimationBone> clonedBone=cloneBones(bones);
 		JSONArray arrays=new JSONArray(clonedBone);
 		lastJsonObject.put("bones", arrays);
@@ -869,8 +902,14 @@ HorizontalPanel h1=new HorizontalPanel();
 			weights.push(bodyWeight.get(i).getY());
 		}
 		lastJsonObject.put("skinWeights", new JSONArray(weights));
+		return lastJsonObject.toString();
+	}
+	private void exportAsJson(){
+		//set bone
 		
-		exportTextChrome(lastJsonObject.toString(),"WeightTool"+exportIndex);
+		
+		
+		exportTextChrome(toJsonText(),"WeightTool"+exportIndex);
 		exportIndex++;
 	}
 	
@@ -1133,7 +1172,7 @@ public void onError(Request request, Throwable exception) {
 				initializeObject();
 				
 				if(loadedGeometry==null){//initial load
-				loadModel("miku.js",
+				loadModel("female001.json",
 				new  LoadHandler() {
 					//loader.load("men3smart.js", new  LoadHandler() {
 						@Override
@@ -1256,7 +1295,7 @@ public void onError(Request request, Throwable exception) {
 		selectVertex=THREE.Object3D();
 		vertexMeshs.clear();
 		boneAndVertex.add(selectVertex);
-		Geometry cube=THREE.CubeGeometry(.3, .3, .3);
+		Geometry cube=THREE.CubeGeometry(.2, .2, .2);
 		
 		for(int i=0;i<bodyGeometry.vertices().length();i++){
 			Material mt=THREE.MeshBasicMaterial().color(defaultColor).build();
@@ -1324,7 +1363,7 @@ public void onError(Request request, Throwable exception) {
 	}
 		
 		
-	private String textureUrl="female_texture1.png";
+	private String textureUrl="female001_texture1.png";
 	
 	private void createSkinnedMesh(){
 		log(bones);
