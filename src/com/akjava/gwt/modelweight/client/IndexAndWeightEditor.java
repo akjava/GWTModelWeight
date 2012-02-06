@@ -1,6 +1,7 @@
 package com.akjava.gwt.modelweight.client;
 
 import com.akjava.gwt.html5.client.HTML5InputRange;
+import com.akjava.gwt.html5.client.HTML5InputRange.HTML5InputRangeListener;
 import com.akjava.gwt.three.client.core.Vector4;
 import com.akjava.gwt.three.client.gwt.animation.AnimationBone;
 import com.google.gwt.core.client.JsArray;
@@ -21,14 +22,18 @@ public class IndexAndWeightEditor extends VerticalPanel{
 		nameLabel = new Label();
 		add(nameLabel);
 		
+		add(new Label("Index1"));
 		index1 = new ListBox();
-		
 		add(index1);
-		index2 = new ListBox();
 		
+		add(new Label("Index2"));
+		index2 = new ListBox();
 		add(index2);
+		
 		balance = new HTML5InputRange(0,100,50);
 		add(balance);
+		
+		add(createRangeLabel("",balance));
 	}
 	public void setBones(JsArray<AnimationBone> bones){
 		index1.clear();
@@ -46,7 +51,7 @@ public class IndexAndWeightEditor extends VerticalPanel{
 		balance.setEnabled(bool);
 	}
 	public void setValue(int ind,Vector4 index,Vector4 weight){
-		nameLabel.setText(""+ind);
+		nameLabel.setText("vertex-Number:"+ind);
 		this.ind=ind;
 		index1.setSelectedIndex((int) index.getX());
 		index2.setSelectedIndex((int) index.getY());
@@ -69,5 +74,24 @@ public class IndexAndWeightEditor extends VerticalPanel{
 	}
 	public double getWeight2(){
 		return 1.0-getWeight1();
+	}
+	
+	public static Label createRangeLabel(final String text,final HTML5InputRange range){
+		final Label label=new Label();
+		label.setText("");
+		label.setStylePrimaryName("title");
+		range.addListener(new HTML5InputRangeListener() {
+			@Override
+			public void changed(int newValue) {
+				double index1=(100.0-newValue)/100;
+				double index2=1.0-index1;
+				
+				String text1=(""+index1).substring(0,4);
+				String text2=(""+index2).substring(0,4);
+				label.setText(""+text1+":"+text2);
+			}
+		});
+		
+		return label;
 	}
 }

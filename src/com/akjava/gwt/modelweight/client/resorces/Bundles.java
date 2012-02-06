@@ -6,6 +6,4 @@ import com.google.gwt.resources.client.TextResource;
 
 public interface Bundles extends ClientBundle {
 public static Bundles INSTANCE=GWT.create(Bundles.class);
-	TextResource weight();
-	TextResource vertex();
 }

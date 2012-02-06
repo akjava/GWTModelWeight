@@ -11,6 +11,7 @@ import com.akjava.bvh.client.BVHParser.ParserListener;
 import com.akjava.gwt.bvh.client.threejs.AnimationBoneConverter;
 import com.akjava.gwt.bvh.client.threejs.AnimationDataConverter;
 import com.akjava.gwt.html5.client.HTML5InputRange;
+import com.akjava.gwt.html5.client.HTML5InputRange.HTML5InputRangeListener;
 import com.akjava.gwt.html5.client.extra.HTML5Builder;
 import com.akjava.gwt.html5.client.file.File;
 import com.akjava.gwt.html5.client.file.FileHandler;
@@ -38,6 +39,7 @@ import com.akjava.gwt.three.client.gwt.Clock;
 import com.akjava.gwt.three.client.gwt.GWTGeometryUtils;
 import com.akjava.gwt.three.client.gwt.GWTThreeUtils;
 import com.akjava.gwt.three.client.gwt.SimpleDemoEntryPoint;
+import com.akjava.gwt.three.client.gwt.ThreeLog;
 import com.akjava.gwt.three.client.gwt.animation.AnimationBone;
 import com.akjava.gwt.three.client.gwt.animation.AnimationData;
 import com.akjava.gwt.three.client.gwt.animation.AnimationHierarchyItem;
@@ -221,13 +223,17 @@ public class GWTModelWeight extends SimpleDemoEntryPoint{
 			}
 		});*/
 		
-		loadBVH("pose.bvh");
-		//loadBVH("14_08.bvh");
+		loadBVH("walking.bvh");
+		//loadBVH("pose.bvh");//no motion
 	}
 	Object3D root;
 	
 	List<Mesh> tmp=new ArrayList<Mesh>();
-	private Object3D boneToSkelton(JsArray<AnimationBone> bones){
+	private Object3D boneToSkelton(BVH bvh){
+		AnimationBoneConverter converter=new AnimationBoneConverter();
+		JsArray<AnimationBone> bones = converter.convertJsonBone(bvh);//has no endsite
+		
+		List<List<Vector3>> endSites=converter.convertJsonBoneEndSites(bvh);
 		tmp.clear();
 		Object3D group=THREE.Object3D();
 		for(int i=0;i<bones.length();i++){
@@ -239,7 +245,7 @@ public class GWTModelWeight extends SimpleDemoEntryPoint{
 			}
 			Mesh mesh=THREE.Mesh(cube, THREE.MeshLambertMaterial().color(color).build());
 			group.add(mesh);
-			Vector3 pos=AnimationBone.jsArrayToVector3(bone.getPos());
+			Vector3 pos=GWTThreeUtils.jsArrayToVector3(bone.getPos());
 			
 			if(bone.getParent()!=-1){
 				
@@ -264,6 +270,21 @@ public class GWTModelWeight extends SimpleDemoEntryPoint{
 			mesh.setPosition(pos);
 			mesh.setName(bone.getName());
 			
+			List<Vector3> sites=endSites.get(i);
+			for(Vector3 end:sites){
+				Mesh endMesh=THREE.Mesh(THREE.CubeGeometry(.3, .3, .3), THREE.MeshLambertMaterial().color(0x00aa00).build());
+				if(end.getX()==0 && end.getY()==0 && end.getZ()==0){
+					continue;//ignore 0 
+				}else{
+					log(bone.getName()+":"+ThreeLog.get(end));
+				}
+				Vector3 epos=end.clone().addSelf(pos);
+				endMesh.setPosition(epos);
+				group.add(GWTGeometryUtils.createLineMesh(pos, epos, 0x888888));
+				group.add(endMesh);
+			}
+			
+			
 			if(bone.getParent()!=-1){
 				//AnimationBone parent=bones.get(bone.getParent());
 				Vector3 ppos=tmp.get(bone.getParent()).getPosition();
@@ -275,13 +296,17 @@ public class GWTModelWeight extends SimpleDemoEntryPoint{
 		return group;
 	}
 	
+	/*
 	private List<NameAndPosition> boneToNameAndWeight(JsArray<AnimationBone> bones){
+		return boneToNameAndWeight(bones,null);
+	}
+	private List<NameAndPosition> boneToNameAndWeight(JsArray<AnimationBone> bones,List<List<Vector3>> endSites){
 		List<NameAndPosition> lists=new ArrayList<NameAndPosition>();
 		List<Vector3> absolutePos=new ArrayList<Vector3>();
 		for(int i=0;i<bones.length();i++){
 			AnimationBone bone=bones.get(i);
 			
-			Vector3 pos=AnimationBone.jsArrayToVector3(bone.getPos());
+			Vector3 pos=GWTThreeUtils.jsArrayToVector3(bone.getPos());
 			String parentName=null;
 			//add start
 			//add center
@@ -324,6 +349,13 @@ public class GWTModelWeight extends SimpleDemoEntryPoint{
 			Mesh mesh=THREE.Mesh(THREE.CubeGeometry(.5, .5, .5), THREE.MeshLambertMaterial().color(0x00ff00).build());
 			mesh.setName(bone.getName());
 			mesh.setPosition(pos);
+			
+			if(endSites!=null){
+				List<Vector3> ends=endSites.get(i);
+				for(Vector3 endSite:ends){
+					lists.add(new NameAndPosition(bone.getName(),pos.clone().addSelf(endSite),i));//
+				}
+			}
 			//boneAndVertex.add(mesh);
 			
 			if(parentPos!=null){
@@ -335,7 +367,7 @@ public class GWTModelWeight extends SimpleDemoEntryPoint{
 			lists.add(new NameAndPosition(bone.getName(),pos,i));//end pos
 		}
 		return lists;
-	}
+	}*/
 	
 	
 	private Projector projector;
@@ -422,16 +454,16 @@ public class GWTModelWeight extends SimpleDemoEntryPoint{
 	}
 	
 
-	private Mesh selection;
+	private Mesh boneSelectionMesh;
 	private int selectionBoneIndex;
 	private Object3D selectVertex;
 	private void selectBone(Object3D target) {
 		lastSelection=-1;
-		if(selection==null){
-			selection=THREE.Mesh(THREE.CubeGeometry(1, 1, 1), THREE.MeshLambertMaterial().color(0x00ff00).build());
-			boneAndVertex.add(selection);
+		if(boneSelectionMesh==null){
+			boneSelectionMesh=THREE.Mesh(THREE.CubeGeometry(1, 1, 1), THREE.MeshLambertMaterial().color(0x00ff00).build());
+			boneAndVertex.add(boneSelectionMesh);
 		}
-		selection.setPosition(target.getPosition());
+		boneSelectionMesh.setPosition(target.getPosition());
 		selectionBoneIndex=findBoneIndex(target.getName());
 		
 		boneListBox.setSelectedIndex(selectionBoneIndex);
@@ -483,7 +515,17 @@ public class GWTModelWeight extends SimpleDemoEntryPoint{
 			mouseDownX=event.getX();
 			mouseDownY=event.getY();
 			
-			if(event.isAltKeyDown()){
+			if(event.isControlKeyDown()){//TODO future function
+				/*
+			int index=indexWeightEditor.getArrayIndex();	
+			if(index!=-1){
+				loadedGeometry.vertices().get(index).getPosition().incrementX(diffX);
+				loadedGeometry.vertices().get(index).getPosition().incrementX(diffY);
+				createSkinnedMesh();
+				createWireBody();
+				
+			}*/
+			}else if(event.isAltKeyDown()){
 			posX+=(double)diffX/2;
 			posY-=(double)diffY/2;
 			}else{
@@ -619,6 +661,7 @@ HorizontalPanel h1=new HorizontalPanel();
 		VerticalPanel boneAndWeight=new VerticalPanel();
 		stackPanel.add(boneAndWeight,"Bone & Weight",30);
 		
+		boneAndWeight.add(new Label("Bone Selection"));
 		boneListBox = new ListBox();
 		boneAndWeight.add(boneListBox);
 		boneListBox.addChangeHandler(new ChangeHandler() {
@@ -649,6 +692,7 @@ HorizontalPanel h1=new HorizontalPanel();
 		prevAndNext.add(next);
 		
 		indexWeightEditor = new IndexAndWeightEditor();
+		indexWeightEditor.setWidth("200px");
 		boneAndWeight.add(indexWeightEditor);
 		
 		updateWeightButton = new Button("Update Weight");
@@ -815,7 +859,7 @@ HorizontalPanel h1=new HorizontalPanel();
 		});
 		loadAndExport.add(webstorage);
 		
-		loadAndExport.add(new Label("Dont export large BVH.large(10M?) text data crash browser"));
+		//loadAndExport.add(new Label("Dont export large BVH.large(10M?) text data crash browser"));
 		showControl();
 	}
 	
@@ -908,12 +952,27 @@ HorizontalPanel h1=new HorizontalPanel();
 		//set bone
 		
 		
-		
-		exportTextChrome(toJsonText(),"WeightTool"+exportIndex);
+		exportTextAsDownloadDataUrl(toJsonText(),"UTF-8","WeightTool"+exportIndex);
+		//exportTextChrome(toJsonText(),"WeightTool"+exportIndex);
 		exportIndex++;
 	}
 	
 	int exportIndex;
+	
+	public static final void exportTextAsDownloadDataUrl(String text,String encode,String wname){
+		
+		String url="data:application/octet-stream;charset="+encode+","+text;
+		Window.open(url, wname, null);
+	}
+	
+	
+	public static final void exportTextAsDataUrl(String text,String encode,String wname){
+		
+		String url="data:text/plain;charset="+encode+","+text;
+		Window.open(url, wname, null);
+	}
+	
+	
 	public native final void exportTextChrome(String text,String wname)/*-{
 	win = $wnd.open("", wname)
 	win.document.body.innerText =""+text+"";
@@ -961,6 +1020,8 @@ public void onError(Request request, Throwable exception) {
 	private Geometry bodyGeometry;
 	private Object3D boneAndVertex;
 	private JsArray<AnimationBone> bones;
+	private List<List<Vector3>> endSites;
+	
 	private SkinnedMesh skinnedMesh;
 	
 	private ColladaData rawCollada;
@@ -972,6 +1033,8 @@ public void onError(Request request, Throwable exception) {
 			boneListBox.addItem(bones.get(i).getName());
 		}
 	}
+	
+
 	
 	public JsArray<AnimationBone>  cloneBones(JsArray<AnimationBone> bones){
 		JsArray<AnimationBone> array=(JsArray<AnimationBone>) JsArray.createArray();
@@ -1021,6 +1084,8 @@ public void onError(Request request, Throwable exception) {
 				//bvh.setSkips(skipFrames);
 				AnimationBoneConverter converter=new AnimationBoneConverter();
 				bones = converter.convertJsonBone(bvh);
+				endSites=converter.convertJsonBoneEndSites(bvh);
+				
 				updateBoneListBox();
 				indexWeightEditor.setBones(bones);
 				
@@ -1172,7 +1237,7 @@ public void onError(Request request, Throwable exception) {
 				initializeObject();
 				
 				if(loadedGeometry==null){//initial load
-				loadModel("female001.json",
+				loadModel("shakure.js",
 				new  LoadHandler() {
 					//loader.load("men3smart.js", new  LoadHandler() {
 						@Override
@@ -1180,7 +1245,7 @@ public void onError(Request request, Throwable exception) {
 						
 						//	SubdivisionModifier modifier=THREE.SubdivisionModifier(3);
 						//	modifier.modify(geometry);
-							log(geometry);
+							//log(geometry);
 							
 							for(int i=0;i<bones.length();i++){
 								if(bones.get(i).getParent()!=-1)
@@ -1271,12 +1336,15 @@ public void onError(Request request, Throwable exception) {
 		
 		if(boneAndVertex!=null){
 			scene.remove(boneAndVertex);
+			if(boneSelectionMesh!=null){
+				boneSelectionMesh=null;
+			}
 		}
 		
 		boneAndVertex = THREE.Object3D();
 		boneAndVertex.setPosition(-15, 0, 0);
 		scene.add(boneAndVertex);
-		Object3D bo=boneToSkelton(bones);
+		Object3D bo=boneToSkelton(bvh);
 		//bo.setPosition(-30, 0, 0);
 		boneAndVertex.add(bo);
 		
@@ -1294,6 +1362,7 @@ public void onError(Request request, Throwable exception) {
 		
 		selectVertex=THREE.Object3D();
 		vertexMeshs.clear();
+		
 		boneAndVertex.add(selectVertex);
 		Geometry cube=THREE.CubeGeometry(.2, .2, .2);
 		
@@ -1313,10 +1382,10 @@ public void onError(Request request, Throwable exception) {
 		bodyWeight = (JsArray<Vector4>) JsArray.createArray();
 		if(loadedGeometry.getSkinIndices().length()!=0 && loadedGeometry.getSkinWeight().length()!=0){
 			log("auto-weight from geometry:");
-			WeightBuilder.autoWeight(loadedGeometry, bones, WeightBuilder.MODE_FROM_GEOMETRY, bodyIndices, bodyWeight);
+			WeightBuilder.autoWeight(loadedGeometry, bones, endSites,WeightBuilder.MODE_FROM_GEOMETRY, bodyIndices, bodyWeight);
 		}else{
 			//TODO support multiple autoWeight
-			WeightBuilder.autoWeight(loadedGeometry, bones, WeightBuilder.MODE_NearParentAndChildren, bodyIndices, bodyWeight);
+			WeightBuilder.autoWeight(loadedGeometry, bones, endSites,WeightBuilder.MODE_NearParentAndChildrenAgressive, bodyIndices, bodyWeight);
 			}
 	}
 	
@@ -1328,7 +1397,7 @@ public void onError(Request request, Throwable exception) {
 			log("invalid-json object");
 		}
 		lastJsonObject=object;
-		log(object.getJavaScriptObject());
+		//log(object.getJavaScriptObject());
 		loader.createModel(object.getJavaScriptObject(), handler, "");
 		loader.onLoadComplete();
 		
@@ -1363,14 +1432,14 @@ public void onError(Request request, Throwable exception) {
 	}
 		
 		
-	private String textureUrl="female001_texture1.png";
+	private String textureUrl="female001_texture1.jpg";
 	
 	private void createSkinnedMesh(){
-		log(bones);
+		//log(bones);
 		JsArray<AnimationBone> clonedBone=cloneBones(bones);
 		//this is not work fine.just remove root moving to decrese flicking
 		AnimationBoneConverter.setBoneAngles(clonedBone, rawAnimationData, 0);
-		log(clonedBone);
+		//log(clonedBone);
 		Geometry newgeo=GeometryUtils.clone(loadedGeometry);
 		newgeo.setSkinIndices(bodyIndices);
 		newgeo.setSkinWeight(bodyWeight);
@@ -1584,7 +1653,7 @@ private Vector4 findNearSpecial(List<NameAndPosition> nameAndPositions,Vector3 p
 		}
 		
 		if(index1==index2){
-			log(""+vindex+","+nameIndex1+":"+nameIndex2);
+			//log(""+vindex+","+nameIndex1+":"+nameIndex2);
 			if(vindex==250){
 			//	log(nameAndPositions.get(nameIndex1).getPosition());
 			//	log(nameAndPositions.get(nameIndex2).getPosition());
@@ -1608,7 +1677,7 @@ private Vector4 findNearSpecial(List<NameAndPosition> nameAndPositions,Vector3 p
 		Map<Integer,Integer> totalIndex=new HashMap<Integer,Integer>();
 		
 		
-		log("find-near:"+vindex);
+		//log("find-near:"+vindex);
 		for(int i=0;i<nameAndPositions.size();i++){
 			int index=nameAndPositions.get(i).getIndex();
 			Vector3 near=nameAndPositions.get(i).getPosition().clone();
