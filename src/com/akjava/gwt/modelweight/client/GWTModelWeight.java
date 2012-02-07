@@ -141,7 +141,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		//Window.open("text/plain:test.txt:"+url, "test", null);
 		
 		storageControler = new StorageControler();
-		canvas.setClearColorHex(0x333333);
+		canvas.setClearColorHex(0x333333);//canvas has margin?
 		
 		
 		scene.add(THREE.AmbientLight(0xffffff));
@@ -279,7 +279,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		for(int i=0;i<bones.length();i++){
 			AnimationBone bone=bones.get(i);
 			Geometry cube=THREE.CubeGeometry(.3, .3, .3);
-			int color=0xff0000;
+			int color=0x00aa00;
 			if(i==0){
 				//color=0x00ff00;
 			}
@@ -422,9 +422,9 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 			screenMove(x,y);
 			return;
 		}*/
-		
+		log("screen:"+screenWidth+"x"+screenHeight);
 		JsArray<Intersect> intersects=projector.gwtPickIntersects(event.getX(), event.getY(), screenWidth, screenHeight, camera,scene);
-		
+		//log("intersects:"+intersects.length());
 		for(int i=0;i<intersects.length();i++){
 			Intersect sect=intersects.get(i);
 			
@@ -441,7 +441,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 					if(event.isShiftKeyDown()){
 						if(selections.contains(at)){
 							selections.remove(new Integer(at));
-							vertexMeshs.get(at).getMaterial().getColor().setHex(defaultColor);
+							vertexMeshs.get(at).getMaterial().getColor().setHex(getVertexColor(at));
 							//??
 							if(lastSelection==at){
 								if(selections.size()>0){
@@ -488,9 +488,24 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 	}
 	private void clearSelections(){
 		for(int index:selections){
-			vertexMeshs.get(index).getMaterial().getColor().setHex(defaultColor);
+			vertexMeshs.get(index).getMaterial().getColor().setHex(getVertexColor(index));
 		}
 		selections.clear();
+	}
+	
+	private int getVertexColor(int index){
+		double v=bodyWeight.get(index).getX();
+		if(v==1){
+			return 0xffffff;
+		}else if(v>0.85){
+			return 0xff4400;
+		}else if(v>0.7){
+			return 0xff8800;
+		}else if(v>0.5){
+			return 0xffaa00;
+		}else{
+			return 0xffff00;
+		}
 	}
 	
 
@@ -524,10 +539,11 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 			if(index.getX()==selectedBoneIndex || index.getY()==selectedBoneIndex){
 				mesh.setVisible(true);
 				Vector4 weight=bodyWeight.get(i);
+				//mesh.getMaterial().getColor().setHex(getVertexColor(i));
 				//log(weight.getX()+","+weight.getY());
 			}else{
 				mesh.setVisible(false);
-				mesh.getMaterial().getColor().setHex(defaultColor);
+				mesh.getMaterial().getColor().setHex(getVertexColor(i));
 			}
 		}
 	}
@@ -969,7 +985,7 @@ HorizontalPanel h1=new HorizontalPanel();
 	private int lastSelection=-1;
 	private void selectVertex(int index){
 		if(lastSelection!=-1){
-			vertexMeshs.get(lastSelection).getMaterial().getColor().setHex(defaultColor);
+			vertexMeshs.get(lastSelection).getMaterial().getColor().setHex(getVertexColor(lastSelection));
 		}
 		Vector4 in=bodyIndices.get(index);
 		Vector4 we=bodyWeight.get(index);
@@ -1426,7 +1442,7 @@ public void onError(Request request, Throwable exception) {
 		
 	}
 	private int selectColor=0xccffcc;
-	private int defaultColor=0xffff00;
+	//private int defaultColor=0xffff00;
 	private void createWireBody(){
 		bodyGeometry=GeometryUtils.clone(loadedGeometry);
 		Mesh wireBody=THREE.Mesh(bodyGeometry, THREE.MeshBasicMaterial().wireFrame(true).color(0xffffff).build());
@@ -1439,7 +1455,7 @@ public void onError(Request request, Throwable exception) {
 		Geometry cube=THREE.CubeGeometry(.2, .2, .2);
 		
 		for(int i=0;i<bodyGeometry.vertices().length();i++){
-			Material mt=THREE.MeshBasicMaterial().color(defaultColor).build();
+			Material mt=THREE.MeshBasicMaterial().color(getVertexColor(i)).build();
 			Vector3 vx=bodyGeometry.vertices().get(i).getPosition();
 			Mesh point=THREE.Mesh(cube, mt);
 			point.setVisible(false);
