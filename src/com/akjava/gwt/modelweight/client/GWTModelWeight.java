@@ -11,7 +11,7 @@ import com.akjava.bvh.client.BVHParser.ParserListener;
 import com.akjava.gwt.bvh.client.threejs.AnimationBoneConverter;
 import com.akjava.gwt.bvh.client.threejs.AnimationDataConverter;
 import com.akjava.gwt.html5.client.HTML5InputRange;
-import com.akjava.gwt.html5.client.HTML5InputRange.HTML5InputRangeListener;
+
 import com.akjava.gwt.html5.client.extra.HTML5Builder;
 import com.akjava.gwt.html5.client.file.File;
 import com.akjava.gwt.html5.client.file.FileHandler;
@@ -38,13 +38,13 @@ import com.akjava.gwt.three.client.extras.loaders.JSONLoader.LoadHandler;
 import com.akjava.gwt.three.client.gwt.Clock;
 import com.akjava.gwt.three.client.gwt.GWTGeometryUtils;
 import com.akjava.gwt.three.client.gwt.GWTThreeUtils;
-import com.akjava.gwt.three.client.gwt.SimpleDemoEntryPoint;
 import com.akjava.gwt.three.client.gwt.ThreeLog;
 import com.akjava.gwt.three.client.gwt.animation.AnimationBone;
 import com.akjava.gwt.three.client.gwt.animation.AnimationData;
 import com.akjava.gwt.three.client.gwt.animation.AnimationHierarchyItem;
 import com.akjava.gwt.three.client.gwt.animation.WeightBuilder;
 import com.akjava.gwt.three.client.gwt.collada.ColladaData;
+import com.akjava.gwt.three.client.gwt.ui.SimpleTabDemoEntryPoint;
 import com.akjava.gwt.three.client.lights.Light;
 import com.akjava.gwt.three.client.materials.Material;
 import com.akjava.gwt.three.client.objects.Mesh;
@@ -59,6 +59,8 @@ import com.google.gwt.event.dom.client.ChangeHandler;
 import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
 import com.google.gwt.event.dom.client.MouseMoveEvent;
+import com.google.gwt.event.logical.shared.SelectionEvent;
+import com.google.gwt.event.logical.shared.SelectionHandler;
 import com.google.gwt.http.client.Request;
 import com.google.gwt.http.client.RequestBuilder;
 import com.google.gwt.http.client.RequestCallback;
@@ -70,6 +72,7 @@ import com.google.gwt.json.client.JSONObject;
 import com.google.gwt.json.client.JSONParser;
 import com.google.gwt.json.client.JSONValue;
 import com.google.gwt.user.client.Window;
+import com.google.gwt.user.client.ui.Anchor;
 import com.google.gwt.user.client.ui.Button;
 import com.google.gwt.user.client.ui.CheckBox;
 import com.google.gwt.user.client.ui.HorizontalPanel;
@@ -83,7 +86,7 @@ import com.google.gwt.user.client.ui.VerticalPanel;
 /**
  * Entry point classes define <code>onModuleLoad()</code>.
  */
-public class GWTModelWeight extends SimpleDemoEntryPoint{
+public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 
 	@Override
 	protected void beforeUpdate(WebGLRenderer renderer) {
@@ -117,8 +120,10 @@ public class GWTModelWeight extends SimpleDemoEntryPoint{
 				skinnedMesh.setVisible(true);
 			}
 		}else{
+			if(animation!=null){
 			currentTime=animation.getCurrentTime();
 			
+			}
 		}
 		//
 	}
@@ -129,8 +134,14 @@ public class GWTModelWeight extends SimpleDemoEntryPoint{
 	private Clock clock=new Clock();
 	@Override
 	protected void initializeOthers(WebGLRenderer renderer) {
-		storageControler = new StorageControler();
 		
+		
+	
+		
+		//Window.open("text/plain:test.txt:"+url, "test", null);
+		
+		storageControler = new StorageControler();
+		canvas.setClearColorHex(0x333333);
 		
 		
 		scene.add(THREE.AmbientLight(0xffffff));
@@ -226,6 +237,35 @@ public class GWTModelWeight extends SimpleDemoEntryPoint{
 		loadBVH("walking.bvh");
 		//loadBVH("pose.bvh");//no motion
 	}
+	//private PopupPanel bottomPanel;//TODO future
+	private void createTabs(){
+		tabPanel.addSelectionHandler(new SelectionHandler<Integer>() {
+			
+			@Override
+			public void onSelection(SelectionEvent<Integer> event) {
+				int selection=event.getSelectedItem();
+				if(selection==0){
+					stats.setVisible(true);
+					showControl();
+					//bottomPanel.setVisible(true);
+					dialog2.setVisible(true);
+					resized(screenWidth,screenHeight);//for some blackout;
+				}else{
+				stats.setVisible(false);
+				//bottomPanel.setVisible(false);
+				hideControl();
+				dialog2.setVisible(false);
+				}
+				
+			}
+		});
+		
+		tabPanel.add(new CopyToolPanel(),"Copy");
+	}
+	
+	
+	
+	
 	Object3D root;
 	
 	List<Mesh> tmp=new ArrayList<Mesh>();
@@ -272,7 +312,7 @@ public class GWTModelWeight extends SimpleDemoEntryPoint{
 			
 			List<Vector3> sites=endSites.get(i);
 			for(Vector3 end:sites){
-				Mesh endMesh=THREE.Mesh(THREE.CubeGeometry(.3, .3, .3), THREE.MeshLambertMaterial().color(0x00aa00).build());
+				Mesh endMesh=THREE.Mesh(THREE.CubeGeometry(.2, .2, .2), THREE.MeshLambertMaterial().color(0x00a00aa).build());
 				if(end.getX()==0 && end.getY()==0 && end.getZ()==0){
 					continue;//ignore 0 
 				}else{
@@ -656,6 +696,16 @@ HorizontalPanel h1=new HorizontalPanel();
 			}
 		});
 		
+		frameRange = new HTML5InputRange(0, 0, 0);
+		frameRange.addChangeHandler(new ChangeHandler() {
+			@Override
+			public void onChange(ChangeEvent event) {
+				updateFrameRange();
+			}
+		});
+		parent.add(frameRange);
+		
+		
 		//editor
 		
 		VerticalPanel boneAndWeight=new VerticalPanel();
@@ -859,10 +909,25 @@ HorizontalPanel h1=new HorizontalPanel();
 		});
 		loadAndExport.add(webstorage);
 		
+		
+		
+		
+		
+		
+		
+		
+		createTabs();
 		//loadAndExport.add(new Label("Dont export large BVH.large(10M?) text data crash browser"));
 		showControl();
 	}
 	
+	protected void updateFrameRange() {
+		paused=true;
+		double time=frameRange.getValue()*bvh.getFrameTime();
+		log("set-current:"+time);
+		animation.setCurrentTime(time);
+		AnimationHandler.update(0);
+	}
 	protected void exportWebStorage() {
 		StorageDataList modelControler=new StorageDataList(storageControler, "MODEL");
 		String title=Window.prompt("FileName", "Skinning-Exported");
@@ -1060,6 +1125,9 @@ public void onError(Request request, Throwable exception) {
 		}
 		return array;
 	}
+	
+	
+	
 	private void parseBVH(String bvhText){
 		final BVHParser parser=new BVHParser();
 		
@@ -1079,6 +1147,7 @@ public void onError(Request request, Throwable exception) {
 				
 				
 				bvh=bv;
+				
 				
 				//bvh.setSkips(10);
 				//bvh.setSkips(skipFrames);
@@ -1111,6 +1180,9 @@ public void onError(Request request, Throwable exception) {
 				AnimationDataConverter dataConverter=new AnimationDataConverter();
 				if(bvh.getFrames()==1){
 					dataConverter.setSkipFirst(false);
+					frameRange.setMax(bvh.getFrames());
+				}else{
+					frameRange.setMax(bvh.getFrames()-1);
 				}
 				
 				animationData = dataConverter.convertJsonAnimation(bones,bvh);
@@ -1527,6 +1599,8 @@ public void onError(Request request, Throwable exception) {
 	private ListBox boneListBox;
 
 	private Button updateWeightButton;
+
+	private HTML5InputRange frameRange;
 	
 	private Vector4 convertWeight(int index,ColladaData collada){
 		if(wdatas==null){
@@ -1928,6 +2002,10 @@ private Vector4 findNearSpecial(List<NameAndPosition> nameAndPositions,Vector3 p
 			double total=near1+near2;
 			return THREE.Vector4(index1,index2,near1/total,near2/total);
 		}
+	}
+	@Override
+	public String getTabTitle() {
+		return "Weight Tool";
 	}
 	
 }
