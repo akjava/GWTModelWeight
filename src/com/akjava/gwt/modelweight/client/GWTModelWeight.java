@@ -11,7 +11,7 @@ import com.akjava.bvh.client.BVHParser.ParserListener;
 import com.akjava.gwt.bvh.client.threejs.AnimationBoneConverter;
 import com.akjava.gwt.bvh.client.threejs.AnimationDataConverter;
 import com.akjava.gwt.html5.client.HTML5InputRange;
-
+import com.akjava.gwt.html5.client.download.HTML5Download;
 import com.akjava.gwt.html5.client.extra.HTML5Builder;
 import com.akjava.gwt.html5.client.file.File;
 import com.akjava.gwt.html5.client.file.FileHandler;
@@ -80,6 +80,7 @@ import com.google.gwt.user.client.ui.Label;
 import com.google.gwt.user.client.ui.ListBox;
 import com.google.gwt.user.client.ui.Panel;
 import com.google.gwt.user.client.ui.StackLayoutPanel;
+import com.google.gwt.user.client.ui.TextBox;
 import com.google.gwt.user.client.ui.VerticalPanel;
 
 
@@ -234,7 +235,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 			}
 		});*/
 		
-		loadBVH("walking.bvh");
+		loadBVH(bvhUrl);
 		//loadBVH("pose.bvh");//no motion
 	}
 	//private PopupPanel bottomPanel;//TODO future
@@ -261,6 +262,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		});
 		
 		tabPanel.add(new CopyToolPanel(),"Copy");
+		tabPanel.add(new MergeToolPanel(),"Merge");
 	}
 	
 	
@@ -422,7 +424,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 			screenMove(x,y);
 			return;
 		}*/
-		log("screen:"+screenWidth+"x"+screenHeight);
+		//log("screen:"+screenWidth+"x"+screenHeight);
 		JsArray<Intersect> intersects=projector.gwtPickIntersects(event.getX(), event.getY(), screenWidth, screenHeight, camera,scene);
 		//log("intersects:"+intersects.length());
 		for(int i=0;i<intersects.length();i++){
@@ -494,17 +496,48 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 	}
 	
 	private int getVertexColor(int index){
-		double v=bodyWeight.get(index).getX();
-		if(v==1){
-			return 0xffffff;
-		}else if(v>0.85){
-			return 0xff4400;
-		}else if(v>0.7){
-			return 0xff8800;
-		}else if(v>0.5){
-			return 0xffaa00;
+		double index1=bodyIndices.get(index).getX();
+		boolean isIndex1=false;
+		if(index1==selectionBoneIndex){
+			isIndex1=true;
+		}
+		
+		double v=0;
+		if(isIndex1){
+			v=bodyWeight.get(index).getX();
 		}else{
+			v=bodyWeight.get(index).getY();
+		}
+		
+		if(index==318){
+			log("isIndex1:"+isIndex1+",index="+index1+",selectBone="+selectionBoneIndex+",v="+v);
+		}
+		if(v==1){
+			return 0xfffefe;
+		}else if(v>0.949){
+			return 0xff0000;
+		}else if(v>0.849){
+			return 0xff977f;
+		}else if(v>0.749){
+			return 0xffb87f;
+		}else if(v>0.649){
+			return 0xffd67f;
+		}
+		else if(v>0.549){
+			return 0xfff17f;
+		}
+		else if(v>0.449){
 			return 0xffff00;
+		}else if(v>0.349){
+			return 0xafff7f;
+		}else if(v>0.249){
+			return 0x82ff7f;
+		}else if(v>0.149){
+			return 0x7fffbb;
+		}else if(v>0.5){
+			return 0x7fffee;
+		}else{
+			return 0x7fcaff;
 		}
 	}
 	
@@ -538,7 +571,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 			Mesh mesh=vertexMeshs.get(i);
 			if(index.getX()==selectedBoneIndex || index.getY()==selectedBoneIndex){
 				mesh.setVisible(true);
-				Vector4 weight=bodyWeight.get(i);
+				mesh.getMaterial().getColor().setHex(getVertexColor(i));
 				//mesh.getMaterial().getColor().setHex(getVertexColor(i));
 				//log(weight.getX()+","+weight.getY());
 			}else{
@@ -604,7 +637,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		parent.add(debugLabel);
 		
 		stackPanel = new StackLayoutPanel(Unit.PX);
-		stackPanel.setSize("200px","400px");
+		stackPanel.setSize("220px","400px");
 		parent.add(stackPanel);
 		
 		VerticalPanel modelPositionAndRotation=new VerticalPanel();
@@ -796,15 +829,39 @@ HorizontalPanel h1=new HorizontalPanel();
 		});
 		boneAndWeight.add(updateWeightButton);
 		
+		boneAndWeight.add(new Label("Auto-Weight"));
+		final ListBox autoWeightBox=new ListBox();
+		autoWeightBox.addItem("From Geometry", "4");
+		autoWeightBox.addItem("test", "6");
+		autoWeightBox.addItem("ParentAndChildren Agressive", "5");
+		autoWeightBox.addItem("ParentAndChildren", "3");
+		autoWeightBox.addItem("NearAgressive", "2");
+		autoWeightBox.addItem("NearSingleBon", "0");
+		autoWeightBox.addItem("NearSpecial", "1");
+		
+		autoWeightBox.setSelectedIndex(1);
+		boneAndWeight.add(autoWeightBox);
+		autoWeightBox.addChangeHandler(new ChangeHandler() {
+			
+			@Override
+			public void onChange(ChangeEvent event) {
+				updateAutoWeight(autoWeightBox.getValue(autoWeightBox.getSelectedIndex()));
+			}
+		});
+		
+		
 		//DONT need?
 		useBasicMaterial = new CheckBox();
 		useBasicMaterial.setText("Use Basic Material");
 		//parent.add(useBasicMaterial);
 		
 		VerticalPanel loadAndExport=new VerticalPanel();
-		stackPanel.add(loadAndExport,"Load & Export",30);
+		stackPanel.add(loadAndExport,"Load Datas",30);
 		
-		loadAndExport.add(new Label("BVH Bone"));
+		loadAndExport.add(new Label("Bone(BVH Motion file)"));
+		final Label bvhSelection=new Label("selection:"+bvhUrl);
+		loadAndExport.add(bvhSelection);
+		
 		final FileUploadForm bvhUpload=new FileUploadForm();
 		loadAndExport.add(bvhUpload);
 		bvhUpload.getFileUpload().addChangeHandler(new ChangeHandler() {
@@ -814,20 +871,24 @@ HorizontalPanel h1=new HorizontalPanel();
 				JsArray<File> files = FileUtils.toFile(event.getNativeEvent());
 				
 				final FileReader reader=FileReader.createFileReader();
+				final File file=files.get(0);
 				reader.setOnLoad(new FileHandler() {
 					@Override
 					public void onLoad() {
 						//log("load:"+Benchmark.end("load"));
 						//GWT.log(reader.getResultAsString());
 						parseBVH(reader.getResultAsString());
+						bvhSelection.setText("selection:"+file.getFileName());
 					}
 				});
-				reader.readAsText(files.get(0),"utf-8");
+				reader.readAsText(file,"utf-8");
 				bvhUpload.reset();
 			}
 		});
 		
-		loadAndExport.add(new Label("Mesh"));
+		loadAndExport.add(new Label("Character(Three.js model file)"));
+		final Label modelSelection=new Label("selection:"+modelUrl);
+		loadAndExport.add(modelSelection);
 		final FileUploadForm meshUpload=new FileUploadForm();
 		loadAndExport.add(meshUpload);
 		meshUpload.getFileUpload().addChangeHandler(new ChangeHandler() {
@@ -837,6 +898,7 @@ HorizontalPanel h1=new HorizontalPanel();
 				JsArray<File> files = FileUtils.toFile(event.getNativeEvent());
 				
 				final FileReader reader=FileReader.createFileReader();
+				final File file=files.get(0);
 				reader.setOnLoad(new FileHandler() {
 					@Override
 					public void onLoad() {
@@ -862,18 +924,22 @@ HorizontalPanel h1=new HorizontalPanel();
 								createSkinnedMesh();
 								
 								createWireBody();
+								modelSelection.setText("selection:"+file.getFileName());
+								saveFileBox.setText(file.getFileName());
 							}
 						});
 					}
 				});
-				reader.readAsText(files.get(0),"utf-8");
+				reader.readAsText(file,"utf-8");
 				meshUpload.reset();
 			}
 		});
 		
 		
-		loadAndExport.add(new Label("Texture Image"));
+		loadAndExport.add(new Label("Texture(PNG or JPEG)"));
 		final FileUploadForm textureUpload=new FileUploadForm();
+		final Label textureSelection=new Label("selection:"+textureUrl);
+		loadAndExport.add(textureSelection);
 		loadAndExport.add(textureUpload);
 		textureUpload.getFileUpload().addChangeHandler(new ChangeHandler() {
 			
@@ -882,6 +948,7 @@ HorizontalPanel h1=new HorizontalPanel();
 				JsArray<File> files = FileUtils.toFile(event.getNativeEvent());
 				
 				final FileReader reader=FileReader.createFileReader();
+				final File file=files.get(0);
 				reader.setOnLoad(new FileHandler() {
 					@Override
 					public void onLoad() {
@@ -889,13 +956,37 @@ HorizontalPanel h1=new HorizontalPanel();
 						//GWT.log(reader.getResultAsString());
 						textureUrl=reader.getResultAsString();
 						createSkinnedMesh();
+						textureSelection.setText("selection:"+file.getFileName());
 					}
 				});
-				reader.readAsDataURL(files.get(0));
+				reader.readAsDataURL(file);
 				textureUpload.reset();
 			}
 		});
 		loadAndExport.add(textureUpload);
+		
+		VerticalPanel export=new VerticalPanel();
+		stackPanel.add(export,"Export Datas",30);
+		
+		export.add(new Label("you can load form pose editor preference"));
+		Button webstorage=new Button("Export in WebStorage");
+		webstorage.addClickHandler(new ClickHandler() {
+			
+			@Override
+			public void onClick(ClickEvent event) {
+				exportWebStorage();
+			}
+		});
+		export.add(webstorage);
+		
+		
+		export.add(new Label("three.js model format"));
+		HorizontalPanel fileNames=new HorizontalPanel();
+		export.add(fileNames);
+		fileNames.add(new Label("Name:"));
+		saveFileBox = new TextBox();
+		saveFileBox.setText("untitled.js");
+		fileNames.add(saveFileBox);
 		
 		HorizontalPanel exports=new HorizontalPanel();
 		loadAndExport.add(exports);
@@ -913,18 +1004,11 @@ HorizontalPanel h1=new HorizontalPanel();
 		exports.add(withAnimation);
 		
 		
-		loadAndExport.add(exports);
+		export.add(exports);
 		
-		Button webstorage=new Button("Export in WebStorage");
-		webstorage.addClickHandler(new ClickHandler() {
-			
-			@Override
-			public void onClick(ClickEvent event) {
-				exportWebStorage();
-			}
-		});
-		loadAndExport.add(webstorage);
 		
+		exportLinks = new VerticalPanel();
+		export.add(exportLinks);
 		
 		
 		
@@ -937,6 +1021,32 @@ HorizontalPanel h1=new HorizontalPanel();
 		showControl();
 	}
 	
+	protected void updateAutoWeight(String value) {
+		int selectedValue=Integer.parseInt(value);
+		if(selectedValue!=-1){
+			bodyIndices = (JsArray<Vector4>) JsArray.createArray();
+			bodyWeight = (JsArray<Vector4>) JsArray.createArray();
+			if(loadedGeometry.getSkinIndices().length()!=0 && loadedGeometry.getSkinWeight().length()!=0){
+				WeightBuilder.autoWeight(loadedGeometry, bones, endSites,selectedValue, bodyIndices, bodyWeight);
+			}else{
+				//cant select geometry
+				if(selectedValue==WeightBuilder.MODE_FROM_GEOMETRY){
+					Window.alert("This geometry has no weight.choose another way");
+				}else{
+				WeightBuilder.autoWeight(loadedGeometry, bones, endSites,selectedValue, bodyIndices, bodyWeight);
+				}
+			}
+			
+			updateVertexColor();
+		}
+	}
+	
+	private void updateVertexColor(){
+		for(int i=0;i<bodyGeometry.vertices().length();i++){
+			Mesh mesh=vertexMeshs.get(i);
+			mesh.getMaterial().getColor().setHex(getVertexColor(i));
+		}
+	}
 	protected void updateFrameRange() {
 		paused=true;
 		double time=frameRange.getValue()*bvh.getFrameTime();
@@ -990,6 +1100,8 @@ HorizontalPanel h1=new HorizontalPanel();
 		Vector4 in=bodyIndices.get(index);
 		Vector4 we=bodyWeight.get(index);
 		
+		log("select:"+index+","+we.getX()+","+we.getY());
+		
 		vertexMeshs.get(index).getMaterial().getColor().setHex(selectColor);
 		
 		indexWeightEditor.setAvailable(true);
@@ -1031,11 +1143,27 @@ HorizontalPanel h1=new HorizontalPanel();
 	}
 	private void exportAsJson(){
 		//set bone
-		
-		
-		exportTextAsDownloadDataUrl(toJsonText(),"UTF-8","WeightTool"+exportIndex);
+		String json=toJsonText();
+		String name=saveFileBox.getText();
+		if(name.isEmpty()){
+			name="untitled.js";
+		}
+		if(anchor!=null){
+			anchor.removeFromParent();
+			anchor=null;
+		}
+		anchor = HTML5Download.generateTextDownloadLink(json, name, "Download File");
+		exportLinks.add(anchor);
+		anchor.addClickHandler(new ClickHandler() {
+			
+			@Override
+			public void onClick(ClickEvent event) {
+				anchor.removeFromParent();
+			}
+		});
+		//exportTextAsDownloadDataUrl(toJsonText(),"UTF-8","WeightTool"+exportIndex);
 		//exportTextChrome(toJsonText(),"WeightTool"+exportIndex);
-		exportIndex++;
+		//exportIndex++;
 	}
 	
 	int exportIndex;
@@ -1325,7 +1453,7 @@ public void onError(Request request, Throwable exception) {
 				initializeObject();
 				
 				if(loadedGeometry==null){//initial load
-				loadModel("shakure.js",
+				loadModel(modelUrl,
 				new  LoadHandler() {
 					//loader.load("men3smart.js", new  LoadHandler() {
 						@Override
@@ -1473,7 +1601,7 @@ public void onError(Request request, Throwable exception) {
 			WeightBuilder.autoWeight(loadedGeometry, bones, endSites,WeightBuilder.MODE_FROM_GEOMETRY, bodyIndices, bodyWeight);
 		}else{
 			//TODO support multiple autoWeight
-			WeightBuilder.autoWeight(loadedGeometry, bones, endSites,WeightBuilder.MODE_NearParentAndChildrenAgressive, bodyIndices, bodyWeight);
+			WeightBuilder.autoWeight(loadedGeometry, bones, endSites,WeightBuilder.MODE_MODE_Start_And_Half_ParentAndChildrenAgressive, bodyIndices, bodyWeight);
 			}
 	}
 	
@@ -1521,6 +1649,8 @@ public void onError(Request request, Throwable exception) {
 		
 		
 	private String textureUrl="female001_texture1.jpg";
+	private String bvhUrl="walking.bvh";
+	private String modelUrl="female03b.js";
 	
 	private void createSkinnedMesh(){
 		//log(bones);
@@ -1617,6 +1747,12 @@ public void onError(Request request, Throwable exception) {
 	private Button updateWeightButton;
 
 	private HTML5InputRange frameRange;
+
+	private TextBox saveFileBox;
+
+	private VerticalPanel exportLinks;
+
+	private Anchor anchor;
 	
 	private Vector4 convertWeight(int index,ColladaData collada){
 		if(wdatas==null){
