@@ -1021,7 +1021,7 @@ HorizontalPanel h1=new HorizontalPanel();
 		
 		
 		
-		
+		stackPanel.showWidget(2);//load
 		
 		createTabs();
 		//loadAndExport.add(new Label("Dont export large BVH.large(10M?) text data crash browser"));
@@ -1175,11 +1175,7 @@ HorizontalPanel h1=new HorizontalPanel();
 	
 	int exportIndex;
 	
-	public static final void exportTextAsDownloadDataUrl(String text,String encode,String wname){
-		
-		String url="data:application/octet-stream;charset="+encode+","+text;
-		Window.open(url, wname, null);
-	}
+	
 	
 	
 	public static final void exportTextAsDataUrl(String text,String encode,String wname){
@@ -1577,7 +1573,7 @@ public void onError(Request request, Throwable exception) {
 		selectionMesh.setVisible(false);	
 		
 	}
-	private int selectColor=0xccffcc;
+	private int selectColor=0xb362ff;
 	//private int defaultColor=0xffff00;
 	private void createWireBody(){
 		bodyGeometry=GeometryUtils.clone(loadedGeometry);
