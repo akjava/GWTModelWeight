@@ -50,14 +50,18 @@ import com.akjava.gwt.three.client.materials.Material;
 import com.akjava.gwt.three.client.objects.Mesh;
 import com.akjava.gwt.three.client.objects.SkinnedMesh;
 import com.akjava.gwt.three.client.renderers.WebGLRenderer;
+import com.akjava.gwt.three.client.textures.Texture;
+import com.google.gwt.canvas.client.Canvas;
 import com.google.gwt.core.client.JsArray;
 import com.google.gwt.core.client.JsArrayNumber;
 import com.google.gwt.core.client.JsArrayString;
+import com.google.gwt.dom.client.ImageElement;
 import com.google.gwt.dom.client.Style.Unit;
 import com.google.gwt.event.dom.client.ChangeEvent;
 import com.google.gwt.event.dom.client.ChangeHandler;
 import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
+import com.google.gwt.event.dom.client.LoadEvent;
 import com.google.gwt.event.dom.client.MouseMoveEvent;
 import com.google.gwt.event.logical.shared.SelectionEvent;
 import com.google.gwt.event.logical.shared.SelectionHandler;
@@ -76,9 +80,11 @@ import com.google.gwt.user.client.ui.Anchor;
 import com.google.gwt.user.client.ui.Button;
 import com.google.gwt.user.client.ui.CheckBox;
 import com.google.gwt.user.client.ui.HorizontalPanel;
+import com.google.gwt.user.client.ui.Image;
 import com.google.gwt.user.client.ui.Label;
 import com.google.gwt.user.client.ui.ListBox;
 import com.google.gwt.user.client.ui.Panel;
+import com.google.gwt.user.client.ui.RootPanel;
 import com.google.gwt.user.client.ui.StackLayoutPanel;
 import com.google.gwt.user.client.ui.TextBox;
 import com.google.gwt.user.client.ui.VerticalPanel;
@@ -88,7 +94,7 @@ import com.google.gwt.user.client.ui.VerticalPanel;
  * Entry point classes define <code>onModuleLoad()</code>.
  */
 public class GWTModelWeight extends SimpleTabDemoEntryPoint{
-
+	private String version="0.2";
 	@Override
 	protected void beforeUpdate(WebGLRenderer renderer) {
 		
@@ -955,7 +961,8 @@ HorizontalPanel h1=new HorizontalPanel();
 						//log("load:"+Benchmark.end("load"));
 						//GWT.log(reader.getResultAsString());
 						textureUrl=reader.getResultAsString();
-						createSkinnedMesh();
+						generateTexture();
+						//createSkinnedMesh();
 						textureSelection.setText("selection:"+file.getFileName());
 					}
 				});
@@ -1450,6 +1457,7 @@ public void onError(Request request, Throwable exception) {
 				//log(test.toString());
 				
 				
+				texture=ImageUtils.loadTexture(textureUrl);
 				initializeObject();
 				
 				if(loadedGeometry==null){//initial load
@@ -1650,8 +1658,48 @@ public void onError(Request request, Throwable exception) {
 		
 	private String textureUrl="female001_texture1.jpg";
 	private String bvhUrl="walking.bvh";
-	private String modelUrl="female03b.js";
+	private String modelUrl="female001.json";
 	
+	private Texture texture;
+	private void generateTexture(){
+		final Image img=new Image(textureUrl);
+		img.setVisible(false);
+		RootPanel.get().add(img);
+		img.addLoadHandler(new com.google.gwt.event.dom.client.LoadHandler() {
+			
+			@Override
+			public void onLoad(LoadEvent event) {
+				Canvas canvas=Canvas.createIfSupported();
+				canvas.setCoordinateSpaceWidth(img.getWidth());
+				canvas.setCoordinateSpaceHeight(img.getHeight());
+				canvas.getContext2d().drawImage(ImageElement.as(img.getElement()),0,0);
+				texture=THREE.Texture(canvas.getCanvasElement());
+				texture.setNeedsUpdate(true);
+				//Window.open(canvas.toDataUrl(), "test", null);
+				img.removeFromParent();
+				updateMaterial();
+			}
+		});
+		
+		
+		
+	}
+	
+	protected void updateMaterial() {
+		
+		Material material=null;
+		
+		if(useBasicMaterial.getValue()){
+			material=THREE.MeshBasicMaterial().skinning(true).color(0xffffff).map(texture).build();
+		}else{
+			material=THREE.MeshLambertMaterial().skinning(true).color(0xffffff).map(texture).build();
+		}
+		
+		
+		if(skinnedMesh!=null){
+			skinnedMesh.setMaterial(material);
+		}
+	}
 	private void createSkinnedMesh(){
 		//log(bones);
 		JsArray<AnimationBone> clonedBone=cloneBones(bones);
@@ -1667,10 +1715,10 @@ public void onError(Request request, Throwable exception) {
 		}
 		Material material=null;
 		if(useBasicMaterial.getValue()){
-			material=THREE.MeshBasicMaterial().skinning(true).color(0xffffff).map(ImageUtils.loadTexture(textureUrl)).build();
+			material=THREE.MeshBasicMaterial().skinning(true).color(0xffffff).map(texture).build();
 			
 		}else{
-			material=THREE.MeshLambertMaterial().skinning(true).color(0xffffff).map(ImageUtils.loadTexture(textureUrl)).build();
+			material=THREE.MeshLambertMaterial().skinning(true).color(0xffffff).map(texture).build();
 		}
 		skinnedMesh = THREE.SkinnedMesh(newgeo, material);
 		root.add(skinnedMesh);
@@ -2158,6 +2206,12 @@ private Vector4 findNearSpecial(List<NameAndPosition> nameAndPositions,Vector3 p
 	@Override
 	public String getTabTitle() {
 		return "Weight Tool";
+	}
+	@Override
+	public String getHtml(){
+	String html="Weight Tool ver."+version+" "+super.getHtml();
+
+	return html;	
 	}
 	
 }
