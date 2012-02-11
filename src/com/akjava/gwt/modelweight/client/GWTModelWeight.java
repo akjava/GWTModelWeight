@@ -29,6 +29,7 @@ import com.akjava.gwt.three.client.core.Object3D;
 import com.akjava.gwt.three.client.core.Projector;
 import com.akjava.gwt.three.client.core.Vector3;
 import com.akjava.gwt.three.client.core.Vector4;
+import com.akjava.gwt.three.client.core.Vertex;
 import com.akjava.gwt.three.client.extras.GeometryUtils;
 import com.akjava.gwt.three.client.extras.ImageUtils;
 import com.akjava.gwt.three.client.extras.animation.Animation;
@@ -94,7 +95,7 @@ import com.google.gwt.user.client.ui.VerticalPanel;
  * Entry point classes define <code>onModuleLoad()</code>.
  */
 public class GWTModelWeight extends SimpleTabDemoEntryPoint{
-	private String version="0.2";
+	private String version="0.2.1";
 	@Override
 	protected void beforeUpdate(WebGLRenderer renderer) {
 		
@@ -540,8 +541,10 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 			return 0x82ff7f;
 		}else if(v>0.149){
 			return 0x7fffbb;
-		}else if(v>0.5){
+		}else if(v>0.05){
 			return 0x7fffee;
+		}else if(v==0){
+			return 0;
 		}else{
 			return 0x7fcaff;
 		}
@@ -910,7 +913,7 @@ HorizontalPanel h1=new HorizontalPanel();
 					public void onLoad() {
 						//log("load:"+Benchmark.end("load"));
 						//GWT.log(reader.getResultAsString());
-						loadJsonModel(reader.getResultAsString(),new LoadHandler() {
+						lastJsonObject=loadJsonModel(reader.getResultAsString(),new LoadHandler() {
 							
 							@Override
 							public void loaded(Geometry geometry) {
@@ -972,6 +975,41 @@ HorizontalPanel h1=new HorizontalPanel();
 		});
 		loadAndExport.add(textureUpload);
 		
+		
+		loadAndExport.add(new Label("Weights and Idecis"));
+		final FileUploadForm weightUpload=new FileUploadForm();
+		final Label weightSelection=new Label("selection:");
+		loadAndExport.add(weightSelection);
+		
+		weightUpload.getFileUpload().addChangeHandler(new ChangeHandler() {
+			
+			@Override
+			public void onChange(ChangeEvent event) {
+				JsArray<File> files = FileUtils.toFile(event.getNativeEvent());
+				
+				final FileReader reader=FileReader.createFileReader();
+				final File file=files.get(0);
+				reader.setOnLoad(new FileHandler() {
+					@Override
+					public void onLoad() {
+						//dont need json object
+						loadJsonModel(reader.getResultAsString(),new LoadHandler() {
+							
+							@Override
+							public void loaded(Geometry geometry) {
+								setWeigthFromGeometry(geometry);
+								weightSelection.setText("selection:"+file.getFileName());
+							}
+
+						});
+					}
+				});
+				reader.readAsText(file,"utf-8");
+				weightUpload.reset();
+			}
+		});
+		loadAndExport.add(weightUpload);
+		
 		VerticalPanel export=new VerticalPanel();
 		stackPanel.add(export,"Export Datas",30);
 		
@@ -1026,6 +1064,50 @@ HorizontalPanel h1=new HorizontalPanel();
 		createTabs();
 		//loadAndExport.add(new Label("Dont export large BVH.large(10M?) text data crash browser"));
 		showControl();
+	}
+	
+
+	private void setWeigthFromGeometry(Geometry geometry) {
+		//loadedGeometry
+		//log(geometry);
+		//log(geometry.getSkinIndices());
+		//log(""+geometry.getSkinIndices().length());
+		if(geometry.getSkinIndices().length()==0){
+			return;
+		}
+		
+		for(int i=0;i<geometry.vertices().length();i++){
+			int loadedIndex=findSameIndex(loadedGeometry.vertices(), geometry.vertices().get(i));
+		//	log(i+" find:"+loadedIndex);
+			if(loadedIndex!=-1){
+				
+				bodyIndices.get(loadedIndex).setX(geometry.getSkinIndices().get(i).getX());
+				bodyIndices.get(loadedIndex).setY(geometry.getSkinIndices().get(i).getY());
+				
+				bodyWeight.get(loadedIndex).setX(geometry.getSkinWeight().get(i).getX());
+				bodyWeight.get(loadedIndex).setY(geometry.getSkinWeight().get(i).getY());
+				
+			}
+		}
+		updateVertexColor();
+	}
+	private int findSameIndex(JsArray<Vertex> vertexList,Vertex checkVertex){
+		int result=-1;
+		for(int i=0;i<vertexList.length();i++){
+			boolean same=true;
+			if(vertexList.get(i).getPosition().getX()!=checkVertex.getPosition().getX()){
+				same=false;
+			}else if(vertexList.get(i).getPosition().getY()!=checkVertex.getPosition().getY()){
+				same=false;
+			}else if(vertexList.get(i).getPosition().getZ()!=checkVertex.getPosition().getZ()){
+				same=false;
+			}
+			if(same){
+				result=i;
+				break;
+			}
+		}
+		return result;
 	}
 	
 	protected void updateAutoWeight(String value) {
@@ -1463,26 +1545,16 @@ public void onError(Request request, Throwable exception) {
 						@Override
 						public void loaded(Geometry geometry) {
 						
-						//	SubdivisionModifier modifier=THREE.SubdivisionModifier(3);
-						//	modifier.modify(geometry);
-							//log(geometry);
-							
+						
 							for(int i=0;i<bones.length();i++){
 								if(bones.get(i).getParent()!=-1)
 								log(bones.get(i).getName()+",parent="+bones.get(bones.get(i).getParent()).getName());
 							}
-							//findIndex(geometry);
 							
 							//auto weight
 							loadedGeometry=geometry;
 							
-							
-						
 							autoWeight();
-						
-							
-							//log(bodyIndices);
-							//log(bodyWeight);
 							
 							createSkinnedMesh();
 							
@@ -1609,17 +1681,18 @@ public void onError(Request request, Throwable exception) {
 			}
 	}
 	
-	private void loadJsonModel(String jsonText,LoadHandler handler){
+	private JSONObject loadJsonModel(String jsonText,LoadHandler handler){
 		JSONLoader loader=THREE.JSONLoader();
 		JSONValue lastJsonValue = JSONParser.parseLenient(jsonText);
 		JSONObject object=lastJsonValue.isObject();
 		if(object==null){
 			log("invalid-json object");
 		}
-		lastJsonObject=object;
+		
 		//log(object.getJavaScriptObject());
 		loader.createModel(object.getJavaScriptObject(), handler, "");
 		loader.onLoadComplete();
+		return object;
 		
 	}
 	
@@ -1632,7 +1705,7 @@ public void onError(Request request, Throwable exception) {
 					@Override
 					public void onResponseReceived(Request request, Response response) {
 						
-						loadJsonModel(response.getText(),handler);
+						lastJsonObject=loadJsonModel(response.getText(),handler);
 					}
 					
 					
