@@ -154,7 +154,9 @@ public class MergeToolPanel extends VerticalPanel{
 
 			@Override
 			public void onClick(ClickEvent event) {
-				
+				if(true){
+					throw new RuntimeException("now not support need fix setVertices");
+				}
 				Geometry exportGeo=GWTGeometryUtils.mergeGeometryPlusWeights(GWTGeometryUtils.clonePlusWeights(file1Object), file2Object);
 				
 				
@@ -164,7 +166,7 @@ public class MergeToolPanel extends VerticalPanel{
 				
 				modelFile.setGeometryUvs(exportGeo.getFaceVertexUvs());
 				
-				modelFile.setVertices(exportGeo.vertices());
+				//modelFile.setVertices(exportGeo.vertices());
 				
 				modelFile.setFaces(exportGeo.faces());
 				
@@ -183,7 +185,7 @@ public class MergeToolPanel extends VerticalPanel{
 					anchror.removeFromParent();
 					anchror=null;
 				}
-				anchror = HTML5Download.generateTextDownloadLink(modelFile.getJsonText(), fileName, "Download");
+				anchror = new HTML5Download().generateTextDownloadLink(modelFile.getJsonText(), fileName, "Download");
 				anchror.addClickHandler(new ClickHandler() {
 					
 					@Override

@@ -1,7 +1,7 @@
 package com.akjava.gwt.modelweight.client;
 
 import com.akjava.gwt.html5.client.HTML5InputRange;
-import com.akjava.gwt.html5.client.HTML5InputRange.HTML5InputRangeListener;
+import com.akjava.gwt.html5.client.InputRangeListener;
 import com.akjava.gwt.three.client.core.Vector4;
 import com.akjava.gwt.three.client.gwt.animation.AnimationBone;
 import com.google.gwt.core.client.JsArray;
@@ -30,7 +30,11 @@ public class IndexAndWeightEditor extends VerticalPanel{
 		index2 = new ListBox();
 		add(index2);
 		
-		balance = new HTML5InputRange(0,100,50);
+		balance = new HTML5InputRange();
+		balance.setMin(0);
+		balance.setMax(100);
+		balance.setValue(50);
+		
 		add(balance);
 		
 		add(createRangeLabel("",balance));
@@ -80,7 +84,7 @@ public class IndexAndWeightEditor extends VerticalPanel{
 		final Label label=new Label();
 		label.setText("");
 		label.setStylePrimaryName("title");
-		range.addListener(new HTML5InputRangeListener() {
+		range.addInputRangeListener(new InputRangeListener() {
 			@Override
 			public void changed(int newValue) {
 				double index1=(100.0-newValue)/100;

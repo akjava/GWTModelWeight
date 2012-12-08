@@ -155,7 +155,7 @@ public class CopyToolPanel extends VerticalPanel{
 				file2Object.put("skinIndices", file1Object.get("skinIndices"));
 				file2Object.put("skinWeights", file1Object.get("skinWeights"));
 				
-				final Anchor anchror=HTML5Download.generateTextDownloadLink(file2Object.toString(), file2Label.getText(), "Download");
+				final Anchor anchror=new HTML5Download().generateTextDownloadLink(file2Object.toString(), file2Label.getText(), "Download");
 				anchror.addClickHandler(new ClickHandler() {
 					
 					@Override

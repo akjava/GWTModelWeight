@@ -11,6 +11,8 @@ import com.akjava.bvh.client.BVHParser.ParserListener;
 import com.akjava.gwt.bvh.client.threejs.AnimationBoneConverter;
 import com.akjava.gwt.bvh.client.threejs.AnimationDataConverter;
 import com.akjava.gwt.html5.client.HTML5InputRange;
+import com.akjava.gwt.html5.client.InputRangeListener;
+import com.akjava.gwt.html5.client.InputRangeWidget;
 import com.akjava.gwt.html5.client.download.HTML5Download;
 import com.akjava.gwt.html5.client.extra.HTML5Builder;
 import com.akjava.gwt.html5.client.file.File;
@@ -18,6 +20,9 @@ import com.akjava.gwt.html5.client.file.FileHandler;
 import com.akjava.gwt.html5.client.file.FileReader;
 import com.akjava.gwt.html5.client.file.FileUploadForm;
 import com.akjava.gwt.html5.client.file.FileUtils;
+import com.akjava.gwt.html5.client.file.ui.DropVerticalPanelBase;
+import com.akjava.gwt.lib.client.IStorageControler;
+import com.akjava.gwt.lib.client.LogUtils;
 import com.akjava.gwt.lib.client.StorageControler;
 import com.akjava.gwt.lib.client.StorageDataList;
 import com.akjava.gwt.modelweight.client.weight.GWTWeightData;
@@ -27,6 +32,7 @@ import com.akjava.gwt.three.client.core.Geometry;
 import com.akjava.gwt.three.client.core.Intersect;
 import com.akjava.gwt.three.client.core.Object3D;
 import com.akjava.gwt.three.client.core.Projector;
+import com.akjava.gwt.three.client.core.Ray;
 import com.akjava.gwt.three.client.core.Vector3;
 import com.akjava.gwt.three.client.core.Vector4;
 import com.akjava.gwt.three.client.core.Vertex;
@@ -63,7 +69,9 @@ import com.google.gwt.event.dom.client.ChangeHandler;
 import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
 import com.google.gwt.event.dom.client.LoadEvent;
+import com.google.gwt.event.dom.client.MouseDownEvent;
 import com.google.gwt.event.dom.client.MouseMoveEvent;
+import com.google.gwt.event.dom.client.MouseUpEvent;
 import com.google.gwt.event.logical.shared.SelectionEvent;
 import com.google.gwt.event.logical.shared.SelectionHandler;
 import com.google.gwt.http.client.Request;
@@ -84,7 +92,6 @@ import com.google.gwt.user.client.ui.HorizontalPanel;
 import com.google.gwt.user.client.ui.Image;
 import com.google.gwt.user.client.ui.Label;
 import com.google.gwt.user.client.ui.ListBox;
-import com.google.gwt.user.client.ui.Panel;
 import com.google.gwt.user.client.ui.RootPanel;
 import com.google.gwt.user.client.ui.StackLayoutPanel;
 import com.google.gwt.user.client.ui.TextBox;
@@ -95,7 +102,7 @@ import com.google.gwt.user.client.ui.VerticalPanel;
  * Entry point classes define <code>onModuleLoad()</code>.
  */
 public class GWTModelWeight extends SimpleTabDemoEntryPoint{
-	private String version="0.2.1";
+	private String version="0.2.2";
 	@Override
 	protected void beforeUpdate(WebGLRenderer renderer) {
 		
@@ -110,12 +117,12 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 			}
 		
 		long delta=clock.delta();
-		//log(""+animation.getCurrentTime());
+		//LogUtils.log(""+animation.getCurrentTime());
 		double v=(double)delta/1000;
 		if(!paused && animation!=null){
 			AnimationHandler.update(v);
 			currentTime=animation.getCurrentTime();
-			//log(""+currentTime+","+delta);
+			//LogUtils.log(""+currentTime+","+delta);
 			String check=""+currentTime;
 			if(check.equals("NaN")){
 				currentTime=0;
@@ -138,8 +145,10 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 
 	double currentTime;
 	
-	private StorageControler storageControler;
+	private IStorageControler storageControler;
 	private Clock clock=new Clock();
+
+	private Mesh mouseClickCatcher;
 	@Override
 	protected void initializeOthers(WebGLRenderer renderer) {
 		
@@ -163,10 +172,13 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		scene.add(pointLight2);
 		
 		projector=THREE.Projector();
+		
+		mouseClickCatcher=THREE.Mesh(THREE.PlaneGeometry(100, 100, 10, 10), THREE.MeshBasicMaterial().color(0xffff00).wireFrame().build());
+		scene.add(mouseClickCatcher);
 		/*
 		//write test
 		Geometry g=THREE.CubeGeometry(1, 1, 1);
-		log(g);
+		LogUtils.log(g);
 		
 		Geometry g2=THREE.CubeGeometry(1, 1, 1);
 		Matrix4 mx=THREE.Matrix4();
@@ -187,7 +199,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		
 		//JSONArray vertices=new JSONArray(nums);
 		JSONObject js=new JSONObject(model);
-		log(js.toString());
+		LogUtils.log(js.toString());
 		
 		scene.add(THREE.AmbientLight(0x888888));
 		Light pointLight = THREE.PointLight(0xffffff);
@@ -203,10 +215,10 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 			@Override
 			public void loaded(Geometry geometry) {
 				AnimationHandler.add(geometry.getAnimation());
-				log(geometry.getBones());
-				log(geometry.getAnimation());
+				LogUtils.log(geometry.getBones());
+				LogUtils.log(geometry.getAnimation());
 				//JSONObject test=new JSONObject(geometry.getAnimation());
-				//log(test.toString());
+				//LogUtils.log(test.toString());
 				
 				Geometry cube=THREE.CubeGeometry(1, 1, 1);
 				JsArray<Vector4> indices=(JsArray<Vector4>) JsArray.createArray();
@@ -235,7 +247,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 				//scene.add(mesh);
 				
 				//Animation animation = THREE.Animation( mesh, "take_001" );
-				//log(animation);
+				//LogUtils.log(animation);
 				//animation.play(); //buffalo
 				
 				
@@ -325,7 +337,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 				if(end.getX()==0 && end.getY()==0 && end.getZ()==0){
 					continue;//ignore 0 
 				}else{
-					log(bone.getName()+":"+ThreeLog.get(end));
+					LogUtils.log(bone.getName()+":"+ThreeLog.get(end));
 				}
 				Vector3 epos=end.clone().addSelf(pos);
 				endMesh.setPosition(epos);
@@ -422,8 +434,18 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 	private Projector projector;
 	Label debugLabel;
 	List<Integer> selections=new ArrayList<Integer>();
+
+	private Object3D selectedObject;
+	private Vector3 offset=THREE.Vector3();
+	
 	@Override
-	public void onMouseClick(ClickEvent event) {
+	public void onMouseUp(MouseUpEvent event) {
+		super.onMouseUp(event);
+		selectedObject=null;
+	}
+	@Override
+	public void onMouseDown(MouseDownEvent event) {
+		super.onMouseDown(event);
 		int x=event.getX();
 		int y=event.getY();
 		/*
@@ -431,9 +453,9 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 			screenMove(x,y);
 			return;
 		}*/
-		//log("screen:"+screenWidth+"x"+screenHeight);
+		//LogUtils.log("screen:"+screenWidth+"x"+screenHeight);
 		JsArray<Intersect> intersects=projector.gwtPickIntersects(event.getX(), event.getY(), screenWidth, screenHeight, camera,scene);
-		//log("intersects:"+intersects.length());
+		//LogUtils.log("intersects:"+intersects.length());
 		for(int i=0;i<intersects.length();i++){
 			Intersect sect=intersects.get(i);
 			
@@ -481,10 +503,30 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 					
 					
 					return;
-				}else{
+				}else{//must be bone
 					if(event.isShiftKeyDown()){
 						continue;
 					}
+					
+					selectedObject=target;
+					Ray ray=projector.gwtCreateRay(x, y, screenWidth, screenHeight, camera);
+					
+					
+					
+					
+					mouseClickCatcher.getPosition().copy( GWTThreeUtils.toPositionVec(target.getMatrixWorld()) );
+					//mouseClickCatcher.getPosition().copy( target.getPosition() );
+					mouseClickCatcher.updateMatrixWorld(true);//very important
+					
+					
+					//mouseClickCatcher.lookAt(camera.getPosition());
+					
+					JsArray<Intersect> pintersects=ray.intersectObject(mouseClickCatcher);
+					//LogUtils.log("plain:"+ThreeLog.get(pintersects.get(0).getPoint()));
+					offset.copy(pintersects.get(0).getPoint()).subSelf(mouseClickCatcher.getPosition());
+					
+					
+					
 				clearSelections();
 				selectBone(target);
 				break;
@@ -517,7 +559,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		}
 		
 		if(index==318){
-			log("isIndex1:"+isIndex1+",index="+index1+",selectBone="+selectionBoneIndex+",v="+v);
+			LogUtils.log("isIndex1:"+isIndex1+",index="+index1+",selectBone="+selectionBoneIndex+",v="+v);
 		}
 		if(v==1){
 			return 0xfffefe;
@@ -574,7 +616,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		}
 	}
 	private void selectVertexsByBone(int selectedBoneIndex) {
-		log("selectVertexsByBone");
+		LogUtils.log("selectVertexsByBone");
 		for(int i=0;i<bodyGeometry.vertices().length();i++){
 			Vector4 index=bodyIndices.get(i);
 			Mesh mesh=vertexMeshs.get(i);
@@ -582,7 +624,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 				mesh.setVisible(true);
 				mesh.getMaterial().getColor().setHex(getVertexColor(i));
 				//mesh.getMaterial().getColor().setHex(getVertexColor(i));
-				//log(weight.getX()+","+weight.getY());
+				//LogUtils.log(weight.getX()+","+weight.getY());
 			}else{
 				mesh.setVisible(false);
 				mesh.getMaterial().getColor().setHex(getVertexColor(i));
@@ -606,12 +648,39 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 	double posY;
 	@Override
 	public void onMouseMove(MouseMoveEvent event) {
+		
+		
+		/*
+		if(selectedObject!=null && event.getNativeButton()==NativeEvent.BUTTON_MIDDLE){
+			
+			Ray ray=projector.gwtCreateRay(event.getX(), event.getY(), screenWidth, screenHeight, camera);
+			JsArray<Intersect> intersects = ray.intersectObject( mouseClickCatcher );
+			
+			
+			Vector3 newPos=intersects.get(0).getPoint().subSelf( offset );
+			
+			Matrix4 rotM=THREE.Matrix4();
+			rotM.getInverse(selectedObject.getMatrixRotationWorld());
+			rotM.multiplyVector3(newPos);		
+			
+			selectedObject.getPosition().copy( newPos);
+			return;
+		}*/
+		
+		
 		if(mouseDown){
 			
 			int diffX=event.getX()-mouseDownX;
 			int diffY=event.getY()-mouseDownY;
 			mouseDownX=event.getX();
 			mouseDownY=event.getY();
+			
+			
+			
+			
+			
+			
+			
 			
 			if(event.isControlKeyDown()){//TODO future function
 				/*
@@ -633,15 +702,15 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		}
 	}
 	
-	private HTML5InputRange positionXRange;
-	private HTML5InputRange positionYRange;
-	private HTML5InputRange positionZRange;
+	private InputRangeWidget positionXRange;
+	private InputRangeWidget positionYRange;
+	private InputRangeWidget positionZRange;
 	
-	private HTML5InputRange rotationRange;
-	private HTML5InputRange rotationYRange;
-	private HTML5InputRange rotationZRange;
+	private InputRangeWidget rotationRange;
+	private InputRangeWidget rotationYRange;
+	private InputRangeWidget rotationZRange;
 	@Override
-	public void createControl(Panel parent) {
+	public void createControl(DropVerticalPanelBase parent) {
 		debugLabel=new Label();
 		parent.add(debugLabel);
 		
@@ -656,7 +725,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		
 HorizontalPanel h1=new HorizontalPanel();
 		
-		rotationRange = new HTML5InputRange(-180,180,0);
+		rotationRange = InputRangeWidget.createInputRange(-180,180,0);
 		modelPositionAndRotation.add(HTML5Builder.createRangeLabel("X-Rotate:", rotationRange));
 		modelPositionAndRotation.add(h1);
 		h1.add(rotationRange);
@@ -671,7 +740,7 @@ HorizontalPanel h1=new HorizontalPanel();
 		
 		HorizontalPanel h2=new HorizontalPanel();
 		
-		rotationYRange = new HTML5InputRange(-180,180,0);
+		rotationYRange = InputRangeWidget.createInputRange(-180,180,0);
 		modelPositionAndRotation.add(HTML5Builder.createRangeLabel("Y-Rotate:", rotationYRange));
 		modelPositionAndRotation.add(h2);
 		h2.add(rotationYRange);
@@ -686,7 +755,7 @@ HorizontalPanel h1=new HorizontalPanel();
 		
 		
 		HorizontalPanel h3=new HorizontalPanel();
-		rotationZRange = new HTML5InputRange(-180,180,0);
+		rotationZRange = InputRangeWidget.createInputRange(-180,180,0);
 		modelPositionAndRotation.add(HTML5Builder.createRangeLabel("Z-Rotate:", rotationZRange));
 		modelPositionAndRotation.add(h3);
 		h3.add(rotationZRange);
@@ -700,7 +769,7 @@ HorizontalPanel h1=new HorizontalPanel();
 		h3.add(reset3);
 		
 		HorizontalPanel h4=new HorizontalPanel();
-		positionXRange = new HTML5InputRange(-50,50,0);
+		positionXRange = InputRangeWidget.createInputRange(-50,50,0);
 		modelPositionAndRotation.add(HTML5Builder.createRangeLabel("X-Position:", positionXRange));
 		modelPositionAndRotation.add(h4);
 		h4.add(positionXRange);
@@ -714,7 +783,7 @@ HorizontalPanel h1=new HorizontalPanel();
 		h4.add(reset4);
 		
 		HorizontalPanel h5=new HorizontalPanel();
-		positionYRange = new HTML5InputRange(-50,50,0);
+		positionYRange = InputRangeWidget.createInputRange(-50,50,0);
 		modelPositionAndRotation.add(HTML5Builder.createRangeLabel("Y-Position:", positionYRange));
 		modelPositionAndRotation.add(h5);
 		h5.add(positionYRange);
@@ -728,7 +797,7 @@ HorizontalPanel h1=new HorizontalPanel();
 		h5.add(reset5);
 		
 		HorizontalPanel h6=new HorizontalPanel();
-		positionZRange = new HTML5InputRange(-50,50,0);
+		positionZRange = InputRangeWidget.createInputRange(-50,50,0);
 		modelPositionAndRotation.add(HTML5Builder.createRangeLabel("Z-Position:", positionZRange));
 		modelPositionAndRotation.add(h6);
 		h6.add(positionZRange);
@@ -754,13 +823,14 @@ HorizontalPanel h1=new HorizontalPanel();
 			}
 		});
 		
-		frameRange = new HTML5InputRange(0, 0, 0);
-		frameRange.addChangeHandler(new ChangeHandler() {
+		frameRange = InputRangeWidget.createInputRange(0, 0, 0);
+		frameRange.addInputRangeListener(new InputRangeListener() {
 			@Override
-			public void onChange(ChangeEvent event) {
+			public void changed(int newValue) {
 				updateFrameRange();
 			}
 		});
+		
 		parent.add(frameRange);
 		
 		
@@ -831,7 +901,7 @@ HorizontalPanel h1=new HorizontalPanel();
 					}
 				}
 				
-				//log("new-ind-weight:"+in.getX()+","+in.getY()+","+we.getX()+","+we.getY());
+				//LogUtils.log("new-ind-weight:"+in.getX()+","+in.getY()+","+we.getX()+","+we.getY());
 				createSkinnedMesh();
 				selectVertexsByBone(selectionBoneIndex);
 			}
@@ -884,7 +954,7 @@ HorizontalPanel h1=new HorizontalPanel();
 				reader.setOnLoad(new FileHandler() {
 					@Override
 					public void onLoad() {
-						//log("load:"+Benchmark.end("load"));
+						//LogUtils.log("load:"+Benchmark.end("load"));
 						//GWT.log(reader.getResultAsString());
 						parseBVH(reader.getResultAsString());
 						bvhSelection.setText("selection:"+file.getFileName());
@@ -911,7 +981,7 @@ HorizontalPanel h1=new HorizontalPanel();
 				reader.setOnLoad(new FileHandler() {
 					@Override
 					public void onLoad() {
-						//log("load:"+Benchmark.end("load"));
+						//LogUtils.log("load:"+Benchmark.end("load"));
 						//GWT.log(reader.getResultAsString());
 						lastJsonObject=loadJsonModel(reader.getResultAsString(),new LoadHandler() {
 							
@@ -927,8 +997,8 @@ HorizontalPanel h1=new HorizontalPanel();
 								autoWeight();
 							
 								
-								//log(bodyIndices);
-								//log(bodyWeight);
+								//LogUtils.log(bodyIndices);
+								//LogUtils.log(bodyWeight);
 								
 								createSkinnedMesh();
 								
@@ -961,7 +1031,7 @@ HorizontalPanel h1=new HorizontalPanel();
 				reader.setOnLoad(new FileHandler() {
 					@Override
 					public void onLoad() {
-						//log("load:"+Benchmark.end("load"));
+						//LogUtils.log("load:"+Benchmark.end("load"));
 						//GWT.log(reader.getResultAsString());
 						textureUrl=reader.getResultAsString();
 						generateTexture();
@@ -1069,16 +1139,16 @@ HorizontalPanel h1=new HorizontalPanel();
 
 	private void setWeigthFromGeometry(Geometry geometry) {
 		//loadedGeometry
-		//log(geometry);
-		//log(geometry.getSkinIndices());
-		//log(""+geometry.getSkinIndices().length());
+		//LogUtils.log(geometry);
+		//LogUtils.log(geometry.getSkinIndices());
+		//LogUtils.log(""+geometry.getSkinIndices().length());
 		if(geometry.getSkinIndices().length()==0){
 			return;
 		}
 		
 		for(int i=0;i<geometry.vertices().length();i++){
 			int loadedIndex=findSameIndex(loadedGeometry.vertices(), geometry.vertices().get(i));
-		//	log(i+" find:"+loadedIndex);
+		//	LogUtils.log(i+" find:"+loadedIndex);
 			if(loadedIndex!=-1){
 				
 				bodyIndices.get(loadedIndex).setX(geometry.getSkinIndices().get(i).getX());
@@ -1091,15 +1161,15 @@ HorizontalPanel h1=new HorizontalPanel();
 		}
 		updateVertexColor();
 	}
-	private int findSameIndex(JsArray<Vertex> vertexList,Vertex checkVertex){
+	private int findSameIndex(JsArray<Vector3> vertexList,Vector3 checkVertex){
 		int result=-1;
 		for(int i=0;i<vertexList.length();i++){
 			boolean same=true;
-			if(vertexList.get(i).getPosition().getX()!=checkVertex.getPosition().getX()){
+			if(vertexList.get(i).getX()!=checkVertex.getX()){
 				same=false;
-			}else if(vertexList.get(i).getPosition().getY()!=checkVertex.getPosition().getY()){
+			}else if(vertexList.get(i).getY()!=checkVertex.getY()){
 				same=false;
-			}else if(vertexList.get(i).getPosition().getZ()!=checkVertex.getPosition().getZ()){
+			}else if(vertexList.get(i).getZ()!=checkVertex.getZ()){
 				same=false;
 			}
 			if(same){
@@ -1139,7 +1209,7 @@ HorizontalPanel h1=new HorizontalPanel();
 	protected void updateFrameRange() {
 		paused=true;
 		double time=frameRange.getValue()*bvh.getFrameTime();
-		log("set-current:"+time);
+		LogUtils.log("set-current:"+time);
 		animation.setCurrentTime(time);
 		AnimationHandler.update(0);
 	}
@@ -1189,7 +1259,7 @@ HorizontalPanel h1=new HorizontalPanel();
 		Vector4 in=bodyIndices.get(index);
 		Vector4 we=bodyWeight.get(index);
 		
-		log("select:"+index+","+we.getX()+","+we.getY());
+		LogUtils.log("select:"+index+","+we.getX()+","+we.getY());
 		
 		vertexMeshs.get(index).getMaterial().getColor().setHex(selectColor);
 		
@@ -1241,7 +1311,7 @@ HorizontalPanel h1=new HorizontalPanel();
 			anchor.removeFromParent();
 			anchor=null;
 		}
-		anchor = HTML5Download.generateTextDownloadLink(json, name, "Download File");
+		anchor = new HTML5Download().generateTextDownloadLink(json, name, "Download File");
 		exportLinks.add(anchor);
 		anchor.addClickHandler(new ClickHandler() {
 			
@@ -1284,7 +1354,7 @@ HorizontalPanel h1=new HorizontalPanel();
 					public void onResponseReceived(Request request, Response response) {
 						
 						String bvhText=response.getText();
-						//log("loaded:"+Benchmark.end("load"));
+						//LogUtils.log("loaded:"+Benchmark.end("load"));
 						//useless spend allmost time with request and spliting.
 						parseBVH(bvhText);
 
@@ -1299,7 +1369,7 @@ public void onError(Request request, Throwable exception) {
 }
 				});
 			} catch (RequestException e) {
-				log(e.getMessage());
+				LogUtils.log(e.getMessage());
 				e.printStackTrace();
 			}
 	}
@@ -1389,9 +1459,9 @@ public void onError(Request request, Throwable exception) {
 				
 				/*
 				for(int i=0;i<bones.length();i++){
-				//	log(i+":"+bones.get(i).getName());
+				//	LogUtils.log(i+":"+bones.get(i).getName());
 				}
-				GWT.log("parsed");
+				GWT.LogUtils.log("parsed");
 				*/
 				
 				/*
@@ -1503,8 +1573,8 @@ public void onError(Request request, Throwable exception) {
 				}
 				
 				
-				log("cube");
-				log(cube);
+				LogUtils.log("cube");
+				LogUtils.log(cube);
 				
 				cube.setSkinIndices(indices);
 				cube.setSkinWeight(weight);
@@ -1525,14 +1595,14 @@ public void onError(Request request, Throwable exception) {
 				
 				//overwrite same name
 				AnimationHandler.add(animationData);
-				//log(data);
-				//log(bones);
+				//LogUtils.log(data);
+				//LogUtils.log(bones);
 				
 				JSONArray array=new JSONArray(bones);
-				//log(array.toString());
+				//LogUtils.log(array.toString());
 				
 				JSONObject test=new JSONObject(animationData);
-				//log(test.toString());
+				//LogUtils.log(test.toString());
 				
 				
 				texture=ImageUtils.loadTexture(textureUrl);
@@ -1548,7 +1618,7 @@ public void onError(Request request, Throwable exception) {
 						
 							for(int i=0;i<bones.length();i++){
 								if(bones.get(i).getParent()!=-1)
-								log(bones.get(i).getName()+",parent="+bones.get(bones.get(i).getParent()).getName());
+								LogUtils.log(bones.get(i).getName()+",parent="+bones.get(bones.get(i).getParent()).getName());
 							}
 							
 							//auto weight
@@ -1569,9 +1639,9 @@ public void onError(Request request, Throwable exception) {
 					createSkinnedMesh();
 					createWireBody();
 				}
-				//log("before create");
+				//LogUtils.log("before create");
 				//Mesh mesh=THREE.Mesh(cube, THREE.MeshLambertMaterial().skinning(false).color(0xff0000).build());
-				//log("create-mesh");
+				//LogUtils.log("create-mesh");
 				//scene.add(mesh);
 				
 				
@@ -1584,11 +1654,11 @@ public void onError(Request request, Throwable exception) {
 					
 					public void colladaReady(ColladaData collada) {
 						rawCollada=collada;
-						log(collada);
+						LogUtils.log(collada);
 						boneNameMaps=new HashMap<String,Integer>();
 						for(int i=0;i<bones.length();i++){
 							boneNameMaps.put(bones.get(i).getName(), i);
-							log(i+":"+bones.get(i).getName());
+							LogUtils.log(i+":"+bones.get(i).getName());
 						}
 						
 						Geometry geometry=collada.getGeometry();
@@ -1604,7 +1674,7 @@ public void onError(Request request, Throwable exception) {
 			
 			@Override
 			public void onFaild(String message) {
-				log(message);
+				LogUtils.log(message);
 			}
 		});
 	}
@@ -1660,7 +1730,7 @@ public void onError(Request request, Throwable exception) {
 		
 		for(int i=0;i<bodyGeometry.vertices().length();i++){
 			Material mt=THREE.MeshBasicMaterial().color(getVertexColor(i)).build();
-			Vector3 vx=bodyGeometry.vertices().get(i).getPosition();
+			Vector3 vx=bodyGeometry.vertices().get(i);
 			Mesh point=THREE.Mesh(cube, mt);
 			point.setVisible(false);
 			point.setName("point:"+i);
@@ -1673,7 +1743,7 @@ public void onError(Request request, Throwable exception) {
 		bodyIndices = (JsArray<Vector4>) JsArray.createArray();
 		bodyWeight = (JsArray<Vector4>) JsArray.createArray();
 		if(loadedGeometry.getSkinIndices().length()!=0 && loadedGeometry.getSkinWeight().length()!=0){
-			log("auto-weight from geometry:");
+			LogUtils.log("auto-weight from geometry:");
 			WeightBuilder.autoWeight(loadedGeometry, bones, endSites,WeightBuilder.MODE_FROM_GEOMETRY, bodyIndices, bodyWeight);
 		}else{
 			//TODO support multiple autoWeight
@@ -1686,10 +1756,10 @@ public void onError(Request request, Throwable exception) {
 		JSONValue lastJsonValue = JSONParser.parseLenient(jsonText);
 		JSONObject object=lastJsonValue.isObject();
 		if(object==null){
-			log("invalid-json object");
+			LogUtils.log("invalid-json object");
 		}
 		
-		//log(object.getJavaScriptObject());
+		//LogUtils.log(object.getJavaScriptObject());
 		loader.createModel(object.getJavaScriptObject(), handler, "");
 		loader.onLoadComplete();
 		return object;
@@ -1717,7 +1787,7 @@ public void onError(Request request, Throwable exception) {
 }
 				});
 			} catch (RequestException e) {
-				log(e.getMessage());
+				LogUtils.log(e.getMessage());
 				e.printStackTrace();
 			}
 		
@@ -1770,11 +1840,11 @@ public void onError(Request request, Throwable exception) {
 		}
 	}
 	private void createSkinnedMesh(){
-		//log(bones);
+		//LogUtils.log(bones);
 		JsArray<AnimationBone> clonedBone=cloneBones(bones);
 		//this is not work fine.just remove root moving to decrese flicking
 		AnimationBoneConverter.setBoneAngles(clonedBone, rawAnimationData, 0);
-		//log(clonedBone);
+		//LogUtils.log(clonedBone);
 		Geometry newgeo=GeometryUtils.clone(loadedGeometry);
 		newgeo.setSkinIndices(bodyIndices);
 		newgeo.setSkinWeight(bodyWeight);
@@ -1863,7 +1933,7 @@ public void onError(Request request, Throwable exception) {
 
 	private Button updateWeightButton;
 
-	private HTML5InputRange frameRange;
+	private InputRangeWidget frameRange;
 
 	private TextBox saveFileBox;
 
@@ -1880,7 +1950,7 @@ public void onError(Request request, Throwable exception) {
 				for(GWTWeightData w:wd){
 					log+=w.getBoneIndex()+":"+w.getWeight()+",";
 				}
-				//log(log);
+				//LogUtils.log(log);
 			}
 		}
 		List<GWTWeightData> wd=wdatas.get(index);
@@ -1902,7 +1972,7 @@ public void onError(Request request, Throwable exception) {
 			
 			double fw=wd.get(0).getWeight();
 			double sw=wd.get(1).getWeight();
-			//log(fid+":"+fw+","+sid+":"+sw);
+			//LogUtils.log(fid+":"+fw+","+sid+":"+sw);
 			
 			//fw=1;
 			
@@ -1926,7 +1996,7 @@ private Vector4 findNearSpecial(List<NameAndPosition> nameAndPositions,Vector3 p
 		Vector3 npt=nameAndPositions.get(i).getPosition().clone();
 		Vector3 subPos=npt.subSelf(pos);
 		double l=subPos.length();
-		//if(vindex==250)log(nameAndPositions.get(i).getName()+","+l);
+		//if(vindex==250)LogUtils.log(nameAndPositions.get(i).getName()+","+l);
 		
 		if(l<near1){
 			int tmp=index1;
@@ -1996,10 +2066,10 @@ private Vector4 findNearSpecial(List<NameAndPosition> nameAndPositions,Vector3 p
 		}
 		
 		if(index1==index2){
-			//log(""+vindex+","+nameIndex1+":"+nameIndex2);
+			//LogUtils.log(""+vindex+","+nameIndex1+":"+nameIndex2);
 			if(vindex==250){
-			//	log(nameAndPositions.get(nameIndex1).getPosition());
-			//	log(nameAndPositions.get(nameIndex2).getPosition());
+			//	LogUtils.log(nameAndPositions.get(nameIndex1).getPosition());
+			//	LogUtils.log(nameAndPositions.get(nameIndex2).getPosition());
 			}
 			return THREE.Vector4(index1,index1,1,0);
 		}else{
@@ -2020,7 +2090,7 @@ private Vector4 findNearSpecial(List<NameAndPosition> nameAndPositions,Vector3 p
 		Map<Integer,Integer> totalIndex=new HashMap<Integer,Integer>();
 		
 		
-		//log("find-near:"+vindex);
+		//LogUtils.log("find-near:"+vindex);
 		for(int i=0;i<nameAndPositions.size();i++){
 			int index=nameAndPositions.get(i).getIndex();
 			Vector3 near=nameAndPositions.get(i).getPosition().clone();
@@ -2084,7 +2154,7 @@ private Vector4 findNearSpecial(List<NameAndPosition> nameAndPositions,Vector3 p
 			return THREE.Vector4(index1,index1,1,0);
 		}else{
 			double total=near1+near2;
-			log("xx:"+index1+","+index2);
+			LogUtils.log("xx:"+index1+","+index2);
 			return THREE.Vector4(index1,index2,(total-near1)/total,(total-near2)/total);
 		}
 	}
@@ -2281,6 +2351,11 @@ private Vector4 findNearSpecial(List<NameAndPosition> nameAndPositions,Vector3 p
 	String html="Weight Tool ver."+version+" "+super.getHtml();
 
 	return html;	
+	}
+	@Override
+	public void onMouseClick(ClickEvent event) {
+		// TODO Auto-generated method stub
+		
 	}
 	
 }
