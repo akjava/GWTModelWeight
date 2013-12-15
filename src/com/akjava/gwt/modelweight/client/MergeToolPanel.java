@@ -7,21 +7,16 @@ import com.akjava.gwt.html5.client.file.FileReader;
 import com.akjava.gwt.html5.client.file.FileUploadForm;
 import com.akjava.gwt.html5.client.file.FileUtils;
 import com.akjava.gwt.lib.client.LogUtils;
-import com.akjava.gwt.three.client.core.Geometry;
-import com.akjava.gwt.three.client.extras.GeometryUtils;
-import com.akjava.gwt.three.client.extras.loaders.JSONLoader.LoadHandler;
 import com.akjava.gwt.three.client.gwt.GWTGeometryUtils;
 import com.akjava.gwt.three.client.gwt.model.JSONModelFile;
+import com.akjava.gwt.three.client.js.core.Geometry;
+import com.akjava.gwt.three.client.js.loaders.JSONLoader.JSONLoadHandler;
+import com.akjava.gwt.three.client.js.materials.Material;
 import com.google.gwt.core.client.JsArray;
 import com.google.gwt.event.dom.client.ChangeEvent;
 import com.google.gwt.event.dom.client.ChangeHandler;
 import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
-import com.google.gwt.json.client.JSONArray;
-import com.google.gwt.json.client.JSONObject;
-import com.google.gwt.json.client.JSONParser;
-import com.google.gwt.json.client.JSONValue;
-import com.google.gwt.user.client.Window;
 import com.google.gwt.user.client.ui.Anchor;
 import com.google.gwt.user.client.ui.Button;
 import com.google.gwt.user.client.ui.HorizontalPanel;
@@ -66,10 +61,10 @@ public class MergeToolPanel extends VerticalPanel{
 						
 						String text=reader.getResultAsString();
 						
-						GWTGeometryUtils.loadJsonModel(text, new LoadHandler() {
+						GWTGeometryUtils.loadJsonModel(text, new JSONLoadHandler() {
 							
 							@Override
-							public void loaded(Geometry geometry) {
+							public void loaded(Geometry geometry,JsArray<Material> materials) {
 								file1Object=geometry;
 							
 							
@@ -115,10 +110,10 @@ public class MergeToolPanel extends VerticalPanel{
 						
 						String text=reader.getResultAsString();
 						
-							GWTGeometryUtils.loadJsonModel(text, new LoadHandler() {
+							GWTGeometryUtils.loadJsonModel(text, new JSONLoadHandler() {
 							
 							@Override
-							public void loaded(Geometry geometry) {
+							public void loaded(Geometry geometry,JsArray<Material> materials) {
 								file2Object=geometry;
 								
 							

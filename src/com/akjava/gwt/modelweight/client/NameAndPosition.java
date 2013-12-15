@@ -1,6 +1,6 @@
 package com.akjava.gwt.modelweight.client;
 
-import com.akjava.gwt.three.client.core.Vector3;
+import com.akjava.gwt.three.client.js.math.Vector3;
 
 public class NameAndPosition {
 private String name;

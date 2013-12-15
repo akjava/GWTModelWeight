@@ -10,7 +10,6 @@ import com.akjava.bvh.client.BVHParser;
 import com.akjava.bvh.client.BVHParser.ParserListener;
 import com.akjava.gwt.bvh.client.threejs.AnimationBoneConverter;
 import com.akjava.gwt.bvh.client.threejs.AnimationDataConverter;
-import com.akjava.gwt.html5.client.HTML5InputRange;
 import com.akjava.gwt.html5.client.InputRangeListener;
 import com.akjava.gwt.html5.client.InputRangeWidget;
 import com.akjava.gwt.html5.client.download.HTML5Download;
@@ -27,21 +26,6 @@ import com.akjava.gwt.lib.client.StorageControler;
 import com.akjava.gwt.lib.client.StorageDataList;
 import com.akjava.gwt.modelweight.client.weight.GWTWeightData;
 import com.akjava.gwt.modelweight.client.weight.WeighDataParser;
-import com.akjava.gwt.three.client.THREE;
-import com.akjava.gwt.three.client.core.Geometry;
-import com.akjava.gwt.three.client.core.Intersect;
-import com.akjava.gwt.three.client.core.Object3D;
-import com.akjava.gwt.three.client.core.Projector;
-import com.akjava.gwt.three.client.core.Ray;
-import com.akjava.gwt.three.client.core.Vector3;
-import com.akjava.gwt.three.client.core.Vector4;
-import com.akjava.gwt.three.client.core.Vertex;
-import com.akjava.gwt.three.client.extras.GeometryUtils;
-import com.akjava.gwt.three.client.extras.ImageUtils;
-import com.akjava.gwt.three.client.extras.animation.Animation;
-import com.akjava.gwt.three.client.extras.animation.AnimationHandler;
-import com.akjava.gwt.three.client.extras.loaders.JSONLoader;
-import com.akjava.gwt.three.client.extras.loaders.JSONLoader.LoadHandler;
 import com.akjava.gwt.three.client.gwt.Clock;
 import com.akjava.gwt.three.client.gwt.GWTGeometryUtils;
 import com.akjava.gwt.three.client.gwt.GWTThreeUtils;
@@ -52,13 +36,29 @@ import com.akjava.gwt.three.client.gwt.animation.AnimationHierarchyItem;
 import com.akjava.gwt.three.client.gwt.animation.WeightBuilder;
 import com.akjava.gwt.three.client.gwt.collada.ColladaData;
 import com.akjava.gwt.three.client.gwt.ui.SimpleTabDemoEntryPoint;
-import com.akjava.gwt.three.client.lights.Light;
-import com.akjava.gwt.three.client.materials.Material;
-import com.akjava.gwt.three.client.objects.Mesh;
-import com.akjava.gwt.three.client.objects.SkinnedMesh;
-import com.akjava.gwt.three.client.renderers.WebGLRenderer;
-import com.akjava.gwt.three.client.textures.Texture;
+import com.akjava.gwt.three.client.js.THREE;
+import com.akjava.gwt.three.client.js.core.Geometry;
+import com.akjava.gwt.three.client.js.core.Intersect;
+import com.akjava.gwt.three.client.js.core.Object3D;
+import com.akjava.gwt.three.client.js.core.Projector;
+import com.akjava.gwt.three.client.js.extras.GeometryUtils;
+import com.akjava.gwt.three.client.js.extras.ImageUtils;
+import com.akjava.gwt.three.client.js.extras.animation.Animation;
+import com.akjava.gwt.three.client.js.extras.animation.AnimationHandler;
+import com.akjava.gwt.three.client.js.lights.Light;
+import com.akjava.gwt.three.client.js.loaders.JSONLoader;
+import com.akjava.gwt.three.client.js.loaders.JSONLoader.JSONLoadHandler;
+import com.akjava.gwt.three.client.js.materials.Material;
+import com.akjava.gwt.three.client.js.math.Euler;
+import com.akjava.gwt.three.client.js.math.Ray;
+import com.akjava.gwt.three.client.js.math.Vector3;
+import com.akjava.gwt.three.client.js.math.Vector4;
+import com.akjava.gwt.three.client.js.objects.Mesh;
+import com.akjava.gwt.three.client.js.objects.SkinnedMesh;
+import com.akjava.gwt.three.client.js.renderers.WebGLRenderer;
+import com.akjava.gwt.three.client.js.textures.Texture;
 import com.google.gwt.canvas.client.Canvas;
+import com.google.gwt.core.client.JavaScriptObject;
 import com.google.gwt.core.client.JsArray;
 import com.google.gwt.core.client.JsArrayNumber;
 import com.google.gwt.core.client.JsArrayString;
@@ -109,11 +109,11 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		
 		if(root!=null){
 			
-			boneAndVertex.getRotation().set(Math.toRadians(rotX),Math.toRadians(rotY),0);
+			boneAndVertex.getRotation().set(Math.toRadians(rotX),Math.toRadians(rotY),0,Euler.XYZ);
 			boneAndVertex.getPosition().set(posX,posY,0);
 			root.setPosition(positionXRange.getValue(), positionYRange.getValue(), positionZRange.getValue());
 			
-			root.getRotation().set(Math.toRadians(rotationRange.getValue()),Math.toRadians(rotationYRange.getValue()),Math.toRadians(rotationZRange.getValue()));
+			root.getRotation().set(Math.toRadians(rotationRange.getValue()),Math.toRadians(rotationYRange.getValue()),Math.toRadians(rotationZRange.getValue()),Euler.XYZ);
 			}
 		
 		long delta=clock.delta();
@@ -349,7 +349,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 			if(bone.getParent()!=-1){
 				//AnimationBone parent=bones.get(bone.getParent());
 				Vector3 ppos=tmp.get(bone.getParent()).getPosition();
-				Mesh line=THREE.Line(GWTGeometryUtils.createLineGeometry(pos, ppos), THREE.LineBasicMaterial().color(0x888888).build());
+				Object3D line=THREE.Line(GWTGeometryUtils.createLineGeometry(pos, ppos), THREE.LineBasicMaterial().color(0x888888).build());
 				group.add(line);
 			}
 			tmp.add(mesh);
@@ -472,7 +472,8 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 					if(event.isShiftKeyDown()){
 						if(selections.contains(at)){
 							selections.remove(new Integer(at));
-							vertexMeshs.get(at).getMaterial().getColor().setHex(getVertexColor(at));
+							//TODO cast material
+							vertexMeshs.get(at).getMaterial().gwtGetColor().setHex(getVertexColor(at));
 							//??
 							if(lastSelection==at){
 								if(selections.size()>0){
@@ -491,7 +492,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 							selectVertex(at);
 						}
 						for(int index:selections){
-							vertexMeshs.get(index).getMaterial().getColor().setHex(selectColor);
+							vertexMeshs.get(index).getMaterial().gwtGetColor().setHex(selectColor);
 						}
 					}else{
 						//clear cache
@@ -523,7 +524,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 					
 					JsArray<Intersect> pintersects=ray.intersectObject(mouseClickCatcher);
 					//LogUtils.log("plain:"+ThreeLog.get(pintersects.get(0).getPoint()));
-					offset.copy(pintersects.get(0).getPoint()).subSelf(mouseClickCatcher.getPosition());
+					offset.copy(pintersects.get(0).getPoint()).sub(mouseClickCatcher.getPosition());
 					
 					
 					
@@ -539,7 +540,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 	}
 	private void clearSelections(){
 		for(int index:selections){
-			vertexMeshs.get(index).getMaterial().getColor().setHex(getVertexColor(index));
+			vertexMeshs.get(index).getMaterial().gwtGetColor().setHex(getVertexColor(index));
 		}
 		selections.clear();
 	}
@@ -622,12 +623,12 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 			Mesh mesh=vertexMeshs.get(i);
 			if(index.getX()==selectedBoneIndex || index.getY()==selectedBoneIndex){
 				mesh.setVisible(true);
-				mesh.getMaterial().getColor().setHex(getVertexColor(i));
+				mesh.getMaterial().gwtGetColor().setHex(getVertexColor(i));
 				//mesh.getMaterial().getColor().setHex(getVertexColor(i));
 				//LogUtils.log(weight.getX()+","+weight.getY());
 			}else{
 				mesh.setVisible(false);
-				mesh.getMaterial().getColor().setHex(getVertexColor(i));
+				mesh.getMaterial().gwtGetColor().setHex(getVertexColor(i));
 			}
 		}
 	}
@@ -983,10 +984,10 @@ HorizontalPanel h1=new HorizontalPanel();
 					public void onLoad() {
 						//LogUtils.log("load:"+Benchmark.end("load"));
 						//GWT.log(reader.getResultAsString());
-						lastJsonObject=loadJsonModel(reader.getResultAsString(),new LoadHandler() {
+						lastJsonObject=loadJsonModel(reader.getResultAsString(),new JSONLoadHandler() {
 							
 							@Override
-							public void loaded(Geometry geometry) {
+							public void loaded(Geometry geometry,JsArray<Material> materials) {
 								
 								initializeObject();
 								
@@ -1063,10 +1064,10 @@ HorizontalPanel h1=new HorizontalPanel();
 					@Override
 					public void onLoad() {
 						//dont need json object
-						loadJsonModel(reader.getResultAsString(),new LoadHandler() {
+						loadJsonModel(reader.getResultAsString(),new JSONLoadHandler() {
 							
 							@Override
-							public void loaded(Geometry geometry) {
+							public void loaded(Geometry geometry,JsArray<Material> materials) {
 								setWeigthFromGeometry(geometry);
 								weightSelection.setText("selection:"+file.getFileName());
 							}
@@ -1203,7 +1204,7 @@ HorizontalPanel h1=new HorizontalPanel();
 	private void updateVertexColor(){
 		for(int i=0;i<bodyGeometry.vertices().length();i++){
 			Mesh mesh=vertexMeshs.get(i);
-			mesh.getMaterial().getColor().setHex(getVertexColor(i));
+			mesh.getMaterial().gwtGetColor().setHex(getVertexColor(i));
 		}
 	}
 	protected void updateFrameRange() {
@@ -1254,14 +1255,14 @@ HorizontalPanel h1=new HorizontalPanel();
 	private int lastSelection=-1;
 	private void selectVertex(int index){
 		if(lastSelection!=-1){
-			vertexMeshs.get(lastSelection).getMaterial().getColor().setHex(getVertexColor(lastSelection));
+			vertexMeshs.get(lastSelection).getMaterial().gwtGetColor().setHex(getVertexColor(lastSelection));
 		}
 		Vector4 in=bodyIndices.get(index);
 		Vector4 we=bodyWeight.get(index);
 		
 		LogUtils.log("select:"+index+","+we.getX()+","+we.getY());
 		
-		vertexMeshs.get(index).getMaterial().getColor().setHex(selectColor);
+		vertexMeshs.get(index).getMaterial().gwtGetColor().setHex(selectColor);
 		
 		indexWeightEditor.setAvailable(true);
 		updateWeightButton.setEnabled(true);
@@ -1610,10 +1611,10 @@ public void onError(Request request, Throwable exception) {
 				
 				if(loadedGeometry==null){//initial load
 				loadModel(modelUrl,
-				new  LoadHandler() {
+				new  JSONLoadHandler() {
 					//loader.load("men3smart.js", new  LoadHandler() {
 						@Override
-						public void loaded(Geometry geometry) {
+						public void loaded(Geometry geometry,JsArray<Material> materials) {
 						
 						
 							for(int i=0;i<bones.length();i++){
@@ -1751,7 +1752,7 @@ public void onError(Request request, Throwable exception) {
 			}
 	}
 	
-	private JSONObject loadJsonModel(String jsonText,LoadHandler handler){
+	private JSONObject loadJsonModel(String jsonText,JSONLoadHandler handler){
 		JSONLoader loader=THREE.JSONLoader();
 		JSONValue lastJsonValue = JSONParser.parseLenient(jsonText);
 		JSONObject object=lastJsonValue.isObject();
@@ -1759,14 +1760,18 @@ public void onError(Request request, Throwable exception) {
 			LogUtils.log("invalid-json object");
 		}
 		
+		JavaScriptObject jsobject=loader.parse(object.getJavaScriptObject(), null);
+		JSONObject newobject=new JSONObject(jsobject);
+		handler.loaded((Geometry) newobject.get("geometry").isObject().getJavaScriptObject(),null);
 		//LogUtils.log(object.getJavaScriptObject());
-		loader.createModel(object.getJavaScriptObject(), handler, "");
-		loader.onLoadComplete();
+		//loader.createModel(object.getJavaScriptObject(), handler, "");
+		//loader.onLoadComplete();
+		
 		return object;
 		
 	}
 	
-	private void loadModel(String path,final LoadHandler handler){
+	private void loadModel(String path,final JSONLoadHandler handler){
 		
 		RequestBuilder builder = new RequestBuilder(RequestBuilder.GET, URL.encode(path));
 			try {
