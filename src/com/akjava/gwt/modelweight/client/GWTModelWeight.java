@@ -102,7 +102,7 @@ import com.google.gwt.user.client.ui.VerticalPanel;
  * Entry point classes define <code>onModuleLoad()</code>.
  */
 public class GWTModelWeight extends SimpleTabDemoEntryPoint{
-	private String version="0.2.2";
+	private String version="0.3";//for three.js r63
 	@Override
 	protected void beforeUpdate(WebGLRenderer renderer) {
 		
