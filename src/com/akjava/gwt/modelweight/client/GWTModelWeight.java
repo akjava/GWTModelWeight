@@ -45,6 +45,7 @@ import com.akjava.gwt.three.client.js.extras.GeometryUtils;
 import com.akjava.gwt.three.client.js.extras.ImageUtils;
 import com.akjava.gwt.three.client.js.extras.animation.Animation;
 import com.akjava.gwt.three.client.js.extras.animation.AnimationHandler;
+import com.akjava.gwt.three.client.js.extras.geometries.CubeGeometry;
 import com.akjava.gwt.three.client.js.lights.Light;
 import com.akjava.gwt.three.client.js.loaders.JSONLoader;
 import com.akjava.gwt.three.client.js.loaders.JSONLoader.JSONLoadHandler;
@@ -291,8 +292,11 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 	
 	Object3D root;
 	
+	//for selection
+	List<Mesh> boneJointMeshs=new ArrayList<Mesh>();
 	List<Mesh> tmp=new ArrayList<Mesh>();
 	private Object3D boneToSkelton(BVH bvh){
+		boneJointMeshs.clear();
 		AnimationBoneConverter converter=new AnimationBoneConverter();
 		JsArray<AnimationBone> bones = converter.convertJsonBone(bvh);//has no endsite
 		
@@ -329,6 +333,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 				halfMesh.lookAt(pos);
 				halfMesh.setName(bones.get(bone.getParent()).getName());
 				
+				boneJointMeshs.add(halfMesh);
 			}
 			mesh.setPosition(pos);
 			mesh.setName(bone.getName());
@@ -616,7 +621,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		if(selectionIndex!=-1 && !vertexMeshs.get(selectionIndex).getVisible()){
 			indexWeightEditor.setAvailable(false);
 			updateWeightButton.setEnabled(false);
-			selectionMesh.setVisible(false);
+			selectionPointIndicateMesh.setVisible(false);
 		}
 	}
 	private void selectVertexsByBone(int selectedBoneIndex) {
@@ -1009,6 +1014,7 @@ HorizontalPanel h1=new HorizontalPanel();
 								createWireBody();
 								modelSelection.setText("selection:"+file.getFileName());
 								saveFileBox.setText(file.getFileName());
+								updateSelectableObjects();
 							}
 						});
 					}
@@ -1139,7 +1145,19 @@ HorizontalPanel h1=new HorizontalPanel();
 		//loadAndExport.add(new Label("Dont export large BVH.large(10M?) text data crash browser"));
 		showControl();
 	}
-	
+	//called when bone changed or mesh changed
+	@SuppressWarnings("unchecked")
+	private void updateSelectableObjects(){
+		objects=THREE.createJsArray();
+		//body each point
+		for(Mesh point:wireBodyPoints){
+			objects.push(point);
+		}
+		//bone
+		for(Mesh mesh:boneJointMeshs){
+			objects.push(mesh);
+		}
+	}
 
 	private void setWeigthFromGeometry(Geometry geometry) {
 		//loadedGeometry
@@ -1263,8 +1281,9 @@ HorizontalPanel h1=new HorizontalPanel();
 		Vector4 in=bodyIndices.get(index);
 		Vector4 we=bodyWeight.get(index);
 		
-		LogUtils.log("select:"+index+","+we.getX()+","+we.getY());
+		//LogUtils.log("select:"+index+","+we.getX()+","+we.getY());
 		
+		//change selected point to selection color,multiple selection is avaiable and to detect change point color.
 		vertexMeshs.get(index).getMaterial().gwtGetColor().setHex(selectColor);
 		
 		indexWeightEditor.setAvailable(true);
@@ -1272,9 +1291,12 @@ HorizontalPanel h1=new HorizontalPanel();
 		
 		indexWeightEditor.setValue(index, in, we);
 		
-		selectionMesh.setVisible(true);
-		selectionMesh.setPosition(vertexMeshs.get(index).getPosition());
-		stackPanel.showWidget(1);
+		//show which point selection,with wireframe weight-color
+		selectionPointIndicateMesh.setVisible(true);
+		selectionPointIndicateMesh.setPosition(vertexMeshs.get(index).getPosition());
+		selectionPointIndicateMesh.getMaterial().gwtGetColor().setHex(getVertexColor(index));
+		
+		stackPanel.showWidget(1); //bone & weight panel
 		lastSelection=index;
 	}
 
@@ -1634,7 +1656,7 @@ public void onError(Request request, Throwable exception) {
 							createSkinnedMesh();
 							
 							createWireBody();
-							
+							updateSelectableObjects();
 						}
 					
 					});
@@ -1643,6 +1665,7 @@ public void onError(Request request, Throwable exception) {
 					autoWeight();
 					createSkinnedMesh();
 					createWireBody();
+					updateSelectableObjects();
 				}
 				//LogUtils.log("before create");
 				//Mesh mesh=THREE.Mesh(cube, THREE.MeshLambertMaterial().skinning(false).color(0xff0000).build());
@@ -1686,9 +1709,9 @@ public void onError(Request request, Throwable exception) {
 	private String animationName;
 	private Geometry loadedGeometry;
 
-	private Mesh selectionMesh;
+	private Mesh selectionPointIndicateMesh;
 	
-	
+	//used for mouse selection ,added mesh's eash point and bone-joint.
 	JsArray<Object3D> objects;
 	
 	@SuppressWarnings("unchecked")
@@ -1719,27 +1742,18 @@ public void onError(Request request, Throwable exception) {
 		//bo.setPosition(-30, 0, 0);
 		boneAndVertex.add(bo);
 		
-		selectionMesh=THREE.Mesh(THREE.CubeGeometry(.5, .5, .5), THREE.MeshBasicMaterial().color(selectColor).transparent(true).wireFrame(true).build());
-		boneAndVertex.add(selectionMesh);
-		selectionMesh.setVisible(false);	
-		
-		
-		//LogUtils.log("add objects");
-		objects=THREE.createJsArray();
-		JsArray<Object3D> bones=bo.getChildren();
-		for(int i=0;i<bones.length();i++){
-			Object3D obj=bones.get(i);
-			//bone mesh has name,connecting line has no name
-			if(!obj.getName().isEmpty()){
-				objects.push(obj);
-				LogUtils.log("add:"+obj.getName());
-			}
-		}
+		selectionPointIndicateMesh=THREE.Mesh(THREE.CubeGeometry(.5, .5, .5), THREE.MeshBasicMaterial().color(selectColor).transparent(true).wireFrame(true).build());
+		boneAndVertex.add(selectionPointIndicateMesh);
+		selectionPointIndicateMesh.setVisible(false);	
 		
 	}
 	private int selectColor=0xb362ff;
+	
+	//for selection
+	private List<Mesh> wireBodyPoints=new ArrayList<Mesh>();
 	//private int defaultColor=0xffff00;
 	private void createWireBody(){
+		wireBodyPoints.clear();
 		bodyGeometry=GeometryUtils.clone(loadedGeometry);
 		Mesh wireBody=THREE.Mesh(bodyGeometry, THREE.MeshBasicMaterial().wireFrame(true).color(0xffffff).build());
 		boneAndVertex.add(wireBody);
@@ -1759,6 +1773,7 @@ public void onError(Request request, Throwable exception) {
 			point.setPosition(vx);
 			selectVertex.add(point);
 			vertexMeshs.add(point);
+			wireBodyPoints.add(point);
 		}
 	}
 	private void autoWeight(){
