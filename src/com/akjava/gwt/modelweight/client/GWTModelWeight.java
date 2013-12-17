@@ -173,7 +173,9 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		
 		projector=THREE.Projector();
 		
+		//TODO is this really need?
 		mouseClickCatcher=THREE.Mesh(THREE.PlaneGeometry(100, 100, 10, 10), THREE.MeshBasicMaterial().color(0xffff00).wireFrame().build());
+		mouseClickCatcher.setVisible(false);
 		scene.add(mouseClickCatcher);
 		/*
 		//write test
@@ -314,11 +316,11 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 				
 				
 				Vector3 ppos=tmp.get(bone.getParent()).getPosition();
-				pos.addSelf(ppos);
+				pos.add(ppos);
 				
-				half.addSelf(ppos);
+				half.add(ppos);
 				
-				double length=ppos.clone().subSelf(pos).length();
+				double length=ppos.clone().sub(pos).length();
 				
 				//half
 				Mesh halfMesh=THREE.Mesh(THREE.CubeGeometry(.2, .2, length), THREE.MeshLambertMaterial().color(0xaaaaaa).build());
@@ -339,7 +341,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 				}else{
 					LogUtils.log(bone.getName()+":"+ThreeLog.get(end));
 				}
-				Vector3 epos=end.clone().addSelf(pos);
+				Vector3 epos=end.clone().add(pos);
 				endMesh.setPosition(epos);
 				group.add(GWTGeometryUtils.createLineMesh(pos, epos, 0x888888));
 				group.add(endMesh);
@@ -454,7 +456,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 			return;
 		}*/
 		//LogUtils.log("screen:"+screenWidth+"x"+screenHeight);
-		JsArray<Intersect> intersects=projector.gwtPickIntersects(event.getX(), event.getY(), screenWidth, screenHeight, camera,scene);
+		JsArray<Intersect> intersects=projector.gwtPickIntersects(event.getX(), event.getY(), screenWidth, screenHeight, camera,objects);
 		LogUtils.log("intersects:"+intersects.length());
 		for(int i=0;i<intersects.length();i++){
 			Intersect sect=intersects.get(i);
@@ -1608,6 +1610,7 @@ public void onError(Request request, Throwable exception) {
 				
 				
 				texture=ImageUtils.loadTexture(textureUrl);
+				texture.setFlipY(false);//for temporaly old model
 				initializeObject();
 				
 				if(loadedGeometry==null){//initial load
@@ -1685,6 +1688,10 @@ public void onError(Request request, Throwable exception) {
 
 	private Mesh selectionMesh;
 	
+	
+	JsArray<Object3D> objects;
+	
+	@SuppressWarnings("unchecked")
 	private void initializeObject(){
 
 		currentTime=0;
@@ -1712,9 +1719,22 @@ public void onError(Request request, Throwable exception) {
 		//bo.setPosition(-30, 0, 0);
 		boneAndVertex.add(bo);
 		
-		selectionMesh=THREE.Mesh(THREE.CubeGeometry(.5, .5, .5), THREE.MeshBasicMaterial().color(selectColor).wireFrame(true).build());
+		selectionMesh=THREE.Mesh(THREE.CubeGeometry(.5, .5, .5), THREE.MeshBasicMaterial().color(selectColor).transparent(true).wireFrame(true).build());
 		boneAndVertex.add(selectionMesh);
 		selectionMesh.setVisible(false);	
+		
+		
+		//LogUtils.log("add objects");
+		objects=THREE.createJsArray();
+		JsArray<Object3D> bones=bo.getChildren();
+		for(int i=0;i<bones.length();i++){
+			Object3D obj=bones.get(i);
+			//bone mesh has name,connecting line has no name
+			if(!obj.getName().isEmpty()){
+				objects.push(obj);
+				LogUtils.log("add:"+obj.getName());
+			}
+		}
 		
 	}
 	private int selectColor=0xb362ff;
@@ -1833,6 +1853,8 @@ public void onError(Request request, Throwable exception) {
 	protected void updateMaterial() {
 		
 		Material material=null;
+		LogUtils.log("texture.setFlipY(false) for old version model");
+		texture.setFlipY(false);//for temporary release //TODO as option for 3.1 format models
 		
 		if(useBasicMaterial.getValue()){
 			material=THREE.MeshBasicMaterial().skinning(true).color(0xffffff).map(texture).build();
