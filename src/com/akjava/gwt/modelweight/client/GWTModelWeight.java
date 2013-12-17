@@ -161,7 +161,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		canvas.setClearColorHex(0x333333);//canvas has margin?
 		
 		
-		scene.add(THREE.AmbientLight(0xffffff));
+		//scene.add(THREE.AmbientLight(0xffffff));
 		
 		Light pointLight = THREE.DirectionalLight(0xffffff,1);
 		pointLight.setPosition(0, 10, 300);
