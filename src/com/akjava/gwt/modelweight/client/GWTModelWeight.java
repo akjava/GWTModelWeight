@@ -102,7 +102,7 @@ import com.google.gwt.user.client.ui.VerticalPanel;
  * Entry point classes define <code>onModuleLoad()</code>.
  */
 public class GWTModelWeight extends SimpleTabDemoEntryPoint{
-	private String version="0.3";//for three.js r63
+	private String version="0.3(for r63)";//for three.js r63
 	@Override
 	protected void beforeUpdate(WebGLRenderer renderer) {
 		
@@ -455,11 +455,12 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		}*/
 		//LogUtils.log("screen:"+screenWidth+"x"+screenHeight);
 		JsArray<Intersect> intersects=projector.gwtPickIntersects(event.getX(), event.getY(), screenWidth, screenHeight, camera,scene);
-		//LogUtils.log("intersects:"+intersects.length());
+		LogUtils.log("intersects:"+intersects.length());
 		for(int i=0;i<intersects.length();i++){
 			Intersect sect=intersects.get(i);
 			
 			Object3D target=sect.getObject();
+			LogUtils.log(target);
 			if(!target.getName().isEmpty()){
 				if(target.getName().startsWith("point:")){
 					if(!target.getVisible()){
