@@ -19,6 +19,7 @@ import com.akjava.gwt.html5.client.file.FileHandler;
 import com.akjava.gwt.html5.client.file.FileReader;
 import com.akjava.gwt.html5.client.file.FileUploadForm;
 import com.akjava.gwt.html5.client.file.FileUtils;
+import com.akjava.gwt.html5.client.file.FileUtils.DataURLListener;
 import com.akjava.gwt.html5.client.file.ui.DropVerticalPanelBase;
 import com.akjava.gwt.lib.client.IStorageControler;
 import com.akjava.gwt.lib.client.LogUtils;
@@ -45,7 +46,6 @@ import com.akjava.gwt.three.client.js.extras.GeometryUtils;
 import com.akjava.gwt.three.client.js.extras.ImageUtils;
 import com.akjava.gwt.three.client.js.extras.animation.Animation;
 import com.akjava.gwt.three.client.js.extras.animation.AnimationHandler;
-import com.akjava.gwt.three.client.js.extras.geometries.CubeGeometry;
 import com.akjava.gwt.three.client.js.lights.Light;
 import com.akjava.gwt.three.client.js.loaders.JSONLoader;
 import com.akjava.gwt.three.client.js.loaders.JSONLoader.JSONLoadHandler;
@@ -462,7 +462,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		}*/
 		//LogUtils.log("screen:"+screenWidth+"x"+screenHeight);
 		JsArray<Intersect> intersects=projector.gwtPickIntersects(event.getX(), event.getY(), screenWidth, screenHeight, camera,objects);
-		LogUtils.log("intersects:"+intersects.length());
+		//LogUtils.log("intersects:"+intersects.length());
 		for(int i=0;i<intersects.length();i++){
 			Intersect sect=intersects.get(i);
 			
@@ -822,6 +822,7 @@ HorizontalPanel h1=new HorizontalPanel();
 		//positionYRange.setValue(-13);
 		positionXRange.setValue(-13);
 		
+		parent.add(new Label("Play Control"));
 		Button bt=new Button("Pause/Play SkinnedMesh");
 		parent.add(bt);
 		bt.addClickHandler(new ClickHandler() {
@@ -948,10 +949,20 @@ HorizontalPanel h1=new HorizontalPanel();
 		
 		loadAndExport.add(new Label("Bone(BVH Motion file)"));
 		final Label bvhSelection=new Label("selection:"+bvhUrl);
+		bvhSelection.setStylePrimaryName("gray");
 		loadAndExport.add(bvhSelection);
 		
-		final FileUploadForm bvhUpload=new FileUploadForm();
+		final FileUploadForm bvhUpload=FileUtils.createSingleTextFileUploadForm(new DataURLListener() {
+			@Override
+			public void uploaded(File file, String value) {
+				parseBVH(value);
+				bvhSelection.setText("selection:"+file.getFileName());
+			}
+		}, true);
+		bvhUpload.setShowDragOverBorder(true);
+		
 		loadAndExport.add(bvhUpload);
+		/*
 		bvhUpload.getFileUpload().addChangeHandler(new ChangeHandler() {
 			
 			@Override
@@ -973,121 +984,88 @@ HorizontalPanel h1=new HorizontalPanel();
 				bvhUpload.reset();
 			}
 		});
+		*/
 		
 		loadAndExport.add(new Label("Character(Three.js model file)"));
 		final Label modelSelection=new Label("selection:"+modelUrl);
+		modelSelection.setStylePrimaryName("gray");
 		loadAndExport.add(modelSelection);
-		final FileUploadForm meshUpload=new FileUploadForm();
-		loadAndExport.add(meshUpload);
-		meshUpload.getFileUpload().addChangeHandler(new ChangeHandler() {
-			
+		
+		final FileUploadForm meshUpload=FileUtils.createSingleTextFileUploadForm(new DataURLListener() {
 			@Override
-			public void onChange(ChangeEvent event) {
-				JsArray<File> files = FileUtils.toFile(event.getNativeEvent());
-				
-				final FileReader reader=FileReader.createFileReader();
-				final File file=files.get(0);
-				reader.setOnLoad(new FileHandler() {
+			public void uploaded(final File file, String value) {
+				lastJsonObject=loadJsonModel(value,new JSONLoadHandler() {
+					
 					@Override
-					public void onLoad() {
-						//LogUtils.log("load:"+Benchmark.end("load"));
-						//GWT.log(reader.getResultAsString());
-						lastJsonObject=loadJsonModel(reader.getResultAsString(),new JSONLoadHandler() {
-							
-							@Override
-							public void loaded(Geometry geometry,JsArray<Material> materials) {
-								
-								initializeObject();
-								
-								loadedGeometry=geometry;
-								
-								
-								
-								autoWeight();
-							
-								
-								//LogUtils.log(bodyIndices);
-								//LogUtils.log(bodyWeight);
-								
-								createSkinnedMesh();
-								
-								createWireBody();
-								modelSelection.setText("selection:"+file.getFileName());
-								saveFileBox.setText(file.getFileName());
-								updateSelectableObjects();
-							}
-						});
+					public void loaded(Geometry geometry,JsArray<Material> materials) {
+						
+						initializeObject();
+						
+						loadedGeometry=geometry;
+						
+						
+						
+						autoWeight();
+					
+						
+						//LogUtils.log(bodyIndices);
+						//LogUtils.log(bodyWeight);
+						
+						createSkinnedMesh();
+						
+						createWireBody();
+						modelSelection.setText("selection:"+file.getFileName());
+						saveFileBox.setText(file.getFileName());
+						updateSelectableObjects();
 					}
 				});
-				reader.readAsText(file,"utf-8");
-				meshUpload.reset();
 			}
-		});
+		}, true);
+		meshUpload.setShowDragOverBorder(true);
+		loadAndExport.add(meshUpload);
+	
 		
 		
 		loadAndExport.add(new Label("Texture(PNG or JPEG)"));
-		final FileUploadForm textureUpload=new FileUploadForm();
 		final Label textureSelection=new Label("selection:"+textureUrl);
+		textureSelection.setStylePrimaryName("gray");
+		final FileUploadForm textureUpload=FileUtils.createSingleFileUploadForm(new DataURLListener() {	
+			@Override
+			public void uploaded(File file, String value) {
+				textureUrl=value;
+				generateTexture();
+				//createSkinnedMesh();
+				textureSelection.setText("selection:"+file.getFileName());
+			}
+		}, true);
+		textureUpload.setShowDragOverBorder(true);
+		
 		loadAndExport.add(textureSelection);
 		loadAndExport.add(textureUpload);
-		textureUpload.getFileUpload().addChangeHandler(new ChangeHandler() {
-			
+		
+		
+		loadAndExport.add(new Label("Weights and Idecis(json)"));
+		weightSelection = new Label("selection:");
+		weightSelection.setStylePrimaryName("gray");
+		final FileUploadForm weightUpload=FileUtils.createSingleTextFileUploadForm(new DataURLListener() {
 			@Override
-			public void onChange(ChangeEvent event) {
-				JsArray<File> files = FileUtils.toFile(event.getNativeEvent());
-				
-				final FileReader reader=FileReader.createFileReader();
-				final File file=files.get(0);
-				reader.setOnLoad(new FileHandler() {
+			public void uploaded(final File file, String value) {
+				//dont need json object
+				loadJsonModel(value,new JSONLoadHandler() {
+					
 					@Override
-					public void onLoad() {
-						//LogUtils.log("load:"+Benchmark.end("load"));
-						//GWT.log(reader.getResultAsString());
-						textureUrl=reader.getResultAsString();
-						generateTexture();
-						//createSkinnedMesh();
-						textureSelection.setText("selection:"+file.getFileName());
+					public void loaded(Geometry geometry,JsArray<Material> materials) {
+						onWeightLoaded(file.getFileName(), geometry, materials);
 					}
-				});
-				reader.readAsDataURL(file);
-				textureUpload.reset();
-			}
-		});
-		loadAndExport.add(textureUpload);
-		
-		
-		loadAndExport.add(new Label("Weights and Idecis"));
-		final FileUploadForm weightUpload=new FileUploadForm();
-		final Label weightSelection=new Label("selection:");
-		loadAndExport.add(weightSelection);
-		
-		weightUpload.getFileUpload().addChangeHandler(new ChangeHandler() {
-			
-			@Override
-			public void onChange(ChangeEvent event) {
-				JsArray<File> files = FileUtils.toFile(event.getNativeEvent());
-				
-				final FileReader reader=FileReader.createFileReader();
-				final File file=files.get(0);
-				reader.setOnLoad(new FileHandler() {
-					@Override
-					public void onLoad() {
-						//dont need json object
-						loadJsonModel(reader.getResultAsString(),new JSONLoadHandler() {
-							
-							@Override
-							public void loaded(Geometry geometry,JsArray<Material> materials) {
-								setWeigthFromGeometry(geometry);
-								weightSelection.setText("selection:"+file.getFileName());
-							}
 
-						});
-					}
 				});
-				reader.readAsText(file,"utf-8");
-				weightUpload.reset();
 			}
-		});
+		}, true);
+		weightUpload.setShowDragOverBorder(true);
+		weightUpload.setTitle("upload json model but only load weight&indecis");
+		
+		
+		loadAndExport.add(weightSelection);
 		loadAndExport.add(weightUpload);
 		
 		VerticalPanel export=new VerticalPanel();
@@ -1125,7 +1103,7 @@ HorizontalPanel h1=new HorizontalPanel();
 		});
 		exports.add(json);
 		withAnimation = new CheckBox("+Animation");
-		withAnimation.setValue(false);	//dont work collectly
+		withAnimation.setValue(false);	//dont work collectly <--what mean is this?
 		exports.add(withAnimation);
 		
 		
@@ -1144,6 +1122,16 @@ HorizontalPanel h1=new HorizontalPanel();
 		createTabs();
 		//loadAndExport.add(new Label("Dont export large BVH.large(10M?) text data crash browser"));
 		showControl();
+	}
+/**
+ * on load model for weight&indecis 
+ * @param fileName
+ * @param geometry
+ * @param materials
+ */
+	private void onWeightLoaded(String fileName,Geometry geometry,JsArray<Material> materials){
+		setWeigthFromGeometry(geometry);
+		weightSelection.setText("selection:"+fileName);
 	}
 	//called when bone changed or mesh changed
 	@SuppressWarnings("unchecked")
@@ -1983,6 +1971,8 @@ public void onError(Request request, Throwable exception) {
 	private VerticalPanel exportLinks;
 
 	private Anchor anchor;
+
+	private Label weightSelection;
 	
 	private Vector4 convertWeight(int index,ColladaData collada){
 		if(wdatas==null){
