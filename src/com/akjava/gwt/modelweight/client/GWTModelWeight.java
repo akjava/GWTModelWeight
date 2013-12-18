@@ -37,6 +37,7 @@ import com.akjava.gwt.three.client.gwt.animation.AnimationData;
 import com.akjava.gwt.three.client.gwt.animation.AnimationHierarchyItem;
 import com.akjava.gwt.three.client.gwt.animation.WeightBuilder;
 import com.akjava.gwt.three.client.gwt.collada.ColladaData;
+import com.akjava.gwt.three.client.gwt.model.JSONModelFile;
 import com.akjava.gwt.three.client.gwt.ui.SimpleTabDemoEntryPoint;
 import com.akjava.gwt.three.client.js.THREE;
 import com.akjava.gwt.three.client.js.core.Geometry;
@@ -124,7 +125,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		if(!paused && animation!=null){
 			AnimationHandler.update(v);
 			currentTime=animation.getCurrentTime();
-			LogUtils.log("animation:"+currentTime+","+delta);
+			//LogUtils.log("animation:"+currentTime+","+delta);
 			String check=""+currentTime;
 			if(check.equals("NaN")){
 				currentTime=0;
@@ -346,7 +347,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 				if(end.getX()==0 && end.getY()==0 && end.getZ()==0){
 					continue;//ignore 0 
 				}else{
-					LogUtils.log(bone.getName()+":"+ThreeLog.get(end));
+					//LogUtils.log(bone.getName()+":"+ThreeLog.get(end));
 				}
 				Vector3 epos=end.clone().add(pos);
 				endMesh.setPosition(epos);
@@ -996,12 +997,15 @@ HorizontalPanel h1=new HorizontalPanel();
 		final FileUploadForm meshUpload=FileUtils.createSingleTextFileUploadForm(new DataURLListener() {
 			@Override
 			public void uploaded(final File file, String value) {
-				lastJsonObject=loadJsonModel(value,new JSONLoadHandler() {
+				JSONObject object=parseJsonObject(value);
+				lastJsonObject=object;
+				loadJsonModel(object,new JSONLoadHandler() {
 					
 					@Override
 					public void loaded(Geometry geometry,JsArray<Material> materials) {
 						
 						onModelLoaded(file.getFileName(),geometry);
+						createSkinnedMesh();
 					}
 				});
 			}
@@ -1035,8 +1039,10 @@ HorizontalPanel h1=new HorizontalPanel();
 		final FileUploadForm weightUpload=FileUtils.createSingleTextFileUploadForm(new DataURLListener() {
 			@Override
 			public void uploaded(final File file, String value) {
-				//dont need json object
-				loadJsonModel(value,new JSONLoadHandler() {
+				JSONObject object=parseJsonObject(value);
+				
+				//dont need json object,just use weights and indecis info
+				loadJsonModel(object,new JSONLoadHandler() {
 					
 					@Override
 					public void loaded(Geometry geometry,JsArray<Material> materials) {
@@ -1109,10 +1115,31 @@ HorizontalPanel h1=new HorizontalPanel();
 		showControl();
 	}
 	
+	private boolean needFlipY=true;//default
 	private void onModelLoaded(String fileName,Geometry geometry){
+		LogUtils.log("onModuleLoaded");
+		if(lastJsonObject!=null){//TODO temporaly
+		JSONModelFile modelFile=(JSONModelFile) lastJsonObject.getJavaScriptObject();
+		//old version 3.0 need flip-Y
+		//see https://github.com/mrdoob/three.js/wiki/Migration#r49--r50
+		if(modelFile.getMetaData().getFormatVersion()==3){
+			needFlipY=false;
+		}
+		}
+		
 		initializeObject();
 		
 		loadedGeometry=geometry;
+		
+		//each time model loaded,check model format and set flipY
+		if(texture!=null){
+			if(!needFlipY){
+				LogUtils.log("texture flipY:false for old 3.0 format");
+			}
+			texture.setFlipY(needFlipY);
+			texture.setNeedsUpdate(true);
+		}
+		
 		autoWeight();		
 		createWireBody();
 		
@@ -1227,9 +1254,9 @@ HorizontalPanel h1=new HorizontalPanel();
 	protected void updateFrameRange() {
 		paused=true;
 		double time=frameRange.getValue()*bvh.getFrameTime();
-		LogUtils.log("bvh-length="+bvh.getFrames()+",ftime="+bvh.getFrameTime());
-		LogUtils.log("set-current:"+time+",rangeValue="+frameRange.getValue()+",bvhTime="+bvh.getFrameTime());
-		LogUtils.log("animation,length="+animation.getData().getLength()+",fps="+animation.getData().getFps());
+		//LogUtils.log("bvh-length="+bvh.getFrames()+",ftime="+bvh.getFrameTime());
+		//LogUtils.log("set-current:"+time+",rangeValue="+frameRange.getValue()+",bvhTime="+bvh.getFrameTime());
+		//LogUtils.log("animation,length="+animation.getData().getLength()+",fps="+animation.getData().getFps());
 		
 		double totaltime=animation.getData().getLength();
 		double animationCurrentTime=animation.getCurrentTime();
@@ -1784,31 +1811,34 @@ public void onError(Request request, Throwable exception) {
 		bodyIndices = (JsArray<Vector4>) JsArray.createArray();
 		bodyWeight = (JsArray<Vector4>) JsArray.createArray();
 		if(loadedGeometry.getSkinIndices().length()!=0 && loadedGeometry.getSkinWeight().length()!=0){
-			LogUtils.log("auto-weight from geometry:");
 			WeightBuilder.autoWeight(loadedGeometry, bones, endSites,WeightBuilder.MODE_FROM_GEOMETRY, bodyIndices, bodyWeight);
 		}else{
-			//TODO support multiple autoWeight
+			LogUtils.log("empty indices&weight auto-weight from geometry:");
 			WeightBuilder.autoWeight(loadedGeometry, bones, endSites,WeightBuilder.MODE_MODE_Start_And_Half_ParentAndChildrenAgressive, bodyIndices, bodyWeight);
 			}
 	}
 	
-	private JSONObject loadJsonModel(String jsonText,JSONLoadHandler handler){
+	private void loadJsonModel(JSONObject object,JSONLoadHandler handler){
 		JSONLoader loader=THREE.JSONLoader();
-		JSONValue lastJsonValue = JSONParser.parseLenient(jsonText);
-		JSONObject object=lastJsonValue.isObject();
-		if(object==null){
-			LogUtils.log("invalid-json object");
-		}
-		
 		JavaScriptObject jsobject=loader.parse(object.getJavaScriptObject(), null);
 		JSONObject newobject=new JSONObject(jsobject);
+		
+		
 		handler.loaded((Geometry) newobject.get("geometry").isObject().getJavaScriptObject(),null);
 		//LogUtils.log(object.getJavaScriptObject());
 		//loader.createModel(object.getJavaScriptObject(), handler, "");
 		//loader.onLoadComplete();
 		
-		return object;
+		//return object;
 		
+	}
+	private JSONObject parseJsonObject(String jsonText){
+		JSONValue lastJsonValue = JSONParser.parseLenient(jsonText);
+		JSONObject object=lastJsonValue.isObject();
+		if(object==null){
+			LogUtils.log("invalid-json object");
+		}
+		return object;
 	}
 	
 	private void loadModel(String path,final JSONLoadHandler handler){
@@ -1819,7 +1849,9 @@ public void onError(Request request, Throwable exception) {
 					
 					@Override
 					public void onResponseReceived(Request request, Response response) {
-						lastJsonObject=loadJsonModel(response.getText(),handler);
+						JSONObject object=parseJsonObject(response.getText());
+						lastJsonObject=object;
+						loadJsonModel(object,handler);
 					}
 					
 					
@@ -1871,8 +1903,12 @@ public void onError(Request request, Throwable exception) {
 	protected void updateMaterial() {
 		
 		Material material=null;
-		LogUtils.log("texture.setFlipY(false) for old version model");
-		texture.setFlipY(false);//for temporary release //TODO as option for 3.1 format models
+		
+		texture.setFlipY(needFlipY);//for temporary release //TODO as option for 3.1 format models
+		
+		if(!needFlipY){
+			LogUtils.log("texture flipY:false for old 3.0 format");
+		}
 		
 		if(useBasicMaterial.getValue()){
 			material=THREE.MeshBasicMaterial().skinning(true).color(0xffffff).map(texture).build();
@@ -1886,6 +1922,7 @@ public void onError(Request request, Throwable exception) {
 		}
 	}
 	private void createSkinnedMesh(){
+		LogUtils.log("createSkinnedMesh");
 		//LogUtils.log(bones);
 		JsArray<AnimationBone> clonedBone=cloneBones(bones);
 		//this is not work fine.just remove root moving to decrese flicking
@@ -2204,7 +2241,7 @@ private Vector4 findNearSpecial(List<NameAndPosition> nameAndPositions,Vector3 p
 			return THREE.Vector4(index1,index1,1,0);
 		}else{
 			double total=near1+near2;
-			LogUtils.log("xx:"+index1+","+index2);
+			//LogUtils.log("xx:"+index1+","+index2);
 			return THREE.Vector4(index1,index2,(total-near1)/total,(total-near2)/total);
 		}
 	}
