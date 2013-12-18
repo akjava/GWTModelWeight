@@ -22,6 +22,7 @@ import com.akjava.gwt.html5.client.file.FileUtils;
 import com.akjava.gwt.html5.client.file.FileUtils.DataURLListener;
 import com.akjava.gwt.html5.client.file.ui.DropVerticalPanelBase;
 import com.akjava.gwt.lib.client.IStorageControler;
+import com.akjava.gwt.lib.client.JsonValueUtils;
 import com.akjava.gwt.lib.client.LogUtils;
 import com.akjava.gwt.lib.client.StorageControler;
 import com.akjava.gwt.lib.client.StorageDataList;
@@ -103,7 +104,7 @@ import com.google.gwt.user.client.ui.VerticalPanel;
  * Entry point classes define <code>onModuleLoad()</code>.
  */
 public class GWTModelWeight extends SimpleTabDemoEntryPoint{
-	private String version="0.3(for r63)";//for three.js r63
+	public static final String version="0.3(for r63)";//for three.js r63
 	@Override
 	protected void beforeUpdate(WebGLRenderer renderer) {
 		
@@ -123,7 +124,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		if(!paused && animation!=null){
 			AnimationHandler.update(v);
 			currentTime=animation.getCurrentTime();
-			//LogUtils.log(""+currentTime+","+delta);
+			LogUtils.log("animation:"+currentTime+","+delta);
 			String check=""+currentTime;
 			if(check.equals("NaN")){
 				currentTime=0;
@@ -285,6 +286,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		
 		tabPanel.add(new CopyToolPanel(),"Copy");
 		tabPanel.add(new MergeToolPanel(),"Merge");
+		tabPanel.add(new ConvertToolPanel(),"Convert");
 	}
 	
 	
@@ -987,7 +989,7 @@ HorizontalPanel h1=new HorizontalPanel();
 		*/
 		
 		loadAndExport.add(new Label("Character(Three.js model file)"));
-		final Label modelSelection=new Label("selection:"+modelUrl);
+		modelSelection = new Label("selection:"+modelUrl);
 		modelSelection.setStylePrimaryName("gray");
 		loadAndExport.add(modelSelection);
 		
@@ -999,24 +1001,7 @@ HorizontalPanel h1=new HorizontalPanel();
 					@Override
 					public void loaded(Geometry geometry,JsArray<Material> materials) {
 						
-						initializeObject();
-						
-						loadedGeometry=geometry;
-						
-						
-						
-						autoWeight();
-					
-						
-						//LogUtils.log(bodyIndices);
-						//LogUtils.log(bodyWeight);
-						
-						createSkinnedMesh();
-						
-						createWireBody();
-						modelSelection.setText("selection:"+file.getFileName());
-						saveFileBox.setText(file.getFileName());
-						updateSelectableObjects();
+						onModelLoaded(file.getFileName(),geometry);
 					}
 				});
 			}
@@ -1123,6 +1108,19 @@ HorizontalPanel h1=new HorizontalPanel();
 		//loadAndExport.add(new Label("Dont export large BVH.large(10M?) text data crash browser"));
 		showControl();
 	}
+	
+	private void onModelLoaded(String fileName,Geometry geometry){
+		initializeObject();
+		
+		loadedGeometry=geometry;
+		autoWeight();		
+		createWireBody();
+		
+		modelSelection.setText("selection:"+fileName);
+		saveFileBox.setText(fileName);
+		
+		updateSelectableObjects();
+	}
 /**
  * on load model for weight&indecis 
  * @param fileName
@@ -1216,12 +1214,44 @@ HorizontalPanel h1=new HorizontalPanel();
 			mesh.getMaterial().gwtGetColor().setHex(getVertexColor(i));
 		}
 	}
+	/**
+	 right now totally broken.
+	 it seems don't touch setCurrentTime ,it's make storm of "THREE.Animation.update: Warning! Scale out of bounds:" error
+	 
+	 some how bvh.getframetime totall differenct in animation.why?
+	 i should fix it first.and set delta to update?
+	 
+	 handling delta seems fine so far.
+	 but i should test when change animation.what happend?
+	 */
 	protected void updateFrameRange() {
 		paused=true;
 		double time=frameRange.getValue()*bvh.getFrameTime();
-		LogUtils.log("set-current:"+time);
-		animation.setCurrentTime(time);
-		AnimationHandler.update(0);
+		LogUtils.log("bvh-length="+bvh.getFrames()+",ftime="+bvh.getFrameTime());
+		LogUtils.log("set-current:"+time+",rangeValue="+frameRange.getValue()+",bvhTime="+bvh.getFrameTime());
+		LogUtils.log("animation,length="+animation.getData().getLength()+",fps="+animation.getData().getFps());
+		
+		double totaltime=animation.getData().getLength();
+		double animationCurrentTime=animation.getCurrentTime();
+		
+		//animation.setCurrentTime(time);
+		double delta=0;
+		if(time>animationCurrentTime){
+			delta=animationCurrentTime=time;
+		}else{
+			double last=totaltime-animationCurrentTime;
+			delta=last+time;
+		}
+		
+		AnimationHandler.update(delta);
+		//animation.stop();
+		//animation.play(true, currentTime);
+		//currentTime=0;//to reset?
+		//paused=false;
+		//AnimationHandler.update(0);
+		//animation.stop();
+		//animation.pause();
+		//AnimationHandler.update(0);
 	}
 	protected void exportWebStorage() {
 		StorageDataList modelControler=new StorageDataList(storageControler, "MODEL");
@@ -1629,27 +1659,13 @@ public void onError(Request request, Throwable exception) {
 					//loader.load("men3smart.js", new  LoadHandler() {
 						@Override
 						public void loaded(Geometry geometry,JsArray<Material> materials) {
-						
-						
-							for(int i=0;i<bones.length();i++){
-								if(bones.get(i).getParent()!=-1)
-								LogUtils.log(bones.get(i).getName()+",parent="+bones.get(bones.get(i).getParent()).getName());
-							}
-							
-							//auto weight
-							loadedGeometry=geometry;
-							
-							autoWeight();
-							
+							onModelLoaded(modelUrl,geometry);
 							createSkinnedMesh();
-							
-							createWireBody();
-							updateSelectableObjects();
 						}
 					
 					});
 				}else{
-					
+					//is this order is important?
 					autoWeight();
 					createSkinnedMesh();
 					createWireBody();
@@ -1803,7 +1819,6 @@ public void onError(Request request, Throwable exception) {
 					
 					@Override
 					public void onResponseReceived(Request request, Response response) {
-						
 						lastJsonObject=loadJsonModel(response.getText(),handler);
 					}
 					
@@ -1973,6 +1988,8 @@ public void onError(Request request, Throwable exception) {
 	private Anchor anchor;
 
 	private Label weightSelection;
+
+	private Label modelSelection;
 	
 	private Vector4 convertWeight(int index,ColladaData collada){
 		if(wdatas==null){
