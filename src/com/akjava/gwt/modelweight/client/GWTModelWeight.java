@@ -1345,6 +1345,11 @@ HorizontalPanel h1=new HorizontalPanel();
 		lastSelection=index;
 	}
 
+	/*
+	 * add bones and skinIndices & skinWeights to last selected model
+	 * animation is option.
+	 * so model format version keep(not touch uv)
+	 */
 	public String toJsonText(){
 		JsArray<AnimationBone> clonedBone=cloneBones(bones);
 		JSONArray arrays=new JSONArray(clonedBone);
@@ -1369,7 +1374,16 @@ HorizontalPanel h1=new HorizontalPanel();
 			weights.push(bodyWeight.get(i).getY());
 		}
 		lastJsonObject.put("skinWeights", new JSONArray(weights));
+		
+		//rewrite gen
+		
+		JSONModelFile file=(JSONModelFile) lastJsonObject.getJavaScriptObject();
+		file.getMetaData().setGeneratedBy(getGeneratedBy());
+		
 		return lastJsonObject.toString();
+	}
+	public static String getGeneratedBy(){
+		return "GWTModel-Weight ver"+GWTModelWeight.version;
 	}
 	private void exportAsJson(){
 		//set bone
@@ -1832,6 +1846,7 @@ public void onError(Request request, Throwable exception) {
 		//return object;
 		
 	}
+	//TODO more validate model format
 	private JSONObject parseJsonObject(String jsonText){
 		JSONValue lastJsonValue = JSONParser.parseLenient(jsonText);
 		JSONObject object=lastJsonValue.isObject();
