@@ -34,10 +34,10 @@ import com.akjava.gwt.three.client.gwt.ThreeLog;
 import com.akjava.gwt.three.client.gwt.animation.AnimationBone;
 import com.akjava.gwt.three.client.gwt.animation.AnimationData;
 import com.akjava.gwt.three.client.gwt.animation.AnimationHierarchyItem;
-import com.akjava.gwt.three.client.gwt.animation.WeightBuilder;
 import com.akjava.gwt.three.client.gwt.collada.ColladaData;
 import com.akjava.gwt.three.client.gwt.model.JSONModelFile;
 import com.akjava.gwt.three.client.gwt.ui.SimpleTabDemoEntryPoint;
+import com.akjava.gwt.three.client.java.animation.WeightBuilder;
 import com.akjava.gwt.three.client.java.utils.GWTGeometryUtils;
 import com.akjava.gwt.three.client.js.THREE;
 import com.akjava.gwt.three.client.js.core.Geometry;
@@ -925,12 +925,13 @@ HorizontalPanel h1=new HorizontalPanel();
 		boneAndWeight.add(new Label("Auto-Weight"));
 		final ListBox autoWeightBox=new ListBox();
 		autoWeightBox.addItem("From Geometry", "4");
-		autoWeightBox.addItem("test", "6");
+		autoWeightBox.addItem("Half ParentAndChildrenAgressive", "6");
 		autoWeightBox.addItem("ParentAndChildren Agressive", "5");
 		autoWeightBox.addItem("ParentAndChildren", "3");
 		autoWeightBox.addItem("NearAgressive", "2");
 		autoWeightBox.addItem("NearSingleBon", "0");
 		autoWeightBox.addItem("NearSpecial", "1");
+		autoWeightBox.addItem("Root All", "7");
 		
 		autoWeightBox.setSelectedIndex(1);
 		boneAndWeight.add(autoWeightBox);
@@ -939,6 +940,7 @@ HorizontalPanel h1=new HorizontalPanel();
 			@Override
 			public void onChange(ChangeEvent event) {
 				updateAutoWeight(autoWeightBox.getValue(autoWeightBox.getSelectedIndex()));
+				createSkinnedMesh();
 			}
 		});
 		
