@@ -36,8 +36,8 @@ import com.akjava.gwt.three.client.gwt.animation.AnimationData;
 import com.akjava.gwt.three.client.gwt.animation.AnimationHierarchyItem;
 import com.akjava.gwt.three.client.gwt.collada.ColladaData;
 import com.akjava.gwt.three.client.gwt.model.JSONModelFile;
-import com.akjava.gwt.three.client.gwt.ui.SimpleTabDemoEntryPoint;
 import com.akjava.gwt.three.client.java.animation.WeightBuilder;
+import com.akjava.gwt.three.client.java.ui.SimpleTabDemoEntryPoint;
 import com.akjava.gwt.three.client.java.utils.GWTGeometryUtils;
 import com.akjava.gwt.three.client.js.THREE;
 import com.akjava.gwt.three.client.js.core.Geometry;
@@ -52,7 +52,9 @@ import com.akjava.gwt.three.client.js.extras.loaders.ColladaLoader;
 import com.akjava.gwt.three.client.js.lights.Light;
 import com.akjava.gwt.three.client.js.loaders.JSONLoader;
 import com.akjava.gwt.three.client.js.loaders.JSONLoader.JSONLoadHandler;
+import com.akjava.gwt.three.client.js.materials.LineBasicMaterialParameter;
 import com.akjava.gwt.three.client.js.materials.Material;
+import com.akjava.gwt.three.client.js.materials.MeshLambertMaterialParameter;
 import com.akjava.gwt.three.client.js.math.Euler;
 import com.akjava.gwt.three.client.js.math.Ray;
 import com.akjava.gwt.three.client.js.math.Vector3;
@@ -72,6 +74,8 @@ import com.google.gwt.event.dom.client.ChangeEvent;
 import com.google.gwt.event.dom.client.ChangeHandler;
 import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
+import com.google.gwt.event.dom.client.DoubleClickEvent;
+import com.google.gwt.event.dom.client.DropEvent;
 import com.google.gwt.event.dom.client.LoadEvent;
 import com.google.gwt.event.dom.client.MouseDownEvent;
 import com.google.gwt.event.dom.client.MouseMoveEvent;
@@ -162,7 +166,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		//Window.open("text/plain:test.txt:"+url, "test", null);
 		
 		storageControler = new StorageControler();
-		canvas.setClearColorHex(0x333333);//canvas has margin?
+		canvas.setClearColor(0x333333);//canvas has margin?
 		
 		
 		//scene.add(THREE.AmbientLight(0xffffff));
@@ -297,7 +301,13 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 	Object3D root;
 	
 	//for selection
+	private final int boneJointColor=0x888888;
+	private final int boneCoreColor=0x008800;
+	
+	private final int selectBoneJointColor=0xeeddee;
+	private final int selectBoneCoreColor=0xee88ee;
 	List<Mesh> boneJointMeshs=new ArrayList<Mesh>();
+	List<Mesh> boneCoreMeshs=new ArrayList<Mesh>();
 	List<Mesh> tmp=new ArrayList<Mesh>();
 	private Object3D boneToSkelton(BVH bvh){
 		boneJointMeshs.clear();
@@ -310,12 +320,11 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		for(int i=0;i<bones.length();i++){
 			AnimationBone bone=bones.get(i);
 			Geometry cube=THREE.CubeGeometry(.3, .3, .3);
-			int color=0x00aa00;
-			if(i==0){
-				//color=0x00ff00;
-			}
-			Mesh mesh=THREE.Mesh(cube, THREE.MeshLambertMaterial().color(color).build());
+			
+			
+			Mesh mesh=THREE.Mesh(cube, THREE.MeshLambertMaterial(MeshLambertMaterialParameter.create().color(boneCoreColor)));
 			group.add(mesh);
+			boneCoreMeshs.add(mesh);
 			Vector3 pos=GWTThreeUtils.jsArrayToVector3(bone.getPos());
 			
 			if(bone.getParent()!=-1){
@@ -331,7 +340,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 				double length=ppos.clone().sub(pos).length();
 				
 				//half
-				Mesh halfMesh=THREE.Mesh(THREE.CubeGeometry(.2, .2, length), THREE.MeshLambertMaterial().color(0xaaaaaa).build());
+				Mesh halfMesh=THREE.Mesh(THREE.CubeGeometry(.2, .2, length), THREE.MeshLambertMaterial(MeshLambertMaterialParameter.create().color(boneJointColor)));
 				group.add(halfMesh);
 				halfMesh.setPosition(half);
 				halfMesh.lookAt(pos);
@@ -342,9 +351,10 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 			mesh.setPosition(pos);
 			mesh.setName(bone.getName());
 			
+			//this mesh is for helping auto-weight
 			List<Vector3> sites=endSites.get(i);
 			for(Vector3 end:sites){
-				Mesh endMesh=THREE.Mesh(THREE.CubeGeometry(.2, .2, .2), THREE.MeshLambertMaterial().color(0x00a00aa).build());
+				Mesh endMesh=THREE.Mesh(THREE.CubeGeometry(.2, .2, .2), THREE.MeshLambertMaterial(MeshLambertMaterialParameter.create().color(0x00a00aa)));
 				if(end.getX()==0 && end.getY()==0 && end.getZ()==0){
 					continue;//ignore 0 
 				}else{
@@ -360,7 +370,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 			if(bone.getParent()!=-1){
 				//AnimationBone parent=bones.get(bone.getParent());
 				Vector3 ppos=tmp.get(bone.getParent()).getPosition();
-				Object3D line=THREE.Line(GWTGeometryUtils.createLineGeometry(pos, ppos), THREE.LineBasicMaterial().color(0x888888).build());
+				Object3D line=THREE.Line(GWTGeometryUtils.createLineGeometry(pos, ppos), THREE.LineBasicMaterial(LineBasicMaterialParameter.create().color(0x888888)));
 				group.add(line);
 			}
 			tmp.add(mesh);
@@ -472,12 +482,15 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 			
 			Object3D target=sect.getObject();
 			LogUtils.log(target);
-			if(!target.getName().isEmpty()){
+			if(!target.getName().isEmpty()){//only point: and bone name
 				if(target.getName().startsWith("point:")){
 					if(!target.getVisible()){
 						//not selected bone
 						continue;
 					}
+					
+					//changeBoneSelectionColor(null);
+					
 					String[] pv=target.getName().split(":");
 					int at=Integer.parseInt(pv[1]);
 					
@@ -508,7 +521,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 						}
 					}else{
 						//clear cache
-						clearSelections();
+						clearBodyPointSelections();
 						
 						
 						selectVertex(at);
@@ -540,7 +553,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 					
 					
 					
-				clearSelections();
+				clearBodyPointSelections();
 				selectBone(target);
 				break;
 				}
@@ -549,8 +562,9 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 			
 		}
 		//selectionMesh.setVisible(false);
+		//TODO clear selection
 	}
-	private void clearSelections(){
+	private void clearBodyPointSelections(){
 		for(int index:selections){
 			vertexMeshs.get(index).getMaterial().gwtGetColor().setHex(getVertexColor(index));
 		}
@@ -609,13 +623,45 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 	private Mesh boneSelectionMesh;
 	private int selectionBoneIndex;
 	private Object3D selectVertex;
+	
+	/**
+	 * change bone colors to detect which one selected.
+	 * when point selected ,all clear bone selection
+	 * @param boneName
+	 */
+	private void changeBoneSelectionColor(String boneName){
+		for(Mesh mesh:boneCoreMeshs){
+			if(boneName==null || !boneName.equals(mesh.getName())){
+				GWTThreeUtils.changeMeshMaterialColor(mesh, boneCoreColor);
+			}else{
+				GWTThreeUtils.changeMeshMaterialColor(mesh, selectBoneCoreColor);
+			}
+		}
+		for(Mesh mesh:boneJointMeshs){
+			if(boneName==null || !boneName.equals(mesh.getName())){
+				GWTThreeUtils.changeMeshMaterialColor(mesh, boneJointColor);
+			}else{
+				GWTThreeUtils.changeMeshMaterialColor(mesh, selectBoneJointColor);
+			}
+		}
+	}
+	
 	private void selectBone(Object3D target) {
 		lastSelection=-1;
+		//right now off boneSelectionMesh
 		if(boneSelectionMesh==null){
 			boneSelectionMesh=THREE.Mesh(THREE.CubeGeometry(1, 1, 1), THREE.MeshLambertMaterial().color(0x00ff00).build());
 			boneAndVertex.add(boneSelectionMesh);
+		}else{
+			
 		}
+		
+		boneSelectionMesh.setVisible(false);//temporaly
 		boneSelectionMesh.setPosition(target.getPosition());
+		
+		changeBoneSelectionColor(target.getName());
+		
+		
 		selectionBoneIndex=findBoneIndex(target.getName());
 		
 		boneListBox.setSelectedIndex(selectionBoneIndex);
@@ -922,25 +968,29 @@ HorizontalPanel h1=new HorizontalPanel();
 		});
 		boneAndWeight.add(updateWeightButton);
 		
-		boneAndWeight.add(new Label("Auto-Weight"));
-		final ListBox autoWeightBox=new ListBox();
-		autoWeightBox.addItem("From Geometry", "4");
-		autoWeightBox.addItem("Half ParentAndChildrenAgressive", "6");
-		autoWeightBox.addItem("ParentAndChildren Agressive", "5");
-		autoWeightBox.addItem("ParentAndChildren", "3");
-		autoWeightBox.addItem("NearAgressive", "2");
-		autoWeightBox.addItem("NearSingleBon", "0");
-		autoWeightBox.addItem("NearSpecial", "1");
-		autoWeightBox.addItem("Root All", "7");
+		boneAndWeight.add(new Label("Re Auto-Weight"));
 		
-		autoWeightBox.setSelectedIndex(1);
-		boneAndWeight.add(autoWeightBox);
-		autoWeightBox.addChangeHandler(new ChangeHandler() {
+		autoWeightListBox = new ListBox();
+		autoWeightListBox.addItem("From Geometry", "4");
+		autoWeightListBox.addItem("Half ParentAndChildrenAgressive", "6");
+		autoWeightListBox.addItem("ParentAndChildren Agressive", "5");
+		autoWeightListBox.addItem("ParentAndChildren", "3");
+		autoWeightListBox.addItem("NearAgressive", "2");
+		autoWeightListBox.addItem("NearSingleBon", "0");
+		autoWeightListBox.addItem("NearSpecial", "1");
+		autoWeightListBox.addItem("Root All", "7");
+		
+		autoWeightListBox.setSelectedIndex(1);
+		boneAndWeight.add(autoWeightListBox);
+		autoWeightListBox.addChangeHandler(new ChangeHandler() {
 			
 			@Override
 			public void onChange(ChangeEvent event) {
-				updateAutoWeight(autoWeightBox.getValue(autoWeightBox.getSelectedIndex()));
+				//if(callAutoWeight){//when model loaded do autoweight and sync the way do it without re-update
+				LogUtils.log("autoweight-changed");
+				updateAutoWeight(autoWeightListBox.getValue(autoWeightListBox.getSelectedIndex()));
 				createSkinnedMesh();
+				//}
 			}
 		});
 		
@@ -954,15 +1004,14 @@ HorizontalPanel h1=new HorizontalPanel();
 		stackPanel.add(loadAndExport,"Load Datas",30);
 		
 		loadAndExport.add(new Label("Bone(BVH Motion file)"));
-		final Label bvhSelection=new Label("selection:"+bvhUrl);
+		bvhSelection = new Label("selection:"+bvhUrl);
 		bvhSelection.setStylePrimaryName("gray");
 		loadAndExport.add(bvhSelection);
 		
 		final FileUploadForm bvhUpload=FileUtils.createSingleTextFileUploadForm(new DataURLListener() {
 			@Override
 			public void uploaded(File file, String value) {
-				parseBVH(value);
-				bvhSelection.setText("selection:"+file.getFileName());
+				onBVHFileUploaded(file, value);
 			}
 		}, true);
 		bvhUpload.setShowDragOverBorder(true);
@@ -1000,17 +1049,7 @@ HorizontalPanel h1=new HorizontalPanel();
 		final FileUploadForm meshUpload=FileUtils.createSingleTextFileUploadForm(new DataURLListener() {
 			@Override
 			public void uploaded(final File file, String value) {
-				JSONObject object=parseJsonObject(value);
-				lastJsonObject=object;
-				loadJsonModel(object,new JSONLoadHandler() {
-					
-					@Override
-					public void loaded(Geometry geometry,JsArray<Material> materials) {
-						
-						onModelLoaded(file.getFileName(),geometry);
-						createSkinnedMesh();
-					}
-				});
+				onModelFileUploaded(file, value);
 				
 			}
 		}, true);
@@ -1020,15 +1059,12 @@ HorizontalPanel h1=new HorizontalPanel();
 		
 		
 		loadAndExport.add(new Label("Texture(PNG or JPEG)"));
-		final Label textureSelection=new Label("selection:"+textureUrl);
+		textureSelection = new Label("selection:"+textureUrl);
 		textureSelection.setStylePrimaryName("gray");
 		final FileUploadForm textureUpload=FileUtils.createSingleFileUploadForm(new DataURLListener() {	
 			@Override
 			public void uploaded(File file, String value) {
-				textureUrl=value;
-				generateTexture();
-				//createSkinnedMesh();
-				textureSelection.setText("selection:"+file.getFileName());
+				onTextureFileUploaded(file, value);
 			}
 		}, true);
 		textureUpload.setShowDragOverBorder(true);
@@ -1043,17 +1079,7 @@ HorizontalPanel h1=new HorizontalPanel();
 		final FileUploadForm weightUpload=FileUtils.createSingleTextFileUploadForm(new DataURLListener() {
 			@Override
 			public void uploaded(final File file, String value) {
-				JSONObject object=parseJsonObject(value);
-				
-				//dont need json object,just use weights and indecis info
-				loadJsonModel(object,new JSONLoadHandler() {
-					
-					@Override
-					public void loaded(Geometry geometry,JsArray<Material> materials) {
-						onWeightLoaded(file.getFileName(), geometry, materials);
-					}
-
-				});
+				onWeightFileUploaded(file, value);
 			}
 		}, true);
 		weightUpload.setShowDragOverBorder(true);
@@ -1174,6 +1200,10 @@ HorizontalPanel h1=new HorizontalPanel();
 		}
 		//bone
 		for(Mesh mesh:boneJointMeshs){
+			objects.push(mesh);
+		}
+		
+		for(Mesh mesh:boneCoreMeshs){
 			objects.push(mesh);
 		}
 	}
@@ -1830,6 +1860,13 @@ public void onError(Request request, Throwable exception) {
 			wireBodyPoints.add(point);
 		}
 	}
+	/* call change listener ,this is not good
+	private void changeAutoWeightListBox(int value){
+		//callAutoWeight=false;
+		autoWeightListBox.setSelectedIndex(value);
+		//callAutoWeight=true;
+	}
+	*/
 	private void autoWeight(){
 		clearBodyIndicesAndWeightArray();
 		LogUtils.log(loadedGeometry);
@@ -1837,11 +1874,15 @@ public void onError(Request request, Throwable exception) {
 		//have valid skinIndices and weight use from that.
 		if(GWTGeometryUtils.isValidSkinIndicesAndWeight(loadedGeometry)){
 			WeightBuilder.autoWeight(loadedGeometry, bones, endSites,WeightBuilder.MODE_FROM_GEOMETRY, bodyIndices, bodyWeight);
+		
+			//changeAutoWeightListBox(0);
+			
 		}else{
 			LogUtils.log("empty indices&weight auto-weight from geometry:this action take a time");
 			//can't auto weight algo change? TODO it
 			WeightBuilder.autoWeight(loadedGeometry, bones, endSites,WeightBuilder.MODE_MODE_Start_And_Half_ParentAndChildrenAgressive, bodyIndices, bodyWeight);
-			}
+			//changeAutoWeightListBox(1);
+		}
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -2062,7 +2103,13 @@ public void onError(Request request, Throwable exception) {
 	private Label weightSelection;
 
 	private Label modelSelection;
-	
+
+	private ListBox autoWeightListBox;
+
+	private Label bvhSelection;
+
+	private Label textureSelection;
+	//private boolean callAutoWeight=true;
 	private Vector4 convertWeight(int index,ColladaData collada){
 		if(wdatas==null){
 			//wdatas=new WeighDataParser().parse(Bundles.INSTANCE.weight().getText());
@@ -2480,4 +2527,128 @@ private Vector4 findNearSpecial(List<NameAndPosition> nameAndPositions,Vector3 p
 		
 	}
 	
+	private void onTextureFileUploaded(final File file,String value){
+		textureUrl=value;
+		generateTexture();
+		//createSkinnedMesh();
+		textureSelection.setText("selection:"+file.getFileName());
+	}
+	private void onBVHFileUploaded(final File file,String value){
+		parseBVH(value);
+		bvhSelection.setText("selection:"+file.getFileName());
+	}
+	private void onWeightFileUploaded(final File file,String value){
+		JSONObject object=parseJsonObject(value);
+		
+		//dont need json object,just use weights and indecis info
+		loadJsonModel(object,new JSONLoadHandler() {
+			
+			@Override
+			public void loaded(Geometry geometry,JsArray<Material> materials) {
+				onWeightLoaded(file.getFileName(), geometry, materials);
+			}
+
+		});
+	}
+	
+
+	private void onModelFileUploaded(final File file,String value){
+		JSONObject object=parseJsonObject(value);
+		lastJsonObject=object;
+		loadJsonModel(object,new JSONLoadHandler() {
+			
+			@Override
+			public void loaded(Geometry geometry,JsArray<Material> materials) {
+				onModelLoaded(file.getFileName(),geometry);
+				createSkinnedMesh();
+			}
+		});
+	}
+	
+	@Override
+	public void onDoubleClick(DoubleClickEvent event) {
+		unselectAll();
+	}
+	private void unselectAll() {
+		clearBodyPointSelections();//clear only selection
+		selectVertexsByBone(-1);//not bone selected
+		changeBoneSelectionColor(null);
+		//TODO disable bone&weight panel
+	}
+	
+	private static final int TYPE_UNKNOWN=0;
+	private static final int TYPE_IMAGE=1;
+	private static final int TYPE_JSON=2;
+	private static final int TYPE_BVH=3;
+	
+	protected void onDrop(DropEvent event){
+		event.preventDefault();
+		String[] images={"png","jpg","jpeg"};
+		String[] jsons={"js","json"};
+		String[] bvhs={"bvh"};
+		
+		
+		final JsArray<File> files = FileUtils.transferToFile(event
+				.getNativeEvent());
+
+			
+			final String fileName=files.get(0).getFileName();
+			int type=0;
+			for(String name:images){
+				if(fileName.toLowerCase().endsWith("."+name)){
+					type=TYPE_IMAGE;
+					break;
+				}
+			}
+			if(type==TYPE_UNKNOWN){
+				for(String name:jsons){
+					if(fileName.toLowerCase().endsWith("."+name)){
+						type=TYPE_JSON;
+						break;
+					}
+				}
+			}
+			if(type==TYPE_UNKNOWN){
+				for(String name:bvhs){
+					if(fileName.toLowerCase().endsWith("."+name)){
+						type=TYPE_BVH;
+						break;
+					}
+				}
+			}
+			final int final_type=type;
+			final FileReader reader = FileReader.createFileReader();
+			if (files.length() > 0) {
+				reader.setOnLoad(new FileHandler() {
+					@Override
+					public void onLoad() {
+						switch(final_type){
+						case TYPE_BVH:
+							onBVHFileUploaded(files.get(0), reader.getResultAsString());
+							break;
+						case TYPE_IMAGE:
+							onTextureFileUploaded(files.get(0), reader.getResultAsString());
+							break;
+						case TYPE_JSON:
+							onModelFileUploaded(files.get(0), reader.getResultAsString());
+							
+							break;	
+						
+						case TYPE_UNKNOWN://never happen
+						}
+					}
+				});
+			
+			if(type==TYPE_UNKNOWN){
+				Window.alert("not supported file-type:"+fileName);
+			}else{
+				if(type==TYPE_IMAGE){
+					reader.readAsDataURL(files.get(0));
+				}else{
+					reader.readAsText(files.get(0),"UTF-8");
+				}
+			}
+			//TODO support multiple files
+		}
+	}
 }
