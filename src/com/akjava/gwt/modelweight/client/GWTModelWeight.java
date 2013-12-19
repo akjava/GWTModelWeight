@@ -69,6 +69,7 @@ import com.google.gwt.core.client.JsArray;
 import com.google.gwt.core.client.JsArrayNumber;
 import com.google.gwt.core.client.JsArrayString;
 import com.google.gwt.dom.client.ImageElement;
+import com.google.gwt.dom.client.NativeEvent;
 import com.google.gwt.dom.client.Style.Unit;
 import com.google.gwt.event.dom.client.ChangeEvent;
 import com.google.gwt.event.dom.client.ChangeHandler;
@@ -121,7 +122,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 			boneAndVertex.getPosition().set(posX,posY,0);
 			root.setPosition(positionXRange.getValue(), positionYRange.getValue(), positionZRange.getValue());
 			
-			root.getRotation().set(Math.toRadians(rotationRange.getValue()),Math.toRadians(rotationYRange.getValue()),Math.toRadians(rotationZRange.getValue()),Euler.XYZ);
+			root.getRotation().set(Math.toRadians(rotationXRange.getValue()),Math.toRadians(rotationYRange.getValue()),Math.toRadians(rotationZRange.getValue()),Euler.XYZ);
 			}
 		
 		long delta=clock.delta();
@@ -727,6 +728,8 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		}*/
 		
 		
+		
+		
 		if(mouseDown){
 			
 			int diffX=event.getX()-mouseDownX;
@@ -737,7 +740,26 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 			
 			
 			
-			
+			if(event.getNativeButton()==NativeEvent.BUTTON_MIDDLE){
+				int newX=rotationXRange.getValue()+diffY;
+				if(newX<-180){
+					newX=360+newX;
+				}
+				if(newX>180){
+					newX=360-newX;
+				}
+				rotationXRange.setValue(newX);
+				
+				int newY=rotationYRange.getValue()+diffX;
+				if(newY<-180){
+					newY=360+newY;
+				}
+				if(newY>180){
+					newY=360-newY;
+				}
+				rotationYRange.setValue(newY);
+				return;
+			}
 			
 			
 			
@@ -765,7 +787,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 	private InputRangeWidget positionYRange;
 	private InputRangeWidget positionZRange;
 	
-	private InputRangeWidget rotationRange;
+	private InputRangeWidget rotationXRange;
 	private InputRangeWidget rotationYRange;
 	private InputRangeWidget rotationZRange;
 	@Override
@@ -784,15 +806,15 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		
 HorizontalPanel h1=new HorizontalPanel();
 		
-		rotationRange = InputRangeWidget.createInputRange(-180,180,0);
-		modelPositionAndRotation.add(HTML5Builder.createRangeLabel("X-Rotate:", rotationRange));
+		rotationXRange = InputRangeWidget.createInputRange(-180,180,0);
+		modelPositionAndRotation.add(HTML5Builder.createRangeLabel("X-Rotate:", rotationXRange));
 		modelPositionAndRotation.add(h1);
-		h1.add(rotationRange);
+		h1.add(rotationXRange);
 		Button reset=new Button("Reset");
 		reset.addClickHandler(new ClickHandler() {
 			@Override
 			public void onClick(ClickEvent event) {
-				rotationRange.setValue(0);
+				rotationXRange.setValue(0);
 			}
 		});
 		h1.add(reset);
