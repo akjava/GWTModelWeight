@@ -29,7 +29,6 @@ import com.akjava.gwt.lib.client.StorageDataList;
 import com.akjava.gwt.modelweight.client.weight.GWTWeightData;
 import com.akjava.gwt.modelweight.client.weight.WeighDataParser;
 import com.akjava.gwt.three.client.gwt.Clock;
-import com.akjava.gwt.three.client.gwt.GWTGeometryUtils;
 import com.akjava.gwt.three.client.gwt.GWTThreeUtils;
 import com.akjava.gwt.three.client.gwt.ThreeLog;
 import com.akjava.gwt.three.client.gwt.animation.AnimationBone;
@@ -39,6 +38,7 @@ import com.akjava.gwt.three.client.gwt.animation.WeightBuilder;
 import com.akjava.gwt.three.client.gwt.collada.ColladaData;
 import com.akjava.gwt.three.client.gwt.model.JSONModelFile;
 import com.akjava.gwt.three.client.gwt.ui.SimpleTabDemoEntryPoint;
+import com.akjava.gwt.three.client.java.utils.GWTGeometryUtils;
 import com.akjava.gwt.three.client.js.THREE;
 import com.akjava.gwt.three.client.js.core.Geometry;
 import com.akjava.gwt.three.client.js.core.Intersect;
@@ -48,6 +48,7 @@ import com.akjava.gwt.three.client.js.extras.GeometryUtils;
 import com.akjava.gwt.three.client.js.extras.ImageUtils;
 import com.akjava.gwt.three.client.js.extras.animation.Animation;
 import com.akjava.gwt.three.client.js.extras.animation.AnimationHandler;
+import com.akjava.gwt.three.client.js.extras.loaders.ColladaLoader;
 import com.akjava.gwt.three.client.js.lights.Light;
 import com.akjava.gwt.three.client.js.loaders.JSONLoader;
 import com.akjava.gwt.three.client.js.loaders.JSONLoader.JSONLoadHandler;
@@ -1008,6 +1009,7 @@ HorizontalPanel h1=new HorizontalPanel();
 						createSkinnedMesh();
 					}
 				});
+				
 			}
 		}, true);
 		meshUpload.setShowDragOverBorder(true);
@@ -1117,13 +1119,15 @@ HorizontalPanel h1=new HorizontalPanel();
 	
 	private boolean needFlipY=true;//default
 	private void onModelLoaded(String fileName,Geometry geometry){
-		LogUtils.log("onModuleLoaded");
-		if(lastJsonObject!=null){//TODO temporaly
+		LogUtils.log("onModelLoaded");
+		if(lastJsonObject!=null){
 		JSONModelFile modelFile=(JSONModelFile) lastJsonObject.getJavaScriptObject();
 		//old version 3.0 need flip-Y
 		//see https://github.com/mrdoob/three.js/wiki/Migration#r49--r50
 		if(modelFile.getMetaData().getFormatVersion()==3){
 			needFlipY=false;
+		}else{
+			needFlipY=true;
 		}
 		}
 		
@@ -1215,11 +1219,14 @@ HorizontalPanel h1=new HorizontalPanel();
 		return result;
 	}
 	
+	@SuppressWarnings("unchecked")
 	protected void updateAutoWeight(String value) {
 		int selectedValue=Integer.parseInt(value);
 		if(selectedValue!=-1){
+			//clear Indices & Weight
 			bodyIndices = (JsArray<Vector4>) JsArray.createArray();
 			bodyWeight = (JsArray<Vector4>) JsArray.createArray();
+			
 			if(loadedGeometry.getSkinIndices().length()!=0 && loadedGeometry.getSkinWeight().length()!=0){
 				WeightBuilder.autoWeight(loadedGeometry, bones, endSites,selectedValue, bodyIndices, bodyWeight);
 			}else{
@@ -1822,14 +1829,23 @@ public void onError(Request request, Throwable exception) {
 		}
 	}
 	private void autoWeight(){
-		bodyIndices = (JsArray<Vector4>) JsArray.createArray();
-		bodyWeight = (JsArray<Vector4>) JsArray.createArray();
-		if(loadedGeometry.getSkinIndices().length()!=0 && loadedGeometry.getSkinWeight().length()!=0){
+		clearBodyIndicesAndWeightArray();
+		LogUtils.log(loadedGeometry);
+		
+		//have valid skinIndices and weight use from that.
+		if(GWTGeometryUtils.isValidSkinIndicesAndWeight(loadedGeometry)){
 			WeightBuilder.autoWeight(loadedGeometry, bones, endSites,WeightBuilder.MODE_FROM_GEOMETRY, bodyIndices, bodyWeight);
 		}else{
-			LogUtils.log("empty indices&weight auto-weight from geometry:");
+			LogUtils.log("empty indices&weight auto-weight from geometry:this action take a time");
+			//can't auto weight algo change? TODO it
 			WeightBuilder.autoWeight(loadedGeometry, bones, endSites,WeightBuilder.MODE_MODE_Start_And_Half_ParentAndChildrenAgressive, bodyIndices, bodyWeight);
 			}
+	}
+	
+	@SuppressWarnings("unchecked")
+	private void clearBodyIndicesAndWeightArray(){
+		bodyIndices = (JsArray<Vector4>) JsArray.createArray();
+		bodyWeight = (JsArray<Vector4>) JsArray.createArray();
 	}
 	
 	private void loadJsonModel(JSONObject object,JSONLoadHandler handler){
@@ -1963,8 +1979,10 @@ public void onError(Request request, Throwable exception) {
 		if(animation!=null){
 			AnimationHandler.removeFromUpdate(animation);
 		}
+		LogUtils.log("start new animation");
+		LogUtils.log(skinnedMesh);
 		animation = THREE.Animation( skinnedMesh, animationName );
-		animation.play(true,currentTime);
+		animation.play(true,0);
 	}
 	
 	private List<Mesh> vertexMeshs=new ArrayList<Mesh>();
