@@ -1751,8 +1751,12 @@ public void onError(Request request, Throwable exception) {
 				//LogUtils.log(test.toString());
 				
 				
-				texture=ImageUtils.loadTexture(textureUrl);
-				texture.setFlipY(false);//for temporaly old model
+				if(texture==null){
+					//initial texture load,no need to care flipY,it's care when model loaded.
+					texture=ImageUtils.loadTexture(textureUrl);
+				}
+				
+				
 				initializeObject();
 				
 				if(loadedGeometry==null){//initial load
