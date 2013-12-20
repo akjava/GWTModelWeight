@@ -74,7 +74,7 @@ public class ConvertToolPanel extends VerticalPanel{
 			@Override
 			public void uploaded(File file, String value) {
 				fileName=file.getFileName();
-				JSONValue jsonValue = JSONParser.parseLenient(value);
+				JSONValue jsonValue = JSONParser.parseStrict(value);
 				JSONObject object=jsonValue.isObject();
 				if(object!=null){
 					jsonmodel = (JSONModelFile) object.getJavaScriptObject();

@@ -62,7 +62,7 @@ public class CopyToolPanel extends VerticalPanel{
 						srcFile.reset();
 						
 						String text=reader.getResultAsString();
-						JSONValue lastJsonValue = JSONParser.parseLenient(text);
+						JSONValue lastJsonValue = JSONParser.parseStrict(text);
 						
 						//TODO more validate
 						JSONObject object=lastJsonValue.isObject();
@@ -118,7 +118,7 @@ public class CopyToolPanel extends VerticalPanel{
 						destFile.reset();
 						
 						String text=reader.getResultAsString();
-						JSONValue lastJsonValue = JSONParser.parseLenient(text);
+						JSONValue lastJsonValue = JSONParser.parseStrict(text);
 						//TODO more validate
 						JSONObject object=lastJsonValue.isObject();
 						

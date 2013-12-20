@@ -29,7 +29,6 @@ import com.akjava.gwt.lib.client.StorageDataList;
 import com.akjava.gwt.modelweight.client.weight.GWTWeightData;
 import com.akjava.gwt.modelweight.client.weight.WeighDataParser;
 import com.akjava.gwt.three.client.gwt.Clock;
-import com.akjava.gwt.three.client.gwt.GWTThreeUtils;
 import com.akjava.gwt.three.client.gwt.ThreeLog;
 import com.akjava.gwt.three.client.gwt.animation.AnimationBone;
 import com.akjava.gwt.three.client.gwt.animation.AnimationData;
@@ -39,6 +38,7 @@ import com.akjava.gwt.three.client.gwt.model.JSONModelFile;
 import com.akjava.gwt.three.client.java.animation.WeightBuilder;
 import com.akjava.gwt.three.client.java.ui.SimpleTabDemoEntryPoint;
 import com.akjava.gwt.three.client.java.utils.GWTGeometryUtils;
+import com.akjava.gwt.three.client.java.utils.GWTThreeUtils;
 import com.akjava.gwt.three.client.js.THREE;
 import com.akjava.gwt.three.client.js.core.Geometry;
 import com.akjava.gwt.three.client.js.core.Intersect;
@@ -111,7 +111,7 @@ import com.google.gwt.user.client.ui.VerticalPanel;
  * Entry point classes define <code>onModuleLoad()</code>.
  */
 public class GWTModelWeight extends SimpleTabDemoEntryPoint{
-	public static final String version="0.3(for r63)";//for three.js r63
+	public static final String version="0.4(for r64)";//for three.js r64
 	@Override
 	protected void beforeUpdate(WebGLRenderer renderer) {
 		
@@ -1931,9 +1931,9 @@ public void onError(Request request, Throwable exception) {
 		//return object;
 		
 	}
-	//TODO more validate model format
+	//TODO replace to GWTThreeUtils.parseJsonObject
 	private JSONObject parseJsonObject(String jsonText){
-		JSONValue lastJsonValue = JSONParser.parseLenient(jsonText);
+		JSONValue lastJsonValue = JSONParser.parseStrict(jsonText);
 		JSONObject object=lastJsonValue.isObject();
 		if(object==null){
 			LogUtils.log("invalid-json object");
