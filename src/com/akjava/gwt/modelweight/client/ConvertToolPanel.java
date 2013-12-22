@@ -6,7 +6,7 @@ import com.akjava.gwt.html5.client.file.FileUploadForm;
 import com.akjava.gwt.html5.client.file.FileUtils;
 import com.akjava.gwt.html5.client.file.FileUtils.DataURLListener;
 import com.akjava.gwt.lib.client.LogUtils;
-import com.akjava.gwt.three.client.gwt.model.JSONModelFile;
+import com.akjava.gwt.three.client.gwt.JSONModelFile;
 import com.akjava.gwt.three.client.js.core.Geometry;
 import com.akjava.lib.common.utils.FileNames;
 import com.google.gwt.core.client.JsArray;
