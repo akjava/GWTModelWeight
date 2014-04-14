@@ -8,7 +8,6 @@ import java.util.Map;
 import com.akjava.bvh.client.BVH;
 import com.akjava.bvh.client.BVHParser;
 import com.akjava.bvh.client.BVHParser.ParserListener;
-import com.akjava.bvh.client.Vec3;
 import com.akjava.gwt.bvh.client.threejs.AnimationBoneConverter;
 import com.akjava.gwt.bvh.client.threejs.AnimationDataConverter;
 import com.akjava.gwt.html5.client.InputRangeListener;
@@ -310,12 +309,8 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 	List<Mesh> boneCoreMeshs=new ArrayList<Mesh>();
 	List<Mesh> tmp=new ArrayList<Mesh>();
 	private Object3D boneToSkelton(BVH bvh){
-		
-		
-		
 		boneJointMeshs.clear();
 		AnimationBoneConverter converter=new AnimationBoneConverter();
-		
 		JsArray<AnimationBone> bones = converter.convertJsonBone(bvh);//has no endsite
 		
 		List<List<Vector3>> endSites=converter.convertJsonBoneEndSites(bvh);
@@ -1419,11 +1414,6 @@ HorizontalPanel h1=new HorizontalPanel();
 	 */
 	public String toJsonText(){
 		JsArray<AnimationBone> clonedBone=cloneBones(bones);
-		
-		
-		
-		
-		
 		JSONArray arrays=new JSONArray(clonedBone);
 		lastJsonObject.put("bones", arrays);
 		//AnimationBoneConverter.setBoneAngles(clonedBone, rawAnimationData, 0); //TODO
@@ -1611,10 +1601,6 @@ public void onError(Request request, Throwable exception) {
 				//bvh.setSkips(skipFrames);
 				AnimationBoneConverter converter=new AnimationBoneConverter();
 				bones = converter.convertJsonBone(bvh);
-				
-				//here?
-				
-				
 				LogUtils.log(bones);
 				endSites=converter.convertJsonBoneEndSites(bvh);
 				
@@ -2048,41 +2034,9 @@ public void onError(Request request, Throwable exception) {
 		}
 	}
 	private void createSkinnedMesh(){
-		LogUtils.log("createSkinnedMesh from export data");
-		//use export data
-		String json=toJsonText();
-		JSONObject object=parseJsonObject(json);
-		loadJsonModel(object, new JSONLoadHandler() {
-			@Override
-			public void loaded(Geometry geometry, JsArray<Material> materials) {
-				if(skinnedMesh!=null){
-					root.remove(skinnedMesh);
-				}
-				Material material=null;
-				if(useBasicMaterial.getValue()){
-					material=THREE.MeshBasicMaterial().skinning(true).color(0xffffff).map(texture).build();
-					
-				}else{
-					material=THREE.MeshLambertMaterial().skinning(true).color(0xffffff).map(texture).build();
-				}
-				skinnedMesh = THREE.SkinnedMesh(geometry, material);
-				root.add(skinnedMesh);
-				
-				if(animation!=null){
-					AnimationHandler.removeFromUpdate(animation);
-				}
-				LogUtils.log("start new animation");
-				LogUtils.log(skinnedMesh);
-				animation = THREE.Animation( skinnedMesh, animationName );
-				animation.play(true,0);
-			}
-		});
-		/*
+		LogUtils.log("createSkinnedMesh");
 		//LogUtils.log(bones);
 		JsArray<AnimationBone> clonedBone=cloneBones(bones);
-		
-		
-		
 		//this is not work fine.just remove root moving to decrese flicking
 		AnimationBoneConverter.setBoneAngles(clonedBone, rawAnimationData, 0);
 		//LogUtils.log(clonedBone);
@@ -2110,7 +2064,6 @@ public void onError(Request request, Throwable exception) {
 		LogUtils.log(skinnedMesh);
 		animation = THREE.Animation( skinnedMesh, animationName );
 		animation.play(true,0);
-		*/
 	}
 	
 	private List<Mesh> vertexMeshs=new ArrayList<Mesh>();
@@ -2643,18 +2596,22 @@ private Vector4 findNearSpecial(List<NameAndPosition> nameAndPositions,Vector3 p
 		LogUtils.log(lastJsonObject.getJavaScriptObject());
 		//TODO support scale
 		JSONNumber jscale=lastJsonObject.get("scale").isNumber();
-		if(jscale!=null){
+		if(jscale!=null ){
 			double scale=(int) jscale.doubleValue();
-			
 			JSONArray jvertices=lastJsonObject.get("vertices").isArray();
-			if(jvertices!=null && scale==1){//1x10
-				LogUtils.log("scale attribute found in json file,and scale it only vertices:"+scale);
+			LogUtils.log("scale:"+scale);
+			if(jvertices!=null){
+				LogUtils.log("scale attribute found in json file,and scale it only vertices");
 				JsArrayNumber numbers=(JsArrayNumber) jvertices.getJavaScriptObject();
 				for(int i=0;i<numbers.length();i++){
+					if(scale==1){
 					numbers.set(i, numbers.get(i)*scale*10);
+					}else{
+						numbers.set(i, numbers.get(i)*scale);
+					}
 				}
 			}
-			//lastJsonObject.put("scale", new JSONNumber(1));//no more use it
+			
 		}
 		loadJsonModel(object,new JSONLoadHandler() {
 			
@@ -2669,9 +2626,6 @@ private Vector4 findNearSpecial(List<NameAndPosition> nameAndPositions,Vector3 p
 				}
 				geometry.setVerticesNeedUpdate(true);
 				*/
-				
-				//AnimationBone root=geometry.getBones().get(0);//may be not importtan geometyr bone not use
-				//root.setPos(0, 0, 0);//root must be zero
 				
 				
 				onModelLoaded(file.getFileName(),geometry);
@@ -2698,7 +2652,7 @@ private Vector4 findNearSpecial(List<NameAndPosition> nameAndPositions,Vector3 p
 	
 	protected void onDrop(DropEvent event){
 		event.preventDefault();
-		String[] images={"png","jpg","jpeg"};//TODO support webp
+		String[] images={"png","jpg","jpeg"};
 		String[] jsons={"js","json"};
 		String[] bvhs={"bvh"};
 		
