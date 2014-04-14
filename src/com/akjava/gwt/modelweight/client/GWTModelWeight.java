@@ -36,6 +36,7 @@ import com.akjava.gwt.three.client.gwt.core.Intersect;
 import com.akjava.gwt.three.client.gwt.materials.LineBasicMaterialParameter;
 import com.akjava.gwt.three.client.gwt.materials.MeshLambertMaterialParameter;
 import com.akjava.gwt.three.client.java.JClock;
+import com.akjava.gwt.three.client.java.ThreeLog;
 import com.akjava.gwt.three.client.java.animation.WeightBuilder;
 import com.akjava.gwt.three.client.java.ui.SimpleTabDemoEntryPoint;
 import com.akjava.gwt.three.client.java.utils.GWTGeometryUtils;
@@ -60,6 +61,7 @@ import com.akjava.gwt.three.client.js.objects.Mesh;
 import com.akjava.gwt.three.client.js.objects.SkinnedMesh;
 import com.akjava.gwt.three.client.js.renderers.WebGLRenderer;
 import com.akjava.gwt.three.client.js.textures.Texture;
+import com.google.common.base.Joiner;
 import com.google.gwt.canvas.client.Canvas;
 import com.google.gwt.core.client.JavaScriptObject;
 import com.google.gwt.core.client.JsArray;
@@ -1407,6 +1409,17 @@ HorizontalPanel h1=new HorizontalPanel();
 		lastSelection=index;
 	}
 
+	public static String get(Vector4 vec){
+		if(vec==null){
+			return "Null";
+		}
+		String ret="x:"+vec.getX();
+		ret+=",y:"+vec.getY();
+		ret+=",z:"+vec.getZ();
+		ret+=",w:"+vec.getW();
+		return ret;
+	}
+	
 	/*
 	 * add bones and skinIndices & skinWeights to last selected model
 	 * animation is option.
@@ -1423,6 +1436,16 @@ HorizontalPanel h1=new HorizontalPanel();
 		//private JsArray<Vector4> bodyIndices;
 		//private JsArray<Vector4> bodyWeight;
 		
+		List<String> lines=new ArrayList<String>();
+		for(int i=0;i<bodyWeight.length();i++){
+			lines.add(i+get(bodyWeight.get(i)));
+		}
+		LogUtils.log("after");
+		LogUtils.log(Joiner.on("\n").join(lines));
+		
+		//LogUtils.log(bodyIndices);
+		
+		//LogUtils.log(bodyWeight);
 		JsArrayNumber indices=(JsArrayNumber) JsArrayNumber.createArray();
 		for(int i=0;i<bodyIndices.length();i++){
 			indices.push(bodyIndices.get(i).getX());
@@ -1915,6 +1938,22 @@ public void onError(Request request, Throwable exception) {
 		
 			//changeAutoWeightListBox(0);
 			
+			//wait must be 1.0
+			for(int i=0;i<bodyWeight.length();i++){
+				Vector4 vec4=bodyWeight.get(i);
+				double total=vec4.getX()+vec4.getY();
+				double remain=(1.0-total)/2;
+				vec4.setX(vec4.getX()+remain);
+				vec4.setY(vec4.getY()+remain);
+			}
+			
+			List<String> lines=new ArrayList<String>();
+			for(int i=0;i<bodyWeight.length();i++){
+				lines.add(i+get(bodyWeight.get(i)));
+			}
+			LogUtils.log("before:");
+			LogUtils.log(Joiner.on("\n").join(lines));
+			
 		}else{
 			LogUtils.log("empty indices&weight auto-weight from geometry:this action take a time");
 			//can't auto weight algo change? TODO it
@@ -2034,14 +2073,16 @@ public void onError(Request request, Throwable exception) {
 		}
 	}
 	private void createSkinnedMesh(){
+		/*
 		LogUtils.log("createSkinnedMesh");
+		
 		//LogUtils.log(bones);
 		JsArray<AnimationBone> clonedBone=cloneBones(bones);
 		//this is not work fine.just remove root moving to decrese flicking
 		AnimationBoneConverter.setBoneAngles(clonedBone, rawAnimationData, 0);
 		//LogUtils.log(clonedBone);
 		Geometry newgeo=GeometryUtils.clone(loadedGeometry);
-		newgeo.setSkinIndices(bodyIndices);
+		newgeo.setSkinIndices(bodyIndices);//maybe need this for implements
 		newgeo.setSkinWeight(bodyWeight);
 		newgeo.setBones(clonedBone);
 		if(skinnedMesh!=null){
@@ -2064,6 +2105,7 @@ public void onError(Request request, Throwable exception) {
 		LogUtils.log(skinnedMesh);
 		animation = THREE.Animation( skinnedMesh, animationName );
 		animation.play(true,0);
+		*/
 	}
 	
 	private List<Mesh> vertexMeshs=new ArrayList<Mesh>();
