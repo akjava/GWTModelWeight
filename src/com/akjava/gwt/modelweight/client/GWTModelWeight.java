@@ -8,6 +8,7 @@ import java.util.Map;
 import com.akjava.bvh.client.BVH;
 import com.akjava.bvh.client.BVHParser;
 import com.akjava.bvh.client.BVHParser.ParserListener;
+import com.akjava.bvh.client.Vec3;
 import com.akjava.gwt.bvh.client.threejs.AnimationBoneConverter;
 import com.akjava.gwt.bvh.client.threejs.AnimationDataConverter;
 import com.akjava.gwt.html5.client.InputRangeListener;
@@ -22,13 +23,11 @@ import com.akjava.gwt.html5.client.file.FileUtils;
 import com.akjava.gwt.html5.client.file.FileUtils.DataURLListener;
 import com.akjava.gwt.html5.client.file.ui.DropVerticalPanelBase;
 import com.akjava.gwt.lib.client.IStorageControler;
-import com.akjava.gwt.lib.client.JsonValueUtils;
 import com.akjava.gwt.lib.client.LogUtils;
 import com.akjava.gwt.lib.client.StorageControler;
 import com.akjava.gwt.lib.client.StorageDataList;
 import com.akjava.gwt.modelweight.client.weight.GWTWeightData;
 import com.akjava.gwt.modelweight.client.weight.WeighDataParser;
-import com.akjava.gwt.three.client.examples.ColladaLoader;
 import com.akjava.gwt.three.client.gwt.JSONModelFile;
 import com.akjava.gwt.three.client.gwt.animation.AnimationBone;
 import com.akjava.gwt.three.client.gwt.animation.AnimationData;
@@ -38,7 +37,6 @@ import com.akjava.gwt.three.client.gwt.core.Intersect;
 import com.akjava.gwt.three.client.gwt.materials.LineBasicMaterialParameter;
 import com.akjava.gwt.three.client.gwt.materials.MeshLambertMaterialParameter;
 import com.akjava.gwt.three.client.java.JClock;
-import com.akjava.gwt.three.client.java.ThreeLog;
 import com.akjava.gwt.three.client.java.animation.WeightBuilder;
 import com.akjava.gwt.three.client.java.ui.SimpleTabDemoEntryPoint;
 import com.akjava.gwt.three.client.java.utils.GWTGeometryUtils;
@@ -90,6 +88,7 @@ import com.google.gwt.http.client.RequestException;
 import com.google.gwt.http.client.Response;
 import com.google.gwt.http.client.URL;
 import com.google.gwt.json.client.JSONArray;
+import com.google.gwt.json.client.JSONNumber;
 import com.google.gwt.json.client.JSONObject;
 import com.google.gwt.json.client.JSONParser;
 import com.google.gwt.json.client.JSONValue;
@@ -311,8 +310,12 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 	List<Mesh> boneCoreMeshs=new ArrayList<Mesh>();
 	List<Mesh> tmp=new ArrayList<Mesh>();
 	private Object3D boneToSkelton(BVH bvh){
+		
+		
+		
 		boneJointMeshs.clear();
 		AnimationBoneConverter converter=new AnimationBoneConverter();
+		
 		JsArray<AnimationBone> bones = converter.convertJsonBone(bvh);//has no endsite
 		
 		List<List<Vector3>> endSites=converter.convertJsonBoneEndSites(bvh);
@@ -1170,6 +1173,9 @@ HorizontalPanel h1=new HorizontalPanel();
 	private boolean needFlipY=true;//default
 	private void onModelLoaded(String fileName,Geometry geometry){
 		LogUtils.log("onModelLoaded");
+		LogUtils.log(geometry);
+		
+		
 		if(lastJsonObject!=null){
 		JSONModelFile modelFile=(JSONModelFile) lastJsonObject.getJavaScriptObject();
 		//old version 3.0 need flip-Y
@@ -1413,6 +1419,11 @@ HorizontalPanel h1=new HorizontalPanel();
 	 */
 	public String toJsonText(){
 		JsArray<AnimationBone> clonedBone=cloneBones(bones);
+		
+		
+		
+		
+		
 		JSONArray arrays=new JSONArray(clonedBone);
 		lastJsonObject.put("bones", arrays);
 		//AnimationBoneConverter.setBoneAngles(clonedBone, rawAnimationData, 0); //TODO
@@ -1591,6 +1602,8 @@ public void onError(Request request, Throwable exception) {
 			public void onSuccess(BVH bv) {
 				
 				
+				LogUtils.log("BVH Loaded:nameAndChannel="+bv.getNameAndChannels().size()+",frame-size="+bv.getFrames());
+				
 				bvh=bv;
 				
 				
@@ -1598,6 +1611,11 @@ public void onError(Request request, Throwable exception) {
 				//bvh.setSkips(skipFrames);
 				AnimationBoneConverter converter=new AnimationBoneConverter();
 				bones = converter.convertJsonBone(bvh);
+				
+				//here?
+				
+				
+				LogUtils.log(bones);
 				endSites=converter.convertJsonBoneEndSites(bvh);
 				
 				updateBoneListBox();
@@ -1833,6 +1851,7 @@ public void onError(Request request, Throwable exception) {
 			scene.remove(root);
 		}
 		root=THREE.Object3D();
+		
 		scene.add(root);
 		
 			
@@ -1866,6 +1885,13 @@ public void onError(Request request, Throwable exception) {
 		wireBodyPoints.clear();
 		bodyGeometry=GeometryUtils.clone(loadedGeometry);
 		Mesh wireBody=THREE.Mesh(bodyGeometry, THREE.MeshBasicMaterial().wireFrame(true).color(0xffffff).build());
+		
+		
+		
+		//
+		
+		
+		
 		boneAndVertex.add(wireBody);
 		
 		selectVertex=THREE.Object3D();
@@ -2022,9 +2048,41 @@ public void onError(Request request, Throwable exception) {
 		}
 	}
 	private void createSkinnedMesh(){
-		LogUtils.log("createSkinnedMesh");
+		LogUtils.log("createSkinnedMesh from export data");
+		//use export data
+		String json=toJsonText();
+		JSONObject object=parseJsonObject(json);
+		loadJsonModel(object, new JSONLoadHandler() {
+			@Override
+			public void loaded(Geometry geometry, JsArray<Material> materials) {
+				if(skinnedMesh!=null){
+					root.remove(skinnedMesh);
+				}
+				Material material=null;
+				if(useBasicMaterial.getValue()){
+					material=THREE.MeshBasicMaterial().skinning(true).color(0xffffff).map(texture).build();
+					
+				}else{
+					material=THREE.MeshLambertMaterial().skinning(true).color(0xffffff).map(texture).build();
+				}
+				skinnedMesh = THREE.SkinnedMesh(geometry, material);
+				root.add(skinnedMesh);
+				
+				if(animation!=null){
+					AnimationHandler.removeFromUpdate(animation);
+				}
+				LogUtils.log("start new animation");
+				LogUtils.log(skinnedMesh);
+				animation = THREE.Animation( skinnedMesh, animationName );
+				animation.play(true,0);
+			}
+		});
+		/*
 		//LogUtils.log(bones);
 		JsArray<AnimationBone> clonedBone=cloneBones(bones);
+		
+		
+		
 		//this is not work fine.just remove root moving to decrese flicking
 		AnimationBoneConverter.setBoneAngles(clonedBone, rawAnimationData, 0);
 		//LogUtils.log(clonedBone);
@@ -2052,6 +2110,7 @@ public void onError(Request request, Throwable exception) {
 		LogUtils.log(skinnedMesh);
 		animation = THREE.Animation( skinnedMesh, animationName );
 		animation.play(true,0);
+		*/
 	}
 	
 	private List<Mesh> vertexMeshs=new ArrayList<Mesh>();
@@ -2580,11 +2639,41 @@ private Vector4 findNearSpecial(List<NameAndPosition> nameAndPositions,Vector3 p
 
 	private void onModelFileUploaded(final File file,String value){
 		JSONObject object=parseJsonObject(value);
-		lastJsonObject=object;
+		lastJsonObject=object;//lastJson object used in exportAsJson
+		LogUtils.log(lastJsonObject.getJavaScriptObject());
+		//TODO support scale
+		JSONNumber jscale=lastJsonObject.get("scale").isNumber();
+		if(jscale!=null){
+			double scale=(int) jscale.doubleValue();
+			
+			JSONArray jvertices=lastJsonObject.get("vertices").isArray();
+			if(jvertices!=null && scale==1){//1x10
+				LogUtils.log("scale attribute found in json file,and scale it only vertices:"+scale);
+				JsArrayNumber numbers=(JsArrayNumber) jvertices.getJavaScriptObject();
+				for(int i=0;i<numbers.length();i++){
+					numbers.set(i, numbers.get(i)*scale*10);
+				}
+			}
+			//lastJsonObject.put("scale", new JSONNumber(1));//no more use it
+		}
 		loadJsonModel(object,new JSONLoadHandler() {
 			
 			@Override
 			public void loaded(Geometry geometry,JsArray<Material> materials) {
+				
+				/*
+				LogUtils.log("force scale up x10,");
+				for(int i=0;i<geometry.getVertices().length();i++){
+				Vector3 vec=geometry.getVertices().get(i);
+				vec.multiply(THREE.Vector3(10, 10, 10));
+				}
+				geometry.setVerticesNeedUpdate(true);
+				*/
+				
+				//AnimationBone root=geometry.getBones().get(0);//may be not importtan geometyr bone not use
+				//root.setPos(0, 0, 0);//root must be zero
+				
+				
 				onModelLoaded(file.getFileName(),geometry);
 				createSkinnedMesh();
 			}
@@ -2609,7 +2698,7 @@ private Vector4 findNearSpecial(List<NameAndPosition> nameAndPositions,Vector3 p
 	
 	protected void onDrop(DropEvent event){
 		event.preventDefault();
-		String[] images={"png","jpg","jpeg"};
+		String[] images={"png","jpg","jpeg"};//TODO support webp
 		String[] jsons={"js","json"};
 		String[] bvhs={"bvh"};
 		
