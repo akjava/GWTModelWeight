@@ -2178,7 +2178,10 @@ public void onError(Request request, Throwable exception) {
 				bone.setPos(0, 0, 0);//root is 0 is better?
 				*/
 				
+				
 				//trying vertex color
+				
+				/*
 				material=THREE.MeshBasicMaterial(vertexColors());
 				
 				List<Integer> result=new ArrayList<Integer>();
@@ -2189,6 +2192,7 @@ public void onError(Request request, Throwable exception) {
 				for(int index:result){
 					geometry.getFaces().get(index).setColor(red);
 				}
+				*/
 				
 				
 				skinnedMesh = THREE.SkinnedMesh(geometry, material);
@@ -2204,7 +2208,7 @@ public void onError(Request request, Throwable exception) {
 			}
 		});
 	}
-	
+	/*
 	public  List<Integer> groupdFaces(List<Integer> result,JsArray<Face3> faces,int targetIndex){
 		result.add(targetIndex);
 		Face3 face=faces.get(targetIndex);
@@ -2278,11 +2282,13 @@ public void onError(Request request, Throwable exception) {
 		return false;
 	}
 	
+	*/
 	
-	
+	//for vertex color material
 	public static  native final JavaScriptObject vertexColors()/*-{
 	return {vertexColors: $wnd.THREE.VertexColors };
 	}-*/;
+	
 	
 	private List<Mesh> vertexMeshs=new ArrayList<Mesh>();
 
