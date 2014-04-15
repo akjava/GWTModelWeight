@@ -9,6 +9,7 @@ import com.akjava.bvh.client.BVH;
 import com.akjava.bvh.client.BVHNode;
 import com.akjava.bvh.client.BVHParser;
 import com.akjava.bvh.client.BVHParser.ParserListener;
+import com.akjava.bvh.client.Vec3;
 import com.akjava.gwt.bvh.client.threejs.AnimationBoneConverter;
 import com.akjava.gwt.bvh.client.threejs.AnimationDataConverter;
 import com.akjava.gwt.html5.client.InputRangeListener;
@@ -42,6 +43,7 @@ import com.akjava.gwt.three.client.java.ui.SimpleTabDemoEntryPoint;
 import com.akjava.gwt.three.client.java.utils.GWTGeometryUtils;
 import com.akjava.gwt.three.client.java.utils.GWTThreeUtils;
 import com.akjava.gwt.three.client.js.THREE;
+import com.akjava.gwt.three.client.js.core.Face3;
 import com.akjava.gwt.three.client.js.core.Geometry;
 import com.akjava.gwt.three.client.js.core.Object3D;
 import com.akjava.gwt.three.client.js.core.Projector;
@@ -53,6 +55,7 @@ import com.akjava.gwt.three.client.js.lights.Light;
 import com.akjava.gwt.three.client.js.loaders.JSONLoader;
 import com.akjava.gwt.three.client.js.loaders.JSONLoader.JSONLoadHandler;
 import com.akjava.gwt.three.client.js.materials.Material;
+import com.akjava.gwt.three.client.js.math.Color;
 import com.akjava.gwt.three.client.js.math.Euler;
 import com.akjava.gwt.three.client.js.math.Ray;
 import com.akjava.gwt.three.client.js.math.Vector3;
@@ -781,8 +784,8 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 				
 			}*/
 			}else if(event.isAltKeyDown()){
-			posX+=(double)diffX/2;
-			posY-=(double)diffY/2;
+			posX+=(double)diffX/4;
+			posY-=(double)diffY/4;
 			}else{
 				rotX=(rotX+diffY);
 				rotY=(rotY+diffX);
@@ -1657,6 +1660,7 @@ public void onError(Request request, Throwable exception) {
 			
 			private AnimationData animationData;
 
+			private Vec3 bvhVec;
 			@Override
 			public void onSuccess(BVH bv) {
 				
@@ -1664,6 +1668,13 @@ public void onError(Request request, Throwable exception) {
 				LogUtils.log("BVH Loaded:nameAndChannel="+bv.getNameAndChannels().size()+",frame-size="+bv.getFrames());
 				
 				bvh=bv;
+				
+				//
+				
+				/* not work
+				bvhVec=bvh.getHiearchy().getOffset();
+				bvh.getHiearchy().setOffset(new Vec3(0,0,0));//i believe no need.
+				*/
 				
 				List<BVHNode> bvhNodes=new ArrayList<BVHNode>();
 				addNode(bvh.getHiearchy(),bvhNodes);
@@ -2167,6 +2178,18 @@ public void onError(Request request, Throwable exception) {
 				bone.setPos(0, 0, 0);//root is 0 is better?
 				*/
 				
+				//trying vertex color
+				material=THREE.MeshBasicMaterial(vertexColors());
+				
+				List<Integer> result=new ArrayList<Integer>();
+				
+				groupdFaces(result,geometry.getFaces(),0);
+				Color red=THREE.Color(0xff0000);
+				LogUtils.log("size:"+result.size());
+				for(int index:result){
+					geometry.getFaces().get(index).setColor(red);
+				}
+				
 				
 				skinnedMesh = THREE.SkinnedMesh(geometry, material);
 				root.add(skinnedMesh);
@@ -2181,6 +2204,85 @@ public void onError(Request request, Throwable exception) {
 			}
 		});
 	}
+	
+	public  List<Integer> groupdFaces(List<Integer> result,JsArray<Face3> faces,int targetIndex){
+		result.add(targetIndex);
+		Face3 face=faces.get(targetIndex);
+		
+		
+		int a=(int) face.getA();
+		for(int i=0;i<faces.length();i++){
+			if(result.contains(i)){
+				continue;
+			}else{
+				if(hasIndex(faces.get(i), a)){
+					groupdFaces(result,faces,i);
+				}
+			}	
+		}
+		
+		int b=(int) face.getB();
+		for(int i=0;i<faces.length();i++){
+			if(result.contains(i)){
+				continue;
+			}else{
+				if(hasIndex(faces.get(i), b)){
+					groupdFaces(result,faces,i);
+				}
+			}	
+		}
+		
+		int c=(int) face.getC();
+		for(int i=0;i<faces.length();i++){
+			if(result.contains(i)){
+				continue;
+			}else{
+				if(hasIndex(faces.get(i), c)){
+					groupdFaces(result,faces,i);
+				}
+			}	
+		}
+		
+		if(face.isFace4()){
+			int d=(int) face.getD();
+			for(int i=0;i<faces.length();i++){
+				if(result.contains(i)){
+					continue;
+				}else{
+					if(hasIndex(faces.get(i), d)){
+						groupdFaces(result,faces,i);
+					}
+				}	
+			}
+		}
+		
+		
+		return result;
+		
+	}
+	
+	private boolean hasIndex(Face3 face,int index){
+		if(face.getA()==index){
+			return true;
+		}
+		if(face.getB()==index){
+			return true;
+		}
+		if(face.getC()==index){
+			return true;
+		}
+		
+		if(face.isFace4() && face.getD()==index){
+			return true;
+		}
+		return false;
+	}
+	
+	
+	
+	public static  native final JavaScriptObject vertexColors()/*-{
+	return {vertexColors: $wnd.THREE.VertexColors };
+	}-*/;
 	
 	private List<Mesh> vertexMeshs=new ArrayList<Mesh>();
 
