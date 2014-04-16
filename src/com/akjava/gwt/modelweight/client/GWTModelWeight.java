@@ -311,7 +311,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		tabPanel.add(new MergeToolPanel(),"Merge");
 		tabPanel.add(new ConvertToolPanel(),"Convert");
 		
-		
+		tabPanel.add(new UvPackToolPanel(),"UvPack");
 		
 	}
 	

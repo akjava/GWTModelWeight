@@ -149,9 +149,12 @@ public class MergeToolPanel extends VerticalPanel{
 
 			@Override
 			public void onClick(ClickEvent event) {
+				/*
 				if(true){
+				//what was this?
 					throw new RuntimeException("now not support need fix setVertices");
 				}
+				*/
 				Geometry exportGeo=GWTGeometryUtils.mergeGeometryPlusWeights(GWTGeometryUtils.clonePlusWeights(file1Object), file2Object);
 				
 				
@@ -161,9 +164,21 @@ public class MergeToolPanel extends VerticalPanel{
 				
 				modelFile.setGeometryUvs(exportGeo.getFaceVertexUvs());
 				
-				//modelFile.setVertices(exportGeo.vertices());
+				modelFile.setVertices(exportGeo.vertices());
+				
+				//set normal first
+				modelFile.setNormals(exportGeo.faces());
 				
 				modelFile.setFaces(exportGeo.faces());
+				
+				
+				LogUtils.log("set-normal");
+				
+				//TODO
+				
+				//support normals
+				//support bones
+				
 				
 				if(exportGeo.getSkinIndices().length()>0){
 				modelFile.setSkinIndicesAndWeights(exportGeo.getSkinIndices(),exportGeo.getSkinWeight());
