@@ -120,6 +120,9 @@ import com.google.gwt.user.client.ui.VerticalPanel;
  */
 public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 	public static final String version="0.4(for r64)";//for three.js r64
+	
+	
+	private double posScale=0.1;
 	@Override
 	protected void beforeUpdate(WebGLRenderer renderer) {
 		
@@ -129,10 +132,8 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 			boneAndVertex.getRotation().set(Math.toRadians(rotX),Math.toRadians(rotY),0,Euler.XYZ);
 			boneAndVertex.getPosition().set(posX,posY,0);
 			
-			boneAndVertex.getScale().set(upscale, upscale, upscale);
 			
-			root.getScale().set(upscale, upscale, upscale);
-			root.setPosition(positionXRange.getValue(), positionYRange.getValue(), positionZRange.getValue());
+			root.setPosition(posScale*positionXRange.getValue(), posScale*positionYRange.getValue(), posScale*positionZRange.getValue());
 			root.getRotation().set(Math.toRadians(rotationXRange.getValue()),Math.toRadians(rotationYRange.getValue()),Math.toRadians(rotationZRange.getValue()),Euler.XYZ);
 			}
 		
@@ -171,8 +172,9 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 	private Mesh mouseClickCatcher;
 	@Override
 	protected void initializeOthers(WebGLRenderer renderer) {
-		
-		
+		cameraZ=10;
+		defaultZoom=1;
+		minCamera=1;
 	
 		
 		//Window.open("text/plain:test.txt:"+url, "test", null);
@@ -344,10 +346,13 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		//Vec3 rootBoneOffset=bvh.getHiearchy().getOffset();
 		//group.getPosition().set(rootBoneOffset.getX(),rootBoneOffset.getY(), rootBoneOffset.getZ());
 		
+		double boneCoreSize=0.03*baseScale;
+		double halfBonecore=0.02*baseScale;
+		double sitesBonecore=0.02*baseScale;
 		
 		for(int i=0;i<bones.length();i++){
 			AnimationBone bone=bones.get(i);
-			Geometry cube=THREE.CubeGeometry(.3, .3, .3);
+			Geometry cube=THREE.CubeGeometry(boneCoreSize, boneCoreSize, boneCoreSize);
 			
 			
 			Mesh mesh=THREE.Mesh(cube, THREE.MeshLambertMaterial(MeshLambertMaterialParameter.create().color(boneCoreColor)));
@@ -368,7 +373,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 				double length=ppos.clone().sub(pos).length();
 				
 				//half
-				Mesh halfMesh=THREE.Mesh(THREE.CubeGeometry(.2, .2, length), THREE.MeshLambertMaterial(MeshLambertMaterialParameter.create().color(boneJointColor)));
+				Mesh halfMesh=THREE.Mesh(THREE.CubeGeometry(halfBonecore, halfBonecore, length), THREE.MeshLambertMaterial(MeshLambertMaterialParameter.create().color(boneJointColor)));
 				group.add(halfMesh);
 				halfMesh.setPosition(half);
 				halfMesh.lookAt(pos);
@@ -382,7 +387,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 			//this mesh is for helping auto-weight
 			List<Vector3> sites=endSites.get(i);
 			for(Vector3 end:sites){
-				Mesh endMesh=THREE.Mesh(THREE.CubeGeometry(.2, .2, .2), THREE.MeshLambertMaterial(MeshLambertMaterialParameter.create().color(0x00a00aa)));
+				Mesh endMesh=THREE.Mesh(THREE.CubeGeometry(sitesBonecore, sitesBonecore, sitesBonecore), THREE.MeshLambertMaterial(MeshLambertMaterialParameter.create().color(0x00a00aa)));
 				if(end.getX()==0 && end.getY()==0 && end.getZ()==0){
 					continue;//ignore 0 
 				}else{
@@ -678,8 +683,9 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 	private void selectBone(Object3D target) {
 		lastSelection=-1;
 		//right now off boneSelectionMesh
+		double boneSelectionSize=0.1*baseScale;
 		if(boneSelectionMesh==null){
-			boneSelectionMesh=THREE.Mesh(THREE.CubeGeometry(1, 1, 1), THREE.MeshLambertMaterial().color(0x00ff00).build());
+			boneSelectionMesh=THREE.Mesh(THREE.CubeGeometry(boneSelectionSize, boneSelectionSize, boneSelectionSize), THREE.MeshLambertMaterial().color(0x00ff00).build());
 			boneAndVertex.add(boneSelectionMesh);
 		}else{
 			
@@ -925,7 +931,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		h6.add(reset6);
 		//move left-side
 		//positionYRange.setValue(-13);
-		positionXRange.setValue(-13);
+		positionXRange.setValue(-20);
 		
 		//parent.add(new Label("Play Control"));
 		Button bt=new Button("Pause/Play SkinnedMesh");
@@ -947,7 +953,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		});
 		
 		parent.add(frameRange);
-		
+		/*
 		CheckBox do1small=new CheckBox("x 0.1");
 		do1small.addValueChangeHandler(new ValueChangeHandler<Boolean>() {
 			@Override
@@ -956,6 +962,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 			}
 		});
 		parent.add(do1small);
+		*/
 		
 		//editor
 		
@@ -1182,7 +1189,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		export.add(fileNames);
 		fileNames.add(new Label("Name:"));
 		saveFileBox = new TextBox();
-		saveFileBox.setText("untitled.json");
+		saveFileBox.setText("untitled.js");
 		fileNames.add(saveFileBox);
 		
 		HorizontalPanel exports=new HorizontalPanel();
@@ -1218,13 +1225,9 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		showControl();
 	}
 	
-	int upscale=1;
+	double baseScale=1;
 	protected void onTotalSizeChanged(Boolean value) {
-		if(value){
-			upscale=10;
-		}else{
-			upscale=1;
-		}
+		
 		
 		List<Mesh> meshs=Lists.newArrayList();
 		meshs.addAll(vertexMeshs);
@@ -1241,10 +1244,12 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 			}
 		
 		//redo-bone and vertex
+		/*
 		for(Mesh mesh:meshs){
 			double scale=(1.0/upscale);
 			mesh.getScale().set(scale,scale,scale);
 		}
+		*/
 	}
 
 	private boolean needFlipY=true;//default
@@ -2070,9 +2075,9 @@ public void onError(Request request, Throwable exception) {
 		//bo.setPosition(-30, 0, 0);
 		boneAndVertex.add(bo);
 		
+		double selectionSize=0.05*baseScale;
 		
-		
-		selectionPointIndicateMesh=THREE.Mesh(THREE.CubeGeometry(.5, .5, .5), THREE.MeshBasicMaterial().color(selectColor).transparent(true).wireFrame(true).build());
+		selectionPointIndicateMesh=THREE.Mesh(THREE.CubeGeometry(selectionSize, selectionSize, selectionSize), THREE.MeshBasicMaterial().color(selectColor).transparent(true).wireFrame(true).build());
 		boneAndVertex.add(selectionPointIndicateMesh);
 		selectionPointIndicateMesh.setVisible(false);	
 		
@@ -2099,7 +2104,8 @@ public void onError(Request request, Throwable exception) {
 		vertexMeshs.clear();
 		
 		boneAndVertex.add(selectVertex);
-		Geometry cube=THREE.CubeGeometry(.2, .2, .2);
+		double bmeshSize=0.02*baseScale;
+		Geometry cube=THREE.CubeGeometry(bmeshSize, bmeshSize, bmeshSize);
 		
 		for(int i=0;i<bodyGeometry.vertices().length();i++){
 			Material mt=THREE.MeshBasicMaterial().color(getVertexColor(i)).build();
@@ -2218,9 +2224,9 @@ public void onError(Request request, Throwable exception) {
 	}
 		
 		
-	private String textureUrl="female001_texture1.jpg";
-	private String bvhUrl="walking.bvh";
-	private String modelUrl="female001.json";
+	private String textureUrl="makehuman0.jpg";
+	private String bvhUrl="dummy.bvh";
+	private String modelUrl="mk_men0001.js";
 	
 	private Texture texture;
 	private void generateTexture(){
@@ -2324,21 +2330,43 @@ public void onError(Request request, Throwable exception) {
 				skinnedMesh = THREE.SkinnedMesh(geometry, material);
 				root.add(skinnedMesh);
 				
-				//debug
-				if(geometry.getAnimations()!=null){
-					animationName=geometry.getAnimations().get(0).getName();
-					AnimationHandler.add(geometry.getAnimations().get(0));
-					LogUtils.log(geometry.getAnimations().get(0));
-				}
 				
 				if(animation!=null){
 					AnimationHandler.removeFromUpdate(animation);
 				}
-				LogUtils.log("start new animation:"+animationName);
-				LogUtils.log(skinnedMesh);
-				animation = THREE.Animation( skinnedMesh, animationName );
-				LogUtils.log(animation);
-				animation.play(true,0);
+				
+				if(animationName!=null){//animation setted when set bvh
+					animation = THREE.Animation( skinnedMesh, animationName );
+					LogUtils.log(animation);
+					animation.play(true,0);
+				}
+					
+				
+				
+				//debug for geometry inside animation
+				/*
+				if(geometry.getAnimations()!=null){
+					if(geometry.getAnimations().length()>0){
+						animationName=geometry.getAnimations().get(0).getName();
+						AnimationHandler.add(geometry.getAnimations().get(0));
+						LogUtils.log(geometry.getAnimations().get(0));
+						
+						
+						LogUtils.log("start new animation:"+animationName);
+						LogUtils.log(skinnedMesh);
+						animation = THREE.Animation( skinnedMesh, animationName );
+						LogUtils.log(animation);
+						animation.play(true,0);
+					}else{
+						animation=null;
+						LogUtils.log("this bone has no animation");
+					}
+					
+				
+					
+				}
+				*/
+				
 			}
 		});
 	}
