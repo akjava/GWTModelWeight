@@ -87,6 +87,7 @@ import com.google.gwt.event.dom.client.LoadEvent;
 import com.google.gwt.event.dom.client.MouseDownEvent;
 import com.google.gwt.event.dom.client.MouseMoveEvent;
 import com.google.gwt.event.dom.client.MouseUpEvent;
+import com.google.gwt.event.dom.client.MouseWheelEvent;
 import com.google.gwt.event.logical.shared.SelectionEvent;
 import com.google.gwt.event.logical.shared.SelectionHandler;
 import com.google.gwt.event.logical.shared.ValueChangeEvent;
@@ -172,10 +173,8 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 	private Mesh mouseClickCatcher;
 	@Override
 	protected void initializeOthers(WebGLRenderer renderer) {
-		cameraZ=10;
-		defaultZoom=1;
-		minCamera=1;
-	
+		cameraZ=5;
+		
 		
 		//Window.open("text/plain:test.txt:"+url, "test", null);
 		
@@ -739,7 +738,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 	int rotX;
 	int rotY;
 	double posX;
-	double posY;
+	double posY=-1;
 	@Override
 	public void onMouseMove(MouseMoveEvent event) {
 		
@@ -808,8 +807,8 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 				
 			}*/
 			}else if(event.isAltKeyDown()){
-			posX+=(double)diffX/4;
-			posY-=(double)diffY/4;
+			posX+=(double)diffX/4*posScale;
+			posY-=(double)diffY/4*posScale;
 			}else{
 				rotX=(rotX+diffY);
 				rotY=(rotY+diffX);
@@ -2173,8 +2172,10 @@ public void onError(Request request, Throwable exception) {
 		JSONObject newobject=new JSONObject(jsobject);
 		
 		
+		
 		handler.loaded((Geometry) newobject.get("geometry").isObject().getJavaScriptObject(),null);
-		//LogUtils.log(object.getJavaScriptObject());
+		LogUtils.log("json");
+		LogUtils.log(object.getJavaScriptObject());
 		//loader.createModel(object.getJavaScriptObject(), handler, "");
 		//loader.onLoadComplete();
 		
@@ -2252,6 +2253,24 @@ public void onError(Request request, Throwable exception) {
 		
 		
 	}
+	@Override
+	public void onMouseWheel(MouseWheelEvent event) {
+		double tzoom=0.05;
+		//TODO make class
+		long t=System.currentTimeMillis();
+		if(mouseLast+100>t){
+			czoom*=2;
+		}else{
+			czoom=tzoom;
+		}
+		//GWT.log("wheel:"+event.getDeltaY());
+		double tmp=cameraZ+event.getDeltaY()*czoom;
+		tmp=Math.max(0.2, tmp);
+		tmp=Math.min(4000, tmp);
+		cameraZ=(double)tmp;
+		mouseLast=t;
+	}
+	double czoom;
 	
 	protected void updateMaterial() {
 		
