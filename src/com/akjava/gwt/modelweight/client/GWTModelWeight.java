@@ -6,12 +6,17 @@ import java.util.List;
 import java.util.Map;
 
 import com.akjava.bvh.client.BVH;
+import com.akjava.bvh.client.BVHMotion;
 import com.akjava.bvh.client.BVHNode;
 import com.akjava.bvh.client.BVHParser;
+import com.akjava.bvh.client.BVHParser.InvalidLineException;
+import com.akjava.bvh.client.BVHWriter;
 import com.akjava.bvh.client.BVHParser.ParserListener;
 import com.akjava.bvh.client.Vec3;
+import com.akjava.gwt.bvh.client.poseframe.PoseFrameData;
 import com.akjava.gwt.bvh.client.threejs.AnimationBoneConverter;
 import com.akjava.gwt.bvh.client.threejs.AnimationDataConverter;
+import com.akjava.gwt.bvh.client.threejs.BVHConverter;
 import com.akjava.gwt.html5.client.InputRangeListener;
 import com.akjava.gwt.html5.client.InputRangeWidget;
 import com.akjava.gwt.html5.client.download.HTML5Download;
@@ -43,7 +48,6 @@ import com.akjava.gwt.three.client.java.ui.SimpleTabDemoEntryPoint;
 import com.akjava.gwt.three.client.java.utils.GWTGeometryUtils;
 import com.akjava.gwt.three.client.java.utils.GWTThreeUtils;
 import com.akjava.gwt.three.client.js.THREE;
-import com.akjava.gwt.three.client.js.core.Face3;
 import com.akjava.gwt.three.client.js.core.Geometry;
 import com.akjava.gwt.three.client.js.core.Object3D;
 import com.akjava.gwt.three.client.js.core.Projector;
@@ -55,7 +59,6 @@ import com.akjava.gwt.three.client.js.lights.Light;
 import com.akjava.gwt.three.client.js.loaders.JSONLoader;
 import com.akjava.gwt.three.client.js.loaders.JSONLoader.JSONLoadHandler;
 import com.akjava.gwt.three.client.js.materials.Material;
-import com.akjava.gwt.three.client.js.math.Color;
 import com.akjava.gwt.three.client.js.math.Euler;
 import com.akjava.gwt.three.client.js.math.Ray;
 import com.akjava.gwt.three.client.js.math.Vector3;
@@ -65,6 +68,7 @@ import com.akjava.gwt.three.client.js.objects.SkinnedMesh;
 import com.akjava.gwt.three.client.js.renderers.WebGLRenderer;
 import com.akjava.gwt.three.client.js.textures.Texture;
 import com.akjava.lib.common.utils.FileNames;
+import com.google.common.collect.Lists;
 import com.google.gwt.canvas.client.Canvas;
 import com.google.gwt.core.client.JavaScriptObject;
 import com.google.gwt.core.client.JsArray;
@@ -85,6 +89,8 @@ import com.google.gwt.event.dom.client.MouseMoveEvent;
 import com.google.gwt.event.dom.client.MouseUpEvent;
 import com.google.gwt.event.logical.shared.SelectionEvent;
 import com.google.gwt.event.logical.shared.SelectionHandler;
+import com.google.gwt.event.logical.shared.ValueChangeEvent;
+import com.google.gwt.event.logical.shared.ValueChangeHandler;
 import com.google.gwt.http.client.Request;
 import com.google.gwt.http.client.RequestBuilder;
 import com.google.gwt.http.client.RequestCallback;
@@ -92,7 +98,6 @@ import com.google.gwt.http.client.RequestException;
 import com.google.gwt.http.client.Response;
 import com.google.gwt.http.client.URL;
 import com.google.gwt.json.client.JSONArray;
-import com.google.gwt.json.client.JSONNumber;
 import com.google.gwt.json.client.JSONObject;
 import com.google.gwt.json.client.JSONParser;
 import com.google.gwt.json.client.JSONValue;
@@ -124,6 +129,9 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 			boneAndVertex.getRotation().set(Math.toRadians(rotX),Math.toRadians(rotY),0,Euler.XYZ);
 			boneAndVertex.getPosition().set(posX,posY,0);
 			
+			boneAndVertex.getScale().set(upscale, upscale, upscale);
+			
+			root.getScale().set(upscale, upscale, upscale);
 			root.setPosition(positionXRange.getValue(), positionYRange.getValue(), positionZRange.getValue());
 			root.getRotation().set(Math.toRadians(rotationXRange.getValue()),Math.toRadians(rotationYRange.getValue()),Math.toRadians(rotationZRange.getValue()),Euler.XYZ);
 			}
@@ -319,15 +327,24 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 	private final int selectBoneCoreColor=0xee88ee;
 	List<Mesh> boneJointMeshs=new ArrayList<Mesh>();
 	List<Mesh> boneCoreMeshs=new ArrayList<Mesh>();
+	private List<Mesh> endPointMeshs=new ArrayList<Mesh>();
+	
 	List<Mesh> tmp=new ArrayList<Mesh>();
-	private Object3D boneToSkelton(BVH bvh){
+	private Object3D createBoneObjects(BVH bvh){
 		boneJointMeshs.clear();
+		
+		endPointMeshs.clear();
 		AnimationBoneConverter converter=new AnimationBoneConverter();
 		JsArray<AnimationBone> bones = converter.convertJsonBone(bvh);//has no endsite
 		
 		List<List<Vector3>> endSites=converter.convertJsonBoneEndSites(bvh);
 		tmp.clear();
 		Object3D group=THREE.Object3D();
+		
+		//Vec3 rootBoneOffset=bvh.getHiearchy().getOffset();
+		//group.getPosition().set(rootBoneOffset.getX(),rootBoneOffset.getY(), rootBoneOffset.getZ());
+		
+		
 		for(int i=0;i<bones.length();i++){
 			AnimationBone bone=bones.get(i);
 			Geometry cube=THREE.CubeGeometry(.3, .3, .3);
@@ -375,6 +392,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 				endMesh.setPosition(epos);
 				group.add(GWTGeometryUtils.createLineMesh(pos, epos, 0x888888));
 				group.add(endMesh);
+				endPointMeshs.add(endMesh);	
 			}
 			
 			
@@ -800,6 +818,8 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 	private InputRangeWidget rotationXRange;
 	private InputRangeWidget rotationYRange;
 	private InputRangeWidget rotationZRange;
+
+	private CheckBox useBone;
 	@Override
 	public void createControl(DropVerticalPanelBase parent) {
 		debugLabel=new Label();
@@ -907,7 +927,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		//positionYRange.setValue(-13);
 		positionXRange.setValue(-13);
 		
-		parent.add(new Label("Play Control"));
+		//parent.add(new Label("Play Control"));
 		Button bt=new Button("Pause/Play SkinnedMesh");
 		parent.add(bt);
 		bt.addClickHandler(new ClickHandler() {
@@ -928,6 +948,14 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		
 		parent.add(frameRange);
 		
+		CheckBox do1small=new CheckBox("x 0.1");
+		do1small.addValueChangeHandler(new ValueChangeHandler<Boolean>() {
+			@Override
+			public void onValueChange(ValueChangeEvent<Boolean> event) {
+				onTotalSizeChanged(event.getValue());
+			}
+		});
+		parent.add(do1small);
 		
 		//editor
 		
@@ -1095,9 +1123,12 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		meshUpload.getFileUpload().setStylePrimaryName("darkgray");
 		loadAndExport.add(meshUpload);
 	
-		force10x = new CheckBox("force multiple x10");
-		loadAndExport.add(force10x);
+		//makehuman export bvh somehow large,and try to fix it ,but this make problem
+		//force10x = new CheckBox("force multiple x10");
+		//loadAndExport.add(force10x);
 		
+		useBone = new CheckBox("use bone in model");
+		loadAndExport.add(useBone);
 		
 		loadAndExport.add(new Label("Texture(PNG or JPEG)"));
 		textureSelection = new Label("selection:"+textureUrl);
@@ -1187,6 +1218,38 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		showControl();
 	}
 	
+	int upscale=1;
+	protected void onTotalSizeChanged(Boolean value) {
+		if(value){
+			upscale=10;
+		}else{
+			upscale=1;
+		}
+		
+		List<Mesh> meshs=Lists.newArrayList();
+		meshs.addAll(vertexMeshs);
+		meshs.addAll(boneJointMeshs);
+		meshs.addAll(boneCoreMeshs);
+		meshs.addAll(endPointMeshs);
+		
+		
+		if(selectionPointIndicateMesh!=null){
+		meshs.add(selectionPointIndicateMesh);
+		}
+		if(boneSelectionMesh!=null){
+			meshs.add(boneSelectionMesh);
+			}
+		
+		//redo-bone and vertex
+		for(Mesh mesh:meshs){
+			double scale=(1.0/upscale);
+			mesh.getScale().set(scale,scale,scale);
+		}
+		
+
+
+	}
+
 	private boolean needFlipY=true;//default
 	
 	
@@ -1221,7 +1284,47 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		infoPanel.getGeometryAnimationObjects().update(true);
 		
 		
-		
+		if(useBone.getValue()){
+			BVHConverter converter=new BVHConverter();
+			LogUtils.log("geo-bone:"+geoBones);
+			LogUtils.log("getBones:"+geoBones.get(0).getPos());
+			BVHNode rootNode=converter.convertBVHNode(geoBones);
+			LogUtils.log("rootNode:"+rootNode.getOffset());
+			converter.setChannels(rootNode,0,"XYZ");	//TODO support other order
+			BVH inBvh=new BVH();
+			inBvh.setHiearchy(rootNode);
+			LogUtils.log("1");
+			
+			BVHMotion motion=new BVHMotion();
+			motion.setFrameTime(.25);
+			
+			
+			//zero
+			/*
+			for(PoseFrameData pose:Lists.newArrayList(new PoseFrameData())){
+				double[] values=converter.angleAndMatrixsToMotion(pose.getAngleAndMatrixs(),BVHConverter.ROOT_POSITION_ROTATE_ONLY,"XYZ");
+				motion.add(values);
+			}
+			*/
+			motion.add(new double[geoBones.length()*3+3]);//only root has pos,TODO find better way
+			
+			motion.setFrames(motion.getMotions().size());//
+			LogUtils.log("2");
+			inBvh.setMotion(motion);
+			
+			BVHWriter writer=new BVHWriter();
+			
+			String bvhText=writer.writeToString(inBvh);
+			
+			
+			//because this time not channel setted,TODO
+			try {
+				setBvh(new BVHParser().parse(bvhText));
+			} catch (InvalidLineException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
 		
 		
 		initializeObject();
@@ -1640,6 +1743,267 @@ public void onError(Request request, Throwable exception) {
 	}
 	
 	
+	private void setBvh(BVH bv){
+
+		LogUtils.log("root-pos:"+bv.getHiearchy().getOffset());
+		
+		bvh=bv;
+		
+		//
+		
+		/* not work
+		bvhVec=bvh.getHiearchy().getOffset();
+		bvh.getHiearchy().setOffset(new Vec3(0,0,0));//i believe no need.
+		*/
+		
+		List<BVHNode> bvhNodes=new ArrayList<BVHNode>();
+		addNode(bvh.getHiearchy(),bvhNodes);
+		
+		infoPanel.getBvhObjects().setDatas(bvhNodes);
+		infoPanel.getBvhObjects().update(true);
+		
+		
+		//bvh.setSkips(10);
+		//bvh.setSkips(skipFrames);
+		
+		AnimationBoneConverter converter=new AnimationBoneConverter();
+		bones = converter.convertJsonBone(bvh);
+		
+		
+		List<AnimationBone> abList=new ArrayList<AnimationBone>();
+		for(int i=0;i<bones.length();i++){
+			abList.add(bones.get(i));
+		}
+		
+		infoPanel.getBvhAnimationObjects().setDatas(abList);
+		infoPanel.getBvhAnimationObjects().update(true);
+		
+		
+		LogUtils.log(bones);
+		endSites=converter.convertJsonBoneEndSites(bvh);
+		
+		updateBoneListBox();
+		indexWeightEditor.setBones(bones);
+		
+		/*
+		for(int i=0;i<bones.length();i++){
+		//	LogUtils.log(i+":"+bones.get(i).getName());
+		}
+		GWT.LogUtils.log("parsed");
+		*/
+		
+		/*
+		
+		
+		for(int i=0;i<bones.length();i++){
+			Mesh mesh=THREE.Mesh(THREE.CubeGeometry(.5, .5, .5), THREE.MeshLambertMaterial().color(0x0000ff).build());
+			scene.add(mesh);
+			JsArrayNumber pos=bones.get(i).getPos();
+			mesh.setPosition(pos.get(0),pos.get(1),pos.get(2));
+		}
+		*/
+		
+		
+		AnimationDataConverter dataConverter=new AnimationDataConverter();
+		if(bvh.getFrames()==1){
+			dataConverter.setSkipFirst(false);
+			frameRange.setMax(bvh.getFrames());
+		}else{
+			frameRange.setMax(bvh.getFrames()-1);
+		}
+		
+		animationData = dataConverter.convertJsonAnimation(bones,bvh);
+		//for(int i=0;i<animationData.getHierarchy().length();i++){
+			AnimationHierarchyItem item=animationData.getHierarchy().get(0);
+			for(int j=0;j<item.getKeys().length();j++){
+				item.getKeys().get(j).setPos(0, 0, 0);//dont move;
+			}
+		//}
+		rawAnimationData=dataConverter.convertJsonAnimation(bones,bvh);//for json
+		animationName=animationData.getName();
+		 JsArray<AnimationHierarchyItem> hitem=animationData.getHierarchy();
+		/*
+		for(int i=0;i<hitem.length();i++){
+			AnimationHierarchyItem item=hitem.get(i);
+			
+			AnimationHierarchyItem parent=null;
+			if(item.getParent()!=-1){
+				parent=hitem.get(item.getParent());
+			}
+			AnimationKey key=item.getKeys().get(keyIndex);
+			Mesh mesh=THREE.Mesh(THREE.CubeGeometry(.5, .5, .5), THREE.MeshLambertMaterial().color(0x00ff00).build());
+			scene.add(mesh);
+			
+			Vector3 meshPos=AnimationUtils.getPosition(key);
+			mesh.setPosition(meshPos);
+			if(parent!=null){
+				Vector3 parentPos=AnimationUtils.getPosition(parent.getKeys().get(keyIndex));
+				Geometry lineG = THREE.Geometry();
+				lineG.vertices().push(THREE.Vertex(meshPos));
+				lineG.vertices().push(THREE.Vertex(parentPos));
+				Mesh line=THREE.Line(lineG, THREE.LineBasicMaterial().color(0xffffff).build());
+				scene.add(line);
+			}
+			
+			
+			
+			Quaternion q=key.getRot();
+			Matrix4 rot=THREE.Matrix4();
+			rot.setRotationFromQuaternion(q);
+			Vector3 rotV=THREE.Vector3();
+			rotV.setRotationFromMatrix(rot);
+			mesh.setRotation(rotV);
+			
+		
+		
+		}
+		*/
+		
+		/*
+		Geometry cube=THREE.CubeGeometry(1, 1, 1);
+		JsArray<Vector4> indices=(JsArray<Vector4>) JsArray.createArray();
+		JsArray<Vector4> weight=(JsArray<Vector4>) JsArray.createArray();
+		for(int i=0;i<cube.vertices().length();i++){
+			Vector4 v4=THREE.Vector4();
+			v4.set(0, 0, 0, 0);
+			indices.push(v4);
+			
+			Vector4 v4w=THREE.Vector4();
+			v4w.set(1, 0, 0, 0);
+			weight.push(v4w);
+		}
+		
+		
+		List<Vector3> parentPos=new ArrayList<Vector3>();
+		parentPos.add(THREE.Vector3());
+		
+		for(int j=1;j<bones.length();j++){
+			Geometry cbone=THREE.CubeGeometry(1, 1, 1);
+			AnimationBone ab=bones.get(j);
+			Vector3 pos=AnimationBone.jsArrayToVector3(ab.getPos());
+			pos.addSelf(parentPos.get(ab.getParent()));
+			parentPos.add(pos);
+			
+			Matrix4 m4=THREE.Matrix4();
+			m4.setPosition(pos);
+			cbone.applyMatrix(m4);
+			GeometryUtils.merge(cube, cbone);
+			for(int i=0;i<cbone.vertices().length();i++){
+				Vector4 v4=THREE.Vector4();
+				v4.set(j, j, 0, 0);
+			//	v4.set(0, 0, 0, 0);
+				indices.push(v4);
+				
+				Vector4 v4w=THREE.Vector4();
+				v4w.set(1, 0, 0, 0);
+				weight.push(v4w);
+			}
+		}
+		
+		
+		LogUtils.log("cube");
+		LogUtils.log(cube);
+		
+		cube.setSkinIndices(indices);
+		cube.setSkinWeight(weight);
+		
+		cube.setBones(bones);
+		*/
+		 
+		 
+		final List<Vector3> bonePositions=new ArrayList<Vector3>();
+		for(int j=0;j<bones.length();j++){
+			AnimationBone bone=bones.get(j);
+			Vector3 pos=AnimationBone.jsArrayToVector3(bone.getPos());
+			if(bone.getParent()!=-1){
+				pos.addSelf(bonePositions.get(bone.getParent()));
+			}
+			bonePositions.add(pos);
+		}
+		
+		//overwrite same name
+		AnimationHandler.add(animationData);
+		//LogUtils.log(data);
+		//LogUtils.log(bones);
+		
+		JSONArray array=new JSONArray(bones);
+		//LogUtils.log(array.toString());
+		
+		JSONObject test=new JSONObject(animationData);
+		//LogUtils.log(test.toString());
+		
+		
+		if(texture==null){
+			//initial texture load,no need to care flipY,it's care when model loaded.
+			texture=ImageUtils.loadTexture(textureUrl);
+		}
+		
+		
+		initializeObject();
+		
+		if(loadedGeometry==null){//initial load
+		loadModel(modelUrl,
+		new  JSONLoadHandler() {
+			//loader.load("men3smart.js", new  LoadHandler() {
+				@Override
+				public void loaded(Geometry geometry,JsArray<Material> materials) {
+					onModelLoaded(modelUrl,geometry);
+					createSkinnedMesh();
+				}
+			
+			});
+		}else{
+			//is this order is important?
+			autoWeight();
+			createSkinnedMesh();
+			createWireBody();
+			updateSelectableObjects();
+		}
+		//LogUtils.log("before create");
+		//Mesh mesh=THREE.Mesh(cube, THREE.MeshLambertMaterial().skinning(false).color(0xff0000).build());
+		//LogUtils.log("create-mesh");
+		//scene.add(mesh);
+		
+		
+		
+		/*
+		ColladaLoader loader=THREE.ColladaLoader();
+		loader.load("men3smart_hair.dae#1", new  ColladaLoadHandler() {
+			
+			
+			
+			public void colladaReady(ColladaData collada) {
+				rawCollada=collada;
+				LogUtils.log(collada);
+				boneNameMaps=new HashMap<String,Integer>();
+				for(int i=0;i<bones.length();i++){
+					boneNameMaps.put(bones.get(i).getName(), i);
+					LogUtils.log(i+":"+bones.get(i).getName());
+				}
+				
+				Geometry geometry=collada.getGeometry();
+				colladaJoints=collada.getJoints();
+				
+				Vector3 xup=THREE.Vector3(Math.toRadians(-90),0,0);
+				Matrix4 mx=THREE.Matrix4();
+				mx.setRotationFromEuler(xup, "XYZ");
+				geometry.applyMatrix(mx);
+				*/
+	}
+	
+	private void addNode(BVHNode node,List<BVHNode> container){
+		container.add(node);
+		for(BVHNode child:node.getJoints()){
+			child.setParentName(node.getName());//somehow name is empty
+			addNode(child,container);
+		}
+	}
+	
+	
+	
+	private AnimationData animationData;
+
+	private Vec3 bvhVec;
 	
 	private void parseBVH(String bvhText){
 		final BVHParser parser=new BVHParser();
@@ -1650,266 +2014,15 @@ public void onError(Request request, Throwable exception) {
 
 			
 
-			private void addNode(BVHNode node,List<BVHNode> container){
-				container.add(node);
-				for(BVHNode child:node.getJoints()){
-					child.setParentName(node.getName());//somehow name is empty
-					addNode(child,container);
-				}
-			}
+	
 			
 			
 			
-			private AnimationData animationData;
-
-			private Vec3 bvhVec;
 			@Override
 			public void onSuccess(BVH bv) {
-				
-				
 				LogUtils.log("BVH Loaded:nameAndChannel="+bv.getNameAndChannels().size()+",frame-size="+bv.getFrames());
 				
-				bvh=bv;
-				
-				//
-				
-				/* not work
-				bvhVec=bvh.getHiearchy().getOffset();
-				bvh.getHiearchy().setOffset(new Vec3(0,0,0));//i believe no need.
-				*/
-				
-				List<BVHNode> bvhNodes=new ArrayList<BVHNode>();
-				addNode(bvh.getHiearchy(),bvhNodes);
-				
-				infoPanel.getBvhObjects().setDatas(bvhNodes);
-				infoPanel.getBvhObjects().update(true);
-				
-				
-				//bvh.setSkips(10);
-				//bvh.setSkips(skipFrames);
-				AnimationBoneConverter converter=new AnimationBoneConverter();
-				bones = converter.convertJsonBone(bvh);
-				
-				List<AnimationBone> abList=new ArrayList<AnimationBone>();
-				for(int i=0;i<bones.length();i++){
-					abList.add(bones.get(i));
-				}
-				
-				infoPanel.getBvhAnimationObjects().setDatas(abList);
-				infoPanel.getBvhAnimationObjects().update(true);
-				
-				
-				LogUtils.log(bones);
-				endSites=converter.convertJsonBoneEndSites(bvh);
-				
-				updateBoneListBox();
-				indexWeightEditor.setBones(bones);
-				
-				/*
-				for(int i=0;i<bones.length();i++){
-				//	LogUtils.log(i+":"+bones.get(i).getName());
-				}
-				GWT.LogUtils.log("parsed");
-				*/
-				
-				/*
-				
-				
-				for(int i=0;i<bones.length();i++){
-					Mesh mesh=THREE.Mesh(THREE.CubeGeometry(.5, .5, .5), THREE.MeshLambertMaterial().color(0x0000ff).build());
-					scene.add(mesh);
-					JsArrayNumber pos=bones.get(i).getPos();
-					mesh.setPosition(pos.get(0),pos.get(1),pos.get(2));
-				}
-				*/
-				
-				
-				AnimationDataConverter dataConverter=new AnimationDataConverter();
-				if(bvh.getFrames()==1){
-					dataConverter.setSkipFirst(false);
-					frameRange.setMax(bvh.getFrames());
-				}else{
-					frameRange.setMax(bvh.getFrames()-1);
-				}
-				
-				animationData = dataConverter.convertJsonAnimation(bones,bvh);
-				//for(int i=0;i<animationData.getHierarchy().length();i++){
-					AnimationHierarchyItem item=animationData.getHierarchy().get(0);
-					for(int j=0;j<item.getKeys().length();j++){
-						item.getKeys().get(j).setPos(0, 0, 0);//dont move;
-					}
-				//}
-				rawAnimationData=dataConverter.convertJsonAnimation(bones,bvh);//for json
-				animationName=animationData.getName();
-				 JsArray<AnimationHierarchyItem> hitem=animationData.getHierarchy();
-				/*
-				for(int i=0;i<hitem.length();i++){
-					AnimationHierarchyItem item=hitem.get(i);
-					
-					AnimationHierarchyItem parent=null;
-					if(item.getParent()!=-1){
-						parent=hitem.get(item.getParent());
-					}
-					AnimationKey key=item.getKeys().get(keyIndex);
-					Mesh mesh=THREE.Mesh(THREE.CubeGeometry(.5, .5, .5), THREE.MeshLambertMaterial().color(0x00ff00).build());
-					scene.add(mesh);
-					
-					Vector3 meshPos=AnimationUtils.getPosition(key);
-					mesh.setPosition(meshPos);
-					if(parent!=null){
-						Vector3 parentPos=AnimationUtils.getPosition(parent.getKeys().get(keyIndex));
-						Geometry lineG = THREE.Geometry();
-						lineG.vertices().push(THREE.Vertex(meshPos));
-						lineG.vertices().push(THREE.Vertex(parentPos));
-						Mesh line=THREE.Line(lineG, THREE.LineBasicMaterial().color(0xffffff).build());
-						scene.add(line);
-					}
-					
-					
-					
-					Quaternion q=key.getRot();
-					Matrix4 rot=THREE.Matrix4();
-					rot.setRotationFromQuaternion(q);
-					Vector3 rotV=THREE.Vector3();
-					rotV.setRotationFromMatrix(rot);
-					mesh.setRotation(rotV);
-					
-				
-				
-				}
-				*/
-				
-				/*
-				Geometry cube=THREE.CubeGeometry(1, 1, 1);
-				JsArray<Vector4> indices=(JsArray<Vector4>) JsArray.createArray();
-				JsArray<Vector4> weight=(JsArray<Vector4>) JsArray.createArray();
-				for(int i=0;i<cube.vertices().length();i++){
-					Vector4 v4=THREE.Vector4();
-					v4.set(0, 0, 0, 0);
-					indices.push(v4);
-					
-					Vector4 v4w=THREE.Vector4();
-					v4w.set(1, 0, 0, 0);
-					weight.push(v4w);
-				}
-				
-				
-				List<Vector3> parentPos=new ArrayList<Vector3>();
-				parentPos.add(THREE.Vector3());
-				
-				for(int j=1;j<bones.length();j++){
-					Geometry cbone=THREE.CubeGeometry(1, 1, 1);
-					AnimationBone ab=bones.get(j);
-					Vector3 pos=AnimationBone.jsArrayToVector3(ab.getPos());
-					pos.addSelf(parentPos.get(ab.getParent()));
-					parentPos.add(pos);
-					
-					Matrix4 m4=THREE.Matrix4();
-					m4.setPosition(pos);
-					cbone.applyMatrix(m4);
-					GeometryUtils.merge(cube, cbone);
-					for(int i=0;i<cbone.vertices().length();i++){
-						Vector4 v4=THREE.Vector4();
-						v4.set(j, j, 0, 0);
-					//	v4.set(0, 0, 0, 0);
-						indices.push(v4);
-						
-						Vector4 v4w=THREE.Vector4();
-						v4w.set(1, 0, 0, 0);
-						weight.push(v4w);
-					}
-				}
-				
-				
-				LogUtils.log("cube");
-				LogUtils.log(cube);
-				
-				cube.setSkinIndices(indices);
-				cube.setSkinWeight(weight);
-				
-				cube.setBones(bones);
-				*/
-				 
-				 
-				final List<Vector3> bonePositions=new ArrayList<Vector3>();
-				for(int j=0;j<bones.length();j++){
-					AnimationBone bone=bones.get(j);
-					Vector3 pos=AnimationBone.jsArrayToVector3(bone.getPos());
-					if(bone.getParent()!=-1){
-						pos.addSelf(bonePositions.get(bone.getParent()));
-					}
-					bonePositions.add(pos);
-				}
-				
-				//overwrite same name
-				AnimationHandler.add(animationData);
-				//LogUtils.log(data);
-				//LogUtils.log(bones);
-				
-				JSONArray array=new JSONArray(bones);
-				//LogUtils.log(array.toString());
-				
-				JSONObject test=new JSONObject(animationData);
-				//LogUtils.log(test.toString());
-				
-				
-				if(texture==null){
-					//initial texture load,no need to care flipY,it's care when model loaded.
-					texture=ImageUtils.loadTexture(textureUrl);
-				}
-				
-				
-				initializeObject();
-				
-				if(loadedGeometry==null){//initial load
-				loadModel(modelUrl,
-				new  JSONLoadHandler() {
-					//loader.load("men3smart.js", new  LoadHandler() {
-						@Override
-						public void loaded(Geometry geometry,JsArray<Material> materials) {
-							onModelLoaded(modelUrl,geometry);
-							createSkinnedMesh();
-						}
-					
-					});
-				}else{
-					//is this order is important?
-					autoWeight();
-					createSkinnedMesh();
-					createWireBody();
-					updateSelectableObjects();
-				}
-				//LogUtils.log("before create");
-				//Mesh mesh=THREE.Mesh(cube, THREE.MeshLambertMaterial().skinning(false).color(0xff0000).build());
-				//LogUtils.log("create-mesh");
-				//scene.add(mesh);
-				
-				
-				
-				/*
-				ColladaLoader loader=THREE.ColladaLoader();
-				loader.load("men3smart_hair.dae#1", new  ColladaLoadHandler() {
-					
-					
-					
-					public void colladaReady(ColladaData collada) {
-						rawCollada=collada;
-						LogUtils.log(collada);
-						boneNameMaps=new HashMap<String,Integer>();
-						for(int i=0;i<bones.length();i++){
-							boneNameMaps.put(bones.get(i).getName(), i);
-							LogUtils.log(i+":"+bones.get(i).getName());
-						}
-						
-						Geometry geometry=collada.getGeometry();
-						colladaJoints=collada.getJoints();
-						
-						Vector3 xup=THREE.Vector3(Math.toRadians(-90),0,0);
-						Matrix4 mx=THREE.Matrix4();
-						mx.setRotationFromEuler(xup, "XYZ");
-						geometry.applyMatrix(mx);
-						*/
-				
+				setBvh(bv);
 			}
 			
 			@Override
@@ -1949,11 +2062,13 @@ public void onError(Request request, Throwable exception) {
 		}
 		
 		boneAndVertex = THREE.Object3D();
-		boneAndVertex.setPosition(-15, 0, 0);
+		//boneAndVertex.setPosition(-15, 0, 0);
 		scene.add(boneAndVertex);
-		Object3D bo=boneToSkelton(bvh);
+		Object3D bo=createBoneObjects(bvh);
 		//bo.setPosition(-30, 0, 0);
 		boneAndVertex.add(bo);
+		
+		
 		
 		selectionPointIndicateMesh=THREE.Mesh(THREE.CubeGeometry(.5, .5, .5), THREE.MeshBasicMaterial().color(selectColor).transparent(true).wireFrame(true).build());
 		boneAndVertex.add(selectionPointIndicateMesh);
@@ -2837,7 +2952,8 @@ private Vector4 findNearSpecial(List<NameAndPosition> nameAndPositions,Vector3 p
 		JSONObject object=parseJsonObject(value);
 		lastJsonObject=object;//lastJson object used in exportAsJson
 		LogUtils.log(lastJsonObject.getJavaScriptObject());
-		//TODO support scale
+		
+		/* old code for force scale up
 		if(force10x.getValue()){
 		JSONNumber jscale=lastJsonObject.get("scale").isNumber();
 		if(jscale!=null ){
@@ -2858,6 +2974,8 @@ private Vector4 findNearSpecial(List<NameAndPosition> nameAndPositions,Vector3 p
 			
 		}
 		}
+		*/
+		
 		loadJsonModel(object,new JSONLoadHandler() {
 			
 			@Override
@@ -2895,7 +3013,7 @@ private Vector4 findNearSpecial(List<NameAndPosition> nameAndPositions,Vector3 p
 	private static final int TYPE_JSON=2;
 	private static final int TYPE_BVH=3;
 
-	private CheckBox force10x;
+	//private CheckBox force10x;
 
 	private InfoPanelTab infoPanel;
 
