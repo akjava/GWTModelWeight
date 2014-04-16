@@ -1245,9 +1245,6 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 			double scale=(1.0/upscale);
 			mesh.getScale().set(scale,scale,scale);
 		}
-		
-
-
 	}
 
 	private boolean needFlipY=true;//default
