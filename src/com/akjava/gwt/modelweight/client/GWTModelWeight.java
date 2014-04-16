@@ -1285,6 +1285,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		
 		
 		if(useBone.getValue()){
+			/*
 			BVHConverter converter=new BVHConverter();
 			LogUtils.log("geo-bone:"+geoBones);
 			LogUtils.log("getBones:"+geoBones.get(0).getPos());
@@ -1297,7 +1298,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 			
 			BVHMotion motion=new BVHMotion();
 			motion.setFrameTime(.25);
-			
+			*/
 			
 			//zero
 			/*
@@ -1306,6 +1307,8 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 				motion.add(values);
 			}
 			*/
+			
+			/*
 			motion.add(new double[geoBones.length()*3+3]);//only root has pos,TODO find better way
 			
 			motion.setFrames(motion.getMotions().size());//
@@ -1315,15 +1318,17 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 			BVHWriter writer=new BVHWriter();
 			
 			String bvhText=writer.writeToString(inBvh);
-			
+			*/
 			
 			//because this time not channel setted,TODO
+			setBvh(new BVHConverter().createBVH(geoBones));
+			/*
 			try {
 				setBvh(new BVHParser().parse(bvhText));
 			} catch (InvalidLineException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
-			}
+			}*/
 		}
 		
 		
