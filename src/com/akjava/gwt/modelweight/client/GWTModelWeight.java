@@ -1188,6 +1188,8 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 	}
 	
 	private boolean needFlipY=true;//default
+	
+	
 	private void onModelLoaded(String fileName,Geometry geometry){
 		LogUtils.log("onModelLoaded");
 		LogUtils.log(geometry);
@@ -2066,6 +2068,8 @@ public void onError(Request request, Throwable exception) {
 		return object;
 	}
 	
+	//this is original loaded text,dont edit it
+	private String lastLoadedText;
 	private void loadModel(String path,final JSONLoadHandler handler){
 		
 		RequestBuilder builder = new RequestBuilder(RequestBuilder.GET, URL.encode(path));
@@ -2074,7 +2078,8 @@ public void onError(Request request, Throwable exception) {
 					
 					@Override
 					public void onResponseReceived(Request request, Response response) {
-						JSONObject object=parseJsonObject(response.getText());
+						lastLoadedText=response.getText();
+						JSONObject object=parseJsonObject(lastLoadedText);
 						lastJsonObject=object;
 						loadJsonModel(object,handler);
 					}
@@ -2150,6 +2155,9 @@ public void onError(Request request, Throwable exception) {
 		LogUtils.log("createSkinnedMesh");
 		String json=toJsonText();
 		JSONObject object=parseJsonObject(json);
+		//JSONObject object=parseJsonObject(lastLoadedText);
+		
+		//try load original
 		loadJsonModel(object,new JSONLoadHandler() {
 			
 			@Override
@@ -2194,16 +2202,25 @@ public void onError(Request request, Throwable exception) {
 				}
 				*/
 				
-				
+				LogUtils.log("before skinned");
+				LogUtils.log(geometry);
 				skinnedMesh = THREE.SkinnedMesh(geometry, material);
 				root.add(skinnedMesh);
+				
+				//debug
+				if(geometry.getAnimations()!=null){
+					animationName=geometry.getAnimations().get(0).getName();
+					AnimationHandler.add(geometry.getAnimations().get(0));
+					LogUtils.log(geometry.getAnimations().get(0));
+				}
 				
 				if(animation!=null){
 					AnimationHandler.removeFromUpdate(animation);
 				}
-				LogUtils.log("start new animation");
+				LogUtils.log("start new animation:"+animationName);
 				LogUtils.log(skinnedMesh);
 				animation = THREE.Animation( skinnedMesh, animationName );
+				LogUtils.log(animation);
 				animation.play(true,0);
 			}
 		});
@@ -2344,6 +2361,7 @@ public void onError(Request request, Throwable exception) {
 
 	private CheckBox useBasicMaterial;
 
+	//this is used for export so,not original loaded
 	private JSONObject lastJsonObject;
 
 	private CheckBox withAnimation;
@@ -2815,6 +2833,7 @@ private Vector4 findNearSpecial(List<NameAndPosition> nameAndPositions,Vector3 p
 	
 
 	private void onModelFileUploaded(final File file,String value){
+		lastLoadedText=value;
 		JSONObject object=parseJsonObject(value);
 		lastJsonObject=object;//lastJson object used in exportAsJson
 		LogUtils.log(lastJsonObject.getJavaScriptObject());
