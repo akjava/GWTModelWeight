@@ -271,7 +271,8 @@ public class MergeToolPanel extends VerticalPanel{
 				
 			}
 		});
-		add(testCompare);
+		//stop test compare
+		//add(testCompare);
 	}
 	private void updateButton(){
 		boolean status=false;
