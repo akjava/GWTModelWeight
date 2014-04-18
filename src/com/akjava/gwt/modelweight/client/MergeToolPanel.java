@@ -1,5 +1,7 @@
 package com.akjava.gwt.modelweight.client;
 
+import java.util.List;
+
 import com.akjava.gwt.html5.client.download.HTML5Download;
 import com.akjava.gwt.html5.client.file.File;
 import com.akjava.gwt.html5.client.file.FileHandler;
@@ -9,14 +11,21 @@ import com.akjava.gwt.html5.client.file.FileUtils;
 import com.akjava.gwt.lib.client.LogUtils;
 import com.akjava.gwt.three.client.gwt.JSONModelFile;
 import com.akjava.gwt.three.client.java.utils.GWTGeometryUtils;
+import com.akjava.gwt.three.client.js.THREE;
 import com.akjava.gwt.three.client.js.core.Geometry;
+import com.akjava.gwt.three.client.js.loaders.JSONLoader;
 import com.akjava.gwt.three.client.js.loaders.JSONLoader.JSONLoadHandler;
 import com.akjava.gwt.three.client.js.materials.Material;
+import com.google.common.base.Joiner;
+import com.google.gwt.core.client.JavaScriptObject;
 import com.google.gwt.core.client.JsArray;
 import com.google.gwt.event.dom.client.ChangeEvent;
 import com.google.gwt.event.dom.client.ChangeHandler;
 import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
+import com.google.gwt.json.client.JSONObject;
+import com.google.gwt.json.client.JSONParser;
+import com.google.gwt.json.client.JSONValue;
 import com.google.gwt.user.client.ui.Anchor;
 import com.google.gwt.user.client.ui.Button;
 import com.google.gwt.user.client.ui.HorizontalPanel;
@@ -33,6 +42,7 @@ public class MergeToolPanel extends VerticalPanel{
 	private Label file2Label;
 
 	private TextBox saveFileBox;
+	JavaScriptObject loadedObject;
 	public MergeToolPanel(){
 		
 		add(new Label("src"));
@@ -61,16 +71,33 @@ public class MergeToolPanel extends VerticalPanel{
 						
 						String text=reader.getResultAsString();
 						
-						GWTGeometryUtils.loadJsonModel(text, new JSONLoadHandler() {
+						JSONLoadHandler handler=new JSONLoadHandler() {
 							
 							@Override
 							public void loaded(Geometry geometry,JsArray<Material> materials) {
 								file1Object=geometry;
-							
-							
 								file1InfoLabel.setText("Indices:"+file1Object.getSkinIndices().length()+",Weigths"+file1Object.getSkinWeight().length());	
 							}
-						});
+						};
+
+						
+						JSONLoader loader=THREE.JSONLoader();
+						JSONValue lastJsonValue = JSONParser.parseStrict(text);
+						JSONObject object=lastJsonValue.isObject();
+						if(object==null){
+							LogUtils.log("null loaded:");
+							handler.loaded(null, null);
+						}
+						
+						loadedObject=object.getJavaScriptObject();
+						
+						JavaScriptObject jsObject=loader.parse(object.getJavaScriptObject(), null);
+						JSONObject newobject=new JSONObject(jsObject);
+						
+						handler.loaded((Geometry) newobject.get("geometry").isObject().getJavaScriptObject(), null);
+						
+						
+						
 						
 						file1Label.setText(file.getFileName());
 						updateButton();
@@ -206,6 +233,45 @@ public class MergeToolPanel extends VerticalPanel{
 				linkContainer.add(anchror);
 			}
 		});
+		
+		Button testCompare=new Button("test compare",new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+				
+				
+				
+				JSONModelFile modelFile=JSONModelFile.create();
+				
+				modelFile.setGeometryUvs(file1Object.getFaceVertexUvs());
+				
+				modelFile.setVertices(file1Object.vertices());
+				
+				//set normal first
+				modelFile.setNormals(file1Object.faces());
+
+				modelFile.setFaces(file1Object.faces());
+				
+				ModelCompare compare=new ModelCompare();
+				
+				LogUtils.log(loadedObject);
+				LogUtils.log(modelFile);
+				
+				List<String> result=compare.compareCore((JSONModelFile)loadedObject, modelFile);
+				
+				//copy others
+							
+				
+				
+				
+				if(result.size()==0){
+					LogUtils.log("fine:same model");
+				}else{
+					LogUtils.log(Joiner.on("\n").join(result));
+				}
+				
+			}
+		});
+		add(testCompare);
 	}
 	private void updateButton(){
 		boolean status=false;

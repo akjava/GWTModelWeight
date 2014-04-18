@@ -277,7 +277,9 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 			}
 		});*/
 		
+		//stop initial load for test
 		loadBVH(bvhUrl);
+		
 		//loadBVH("pose.bvh");//no motion
 	}
 	//private PopupPanel bottomPanel;//TODO future
