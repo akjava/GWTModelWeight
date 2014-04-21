@@ -278,10 +278,17 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		});*/
 		
 		//stop initial load for test
-		loadBVH(bvhUrl);
+		if(debugTab){
+		LogUtils.log("debug tab mode:main widget not work because of lack of base bvh");	
 		
+		}else{//this action generate skinned mesh and this freeze on debug-mode
+		loadBVH(bvhUrl);
+		}
 		//loadBVH("pose.bvh");//no motion
 	}
+	
+	private boolean debugTab=false;
+	
 	//private PopupPanel bottomPanel;//TODO future
 	private void createTabs(){
 		tabPanel.addSelectionHandler(new SelectionHandler<Integer>() {
@@ -299,7 +306,9 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 				stats.setVisible(false);
 				//bottomPanel.setVisible(false);
 				hideControl();
-				dialog2.setVisible(false);
+				if(dialog2!=null){//debug mode call this
+					dialog2.setVisible(false);
+					}
 				}
 				
 			}
@@ -315,6 +324,10 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		
 		tabPanel.add(new UvPackToolPanel(),"UvPack");
 		
+		//for special debug
+		if(debugTab){
+			tabPanel.selectTab(5);
+			}
 	}
 	
 	
@@ -2227,7 +2240,7 @@ public void onError(Request request, Throwable exception) {
 	}
 		
 		
-	private String textureUrl="makehuman0.jpg";
+	private String textureUrl="uvpack.jpg";
 	private String bvhUrl="dummy.bvh";
 	private String modelUrl="mk_men0001.js";
 	
