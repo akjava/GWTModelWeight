@@ -287,7 +287,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		//loadBVH("pose.bvh");//no motion
 	}
 	
-	private boolean debugTab=true;
+	private boolean debugTab=false;
 	
 	//private PopupPanel bottomPanel;//TODO future
 	private void createTabs(){
@@ -947,10 +947,9 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		//positionYRange.setValue(-13);
 		positionXRange.setValue(-20);
 		
-		//parent.add(new Label("Play Control"));
-		Button bt=new Button("Pause/Play SkinnedMesh");
-		parent.add(bt);
-		bt.addClickHandler(new ClickHandler() {
+		pauseBt = new Button("Pause/Play SkinnedMesh");
+		parent.add(pauseBt);
+		pauseBt.addClickHandler(new ClickHandler() {
 			
 			@Override
 			public void onClick(ClickEvent event) {
@@ -1841,8 +1840,18 @@ public void onError(Request request, Throwable exception) {
 			}
 		//}
 		rawAnimationData=dataConverter.convertJsonAnimation(bones,bvh);//for json
+		
+		if(bvh.getFrames()==1){
+		animationName=null;//i guess 1 frame bvh usually maked geometry bone which has no animation erase mesh.
+		pauseBt.setEnabled(false);
+		frameRange.setEnabled(false);
+		}else{
+			pauseBt.setEnabled(true);
+			frameRange.setEnabled(true);	
 		animationName=animationData.getName();
-		 JsArray<AnimationHierarchyItem> hitem=animationData.getHierarchy();
+		}
+		
+		//JsArray<AnimationHierarchyItem> hitem=animationData.getHierarchy();
 		/*
 		for(int i=0;i<hitem.length();i++){
 			AnimationHierarchyItem item=hitem.get(i);
@@ -2369,11 +2378,13 @@ public void onError(Request request, Throwable exception) {
 					AnimationHandler.removeFromUpdate(animation);
 				}
 				
+				//i guess this crash,if animation length is 1 
 				if(animationName!=null){//animation setted when set bvh
 					animation = THREE.Animation( skinnedMesh, animationName );
 					LogUtils.log(animation);
 					animation.play(true,0);
 				}
+				
 					
 				
 				
@@ -3082,6 +3093,9 @@ private Vector4 findNearSpecial(List<NameAndPosition> nameAndPositions,Vector3 p
 	private InfoPanelTab infoPanel;
 
 	private CheckBox controlBone;
+
+
+	private Button pauseBt;
 	
 	protected void onDrop(DropEvent event){
 		event.preventDefault();
