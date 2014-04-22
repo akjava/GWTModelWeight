@@ -1,11 +1,11 @@
 package com.akjava.gwt.modelweight.client;
 
 
-import java.util.ArrayList;
-import java.util.BitSet;
+import java.io.IOException;
 import java.util.List;
 
 import com.akjava.gwt.html5.client.download.HTML5Download;
+import com.akjava.gwt.html5.client.input.ColorBox;
 import com.akjava.gwt.lib.client.CanvasUtils;
 import com.akjava.gwt.lib.client.LogUtils;
 import com.akjava.gwt.lib.client.widget.cell.EasyCellTableObjects;
@@ -29,6 +29,7 @@ import com.google.gwt.core.shared.GWT;
 import com.google.gwt.dom.client.ImageElement;
 import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
+import com.google.gwt.text.shared.Renderer;
 import com.google.gwt.user.cellview.client.CellTable;
 import com.google.gwt.user.cellview.client.Column;
 import com.google.gwt.user.cellview.client.TextColumn;
@@ -39,6 +40,7 @@ import com.google.gwt.user.client.ui.HorizontalPanel;
 import com.google.gwt.user.client.ui.Image;
 import com.google.gwt.user.client.ui.Label;
 import com.google.gwt.user.client.ui.TextBox;
+import com.google.gwt.user.client.ui.ValueListBox;
 import com.google.gwt.user.client.ui.VerticalPanel;
 
 public class UvPackToolPanel extends VerticalPanel{
@@ -56,6 +58,33 @@ public class UvPackToolPanel extends VerticalPanel{
 	
 	private Canvas textureCanvas;
 	public UvPackToolPanel(){
+		
+		HorizontalPanel h1=new HorizontalPanel();
+		add(h1);
+		h1.add(new Label("uv-line-size"));
+		
+		uvLineWidthBox = new ValueListBox<Double>(new Renderer<Double>() {
+			@Override
+			public String render(Double object) {
+				if(object==null){
+					return "";
+				}
+				return String.valueOf(object);
+			}
+
+			@Override
+			public void render(Double object, Appendable appendable) throws IOException {
+			}
+		});
+		uvLineWidthBox.setValue(0.1);
+		
+		uvLineWidthBox.setAcceptableValues(Lists.newArrayList(0.1,0.01,1.0,2.0,3.0,4.0,5.0));
+		h1.add(uvLineWidthBox);
+		
+		uvLineColorBox = new ColorBox();
+		uvLineColorBox.setValue("#000000");
+		h1.add(uvLineColorBox);
+		
 		textureCanvas=CanvasUtils.createCanvas(512, 512);
 		SimpleCellTable<UVPackData> uvPackTable=new SimpleCellTable<UVPackData>(999) {
 			@Override
@@ -236,6 +265,10 @@ public class UvPackToolPanel extends VerticalPanel{
 	}
 	
 	private Canvas uvCanvas;
+
+	private ValueListBox<Double> uvLineWidthBox;
+
+	private ColorBox uvLineColorBox;
 	private String createUvImage(JSONModelFile modelFile){
 		
 	
@@ -251,8 +284,8 @@ public class UvPackToolPanel extends VerticalPanel{
 		uvCanvas.getContext2d().translate(0, uvCanvas.getCoordinateSpaceHeight()); 
 		uvCanvas.getContext2d().scale(1, -1);
 		
-		uvCanvas.getContext2d().setStrokeStyle("#000000");
-		uvCanvas.getContext2d().setLineWidth(0.1);
+		uvCanvas.getContext2d().setStrokeStyle(uvLineColorBox.getValue());
+		uvCanvas.getContext2d().setLineWidth(uvLineWidthBox.getValue());
 		
 		/*
 		for(UVPackData data:easyCellTableObjects.getDatas()){
