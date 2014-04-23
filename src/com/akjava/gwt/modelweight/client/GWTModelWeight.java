@@ -822,8 +822,8 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 				
 			}*/
 			}else if(event.isAltKeyDown()){
-			posX+=(double)diffX/4*posScale;
-			posY-=(double)diffY/4*posScale;
+			posX+=(double)diffX/16*posScale;
+			posY-=(double)diffY/16*posScale;
 			}else{
 				rotX=(rotX+diffY);
 				rotY=(rotY+diffX);
@@ -842,6 +842,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 	private CheckBox useBone;
 	@Override
 	public void createControl(DropVerticalPanelBase parent) {
+		nearCamera=0.01;
 		debugLabel=new Label();
 		parent.add(debugLabel);
 		
@@ -2127,7 +2128,7 @@ public void onError(Request request, Throwable exception) {
 		vertexMeshs.clear();
 		
 		boneAndVertex.add(selectVertex);
-		double bmeshSize=0.02*baseScale;
+		double bmeshSize=0.01*baseScale;
 		Geometry cube=THREE.CubeGeometry(bmeshSize, bmeshSize, bmeshSize);
 		
 		for(int i=0;i<bodyGeometry.vertices().length();i++){

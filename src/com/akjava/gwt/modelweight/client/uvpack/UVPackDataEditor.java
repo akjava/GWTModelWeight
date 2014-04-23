@@ -49,7 +49,7 @@ public class UVPackDataEditor extends VerticalPanel implements Editor<UVPackData
 	private Label imageSizeLabel;
 	public UVPackDataEditor(){
 		
-		add(new Label("dont drop file here.first tab all drop event"));
+		add(new Label("dont drop file here.first tab handle all drop event"));
 		
 		modelFileEditor=SimpleEditor.of();
 		
@@ -174,6 +174,7 @@ public class UVPackDataEditor extends VerticalPanel implements Editor<UVPackData
 		return label;
 	}
 
+	//TODO move lib
 	@Ignore
 	public <T> ValueListBox<T> createToStringListBox(){
 		return createToStringListBox(null,null);

@@ -36,14 +36,16 @@ import com.google.gwt.user.cellview.client.TextColumn;
 import com.google.gwt.user.client.Timer;
 import com.google.gwt.user.client.ui.Anchor;
 import com.google.gwt.user.client.ui.Button;
+import com.google.gwt.user.client.ui.DeckLayoutPanel;
 import com.google.gwt.user.client.ui.HorizontalPanel;
 import com.google.gwt.user.client.ui.Image;
 import com.google.gwt.user.client.ui.Label;
+import com.google.gwt.user.client.ui.ScrollPanel;
 import com.google.gwt.user.client.ui.TextBox;
 import com.google.gwt.user.client.ui.ValueListBox;
 import com.google.gwt.user.client.ui.VerticalPanel;
 
-public class UvPackToolPanel extends VerticalPanel{
+public class UvPackToolPanel extends DeckLayoutPanel{
 
 	private Geometry file1Object;
 
@@ -59,9 +61,22 @@ public class UvPackToolPanel extends VerticalPanel{
 	private Canvas textureCanvas;
 	public UvPackToolPanel(){
 		
+		ScrollPanel scroll=new ScrollPanel();
+		scroll.setSize("100%", "100%");
+		add(scroll);
+		this.showWidget(0);
+		
+		VerticalPanel root=new VerticalPanel();
+		root.setSpacing(8);
+		scroll.add(root);
+		root.setSize("100%", "100%");
+		
 		HorizontalPanel h1=new HorizontalPanel();
-		add(h1);
+		root.add(h1);
 		h1.add(new Label("uv-line-size"));
+		
+		
+		
 		
 		uvLineWidthBox = new ValueListBox<Double>(new Renderer<Double>() {
 			@Override
@@ -165,13 +180,13 @@ public class UvPackToolPanel extends VerticalPanel{
 		
 		easyCellTableObjects=generator.getEasyCells();
 		
-		add(panel);
+		root.add(panel);
 		
-		add(editor);
+		root.add(editor);
 		
 		
 		HorizontalPanel fileNames=new HorizontalPanel();
-		add(fileNames);
+		root.add(fileNames);
 		fileNames.add(new Label("SaveName:"));
 		saveFileBox = new TextBox();
 		saveFileBox.setText("uvpacked.js");
@@ -181,9 +196,9 @@ public class UvPackToolPanel extends VerticalPanel{
 		
 		copyButton = new Button("Pack Uv");
 		//copyButton.setEnabled(false);
-		add(copyButton);
+		root.add(copyButton);
 		final HorizontalPanel linkContainer=new HorizontalPanel();
-		add(linkContainer);
+		root.add(linkContainer);
 		copyButton.addClickHandler(new ClickHandler() {
 			
 			private Anchor anchror;
