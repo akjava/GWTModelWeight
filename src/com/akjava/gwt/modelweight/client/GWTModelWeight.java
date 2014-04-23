@@ -2195,8 +2195,8 @@ public void onError(Request request, Throwable exception) {
 				Vector4 vec4=bodyWeight.get(i);
 				double total=vec4.getX()+vec4.getY();
 				double remain=(1.0-total)/2;
-				vec4.setX(vec4.getX()+remain);
-				vec4.setY(vec4.getY()+remain);
+				//vec4.setX(vec4.getX()+remain);// i guess this is problem
+				//vec4.setY(vec4.getY()+remain);
 			}
 			/*
 			List<String> lines=new ArrayList<String>();
