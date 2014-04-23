@@ -8,6 +8,7 @@ import com.akjava.gwt.html5.client.file.FileHandler;
 import com.akjava.gwt.html5.client.file.FileReader;
 import com.akjava.gwt.html5.client.file.FileUploadForm;
 import com.akjava.gwt.html5.client.file.FileUtils;
+import com.akjava.gwt.html5.client.file.FileUtils.DataURLListener;
 import com.akjava.gwt.lib.client.LogUtils;
 import com.akjava.gwt.three.client.gwt.JSONModelFile;
 import com.akjava.gwt.three.client.java.utils.GWTGeometryUtils;
@@ -52,10 +53,47 @@ public class MergeToolPanel extends VerticalPanel{
 		final Label file1InfoLabel=new Label(".");
 		add(file1InfoLabel);
 		
-		final FileUploadForm srcFile=new FileUploadForm();
+		final FileUploadForm srcFile=FileUtils.createSingleTextFileUploadForm(new DataURLListener() {
+			
+			@Override
+			public void uploaded(File file, String asStringText) {
+
+				JSONLoadHandler handler=new JSONLoadHandler() {
+					
+					@Override
+					public void loaded(Geometry geometry,JsArray<Material> materials) {
+						file1Object=geometry;
+						file1InfoLabel.setText("Indices:"+file1Object.getSkinIndices().length()+",Weigths"+file1Object.getSkinWeight().length());	
+					}
+				};
+
+				
+				JSONLoader loader=THREE.JSONLoader();
+				JSONValue lastJsonValue = JSONParser.parseStrict(asStringText);
+				JSONObject object=lastJsonValue.isObject();
+				if(object==null){
+					LogUtils.log("null loaded:");
+					handler.loaded(null, null);
+				}
+				
+				loadedObject=object.getJavaScriptObject();
+				
+				JavaScriptObject jsObject=loader.parse(object.getJavaScriptObject(), null);
+				JSONObject newobject=new JSONObject(jsObject);
+				
+				handler.loaded((Geometry) newobject.get("geometry").isObject().getJavaScriptObject(), null);
+				
+				
+				
+				
+				file1Label.setText(file.getFileName());
+				updateButton();
+				
+			}
+		}, true);
 		add(srcFile);
 		
-		
+		/*
 		srcFile.getFileUpload().addChangeHandler(new ChangeHandler() {
 			
 			@Override
@@ -106,7 +144,7 @@ public class MergeToolPanel extends VerticalPanel{
 				reader.readAsText(file,"utf-8");
 			}
 		});
-		
+		*/
 		
 
 		add(new Label("dest"));
@@ -116,10 +154,30 @@ public class MergeToolPanel extends VerticalPanel{
 		final Label file2InfoLabel=new Label();
 		add(file2InfoLabel);
 		
-		final FileUploadForm destFile=new FileUploadForm();
+		final FileUploadForm destFile=FileUtils.createSingleTextFileUploadForm(new DataURLListener() {
+			
+			@Override
+			public void uploaded(final File file, String asStringText) {
+				GWTGeometryUtils.loadJsonModel(asStringText, new JSONLoadHandler() {
+					
+					@Override
+					public void loaded(Geometry geometry,JsArray<Material> materials) {
+						file2Object=geometry;
+						
+					
+						file2InfoLabel.setText("Indices:"+file2Object.getSkinIndices().length()+",Weigths"+file2Object.getSkinWeight().length());	
+						saveFileBox.setText(file.getFileName());
+					}
+				});
+
+				file2Label.setText(file.getFileName());
+				updateButton();
+				
+			}
+		}, true);
 		add(destFile);
 		
-		
+		/*
 		destFile.getFileUpload().addChangeHandler(new ChangeHandler() {
 			
 			@Override
@@ -137,25 +195,13 @@ public class MergeToolPanel extends VerticalPanel{
 						
 						String text=reader.getResultAsString();
 						
-							GWTGeometryUtils.loadJsonModel(text, new JSONLoadHandler() {
-							
-							@Override
-							public void loaded(Geometry geometry,JsArray<Material> materials) {
-								file2Object=geometry;
-								
-							
-								file2InfoLabel.setText("Indices:"+file2Object.getSkinIndices().length()+",Weigths"+file2Object.getSkinWeight().length());	
-								saveFileBox.setText(file.getFileName());
-							}
-						});
-
-						file2Label.setText(file.getFileName());
-						updateButton();
+						
 					}
 				});
 				reader.readAsText(file,"utf-8");
 			}
 		});
+		*/
 		
 		HorizontalPanel fileNames=new HorizontalPanel();
 		add(fileNames);

@@ -67,6 +67,7 @@ import com.akjava.gwt.three.client.js.objects.Mesh;
 import com.akjava.gwt.three.client.js.objects.SkinnedMesh;
 import com.akjava.gwt.three.client.js.renderers.WebGLRenderer;
 import com.akjava.gwt.three.client.js.textures.Texture;
+import com.akjava.lib.common.utils.ColorUtils;
 import com.akjava.lib.common.utils.FileNames;
 import com.google.common.collect.Lists;
 import com.google.gwt.canvas.client.Canvas;
@@ -633,6 +634,18 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 			v=bodyWeight.get(index).getY();
 		}
 		
+		
+		if(v==1){
+			return 0xffffff;
+		}else if(v==0){
+			return 0;
+		}
+		
+		int[] cv=toColorByDouble(v);
+		
+		int color=ColorUtils.toColor(cv);
+		return color;
+		/*
 		if(index==318){
 			LogUtils.log("isIndex1:"+isIndex1+",index="+index1+",selectBone="+selectionBoneIndex+",v="+v);
 		}
@@ -665,6 +678,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		}else{
 			return 0x7fcaff;
 		}
+		*/
 	}
 	
 
@@ -1157,6 +1171,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		final FileUploadForm textureUpload=FileUtils.createSingleFileUploadForm(new DataURLListener() {	
 			@Override
 			public void uploaded(File file, String value) {
+				LogUtils.log("texture upload");
 				onTextureFileUploaded(file, value);
 			}
 		}, true);
@@ -1761,6 +1776,21 @@ public void onError(Request request, Throwable exception) {
 			array.push(cloned);
 		}
 		return array;
+	}
+	
+	private int [] toColorByDouble(double v){
+		return toColor((int) (255*v));
+	}
+	
+	//0-255
+	private int[] toColor(int v){
+		int[] rgb=new int[3];
+		double phase = (double)v/255;
+		double shift =Math.PI+Math.PI/4;
+		 rgb[0]=(int) (255*(Math.sin(1.5*Math.PI*phase + shift + Math.PI ) + 1)/2.0) ;
+		 rgb[1]=(int) (255*(Math.sin(1.5*Math.PI*phase + shift + Math.PI/2 ) + 1)/2.0) ;
+		 rgb[2]=(int) (255*(Math.sin(1.5*Math.PI*phase + shift  ) + 1)/2.0) ;
+		return rgb;
 	}
 	
 	
@@ -3099,7 +3129,8 @@ private Vector4 findNearSpecial(List<NameAndPosition> nameAndPositions,Vector3 p
 	private Button pauseBt;
 	
 	protected void onDrop(DropEvent event){
-		event.preventDefault();
+		LogUtils.log("root-drop");
+		event.preventDefault();//TODO
 		String[] images={"png","jpg","jpeg"};
 		String[] jsons={"js","json"};
 		String[] bvhs={"bvh"};

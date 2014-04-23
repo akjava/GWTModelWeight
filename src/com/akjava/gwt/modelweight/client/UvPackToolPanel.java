@@ -108,7 +108,7 @@ public class UvPackToolPanel extends DeckLayoutPanel{
 					@Override
 					public String getValue(UVPackData object) {
 
-						return object.getFileName();
+						return object.getModelFileName();
 					}
 				};
 				table.addColumn(name,"name");

@@ -36,7 +36,8 @@ public class UVPackDataEditor extends VerticalPanel implements Editor<UVPackData
 	public interface UVPackDataEditorDriver extends SimpleBeanEditorDriver<UVPackData, UVPackDataEditor> {}
 	SimpleEditor<Geometry> geometryEditor;
 	SimpleEditor<JSONModelFile> modelFileEditor; 
-	Label fileNameEditor;
+	Label modelFileNameEditor;
+	Label textureFileNameEditor;
 	SimpleEditor<Integer> faceTypeEditor;//can't use because until export ,no way to know
 	SimpleEditor<ImageElement> textureEditor;
 	
@@ -49,12 +50,30 @@ public class UVPackDataEditor extends VerticalPanel implements Editor<UVPackData
 	private Label imageSizeLabel;
 	public UVPackDataEditor(){
 		
-		add(new Label("dont drop file here.first tab handle all drop event"));
+		//add(new Label("dont drop file here.first tab handle all drop event"));
 		
 		modelFileEditor=SimpleEditor.of();
 		
-		fileNameEditor=new Label();
-		add(fileNameEditor);
+		HorizontalPanel h=new HorizontalPanel();
+		Label l=new Label("Model:");
+		l.setWidth("60px");
+		h.add(l);
+		
+		modelFileNameEditor=new Label();
+		modelFileNameEditor.setWidth("160px");
+		h.add(modelFileNameEditor);
+		
+		
+		Label l2=new Label("Texture:");
+		l2.setWidth("60px");
+		h.add(l2);
+		
+		add(h);
+		
+		textureFileNameEditor=new Label();
+		textureFileNameEditor.setWidth("160px");
+		h.add(textureFileNameEditor);
+		
 		
 		imageSizeLabel=new Label();
 		add(imageSizeLabel);
@@ -89,7 +108,7 @@ public class UVPackDataEditor extends VerticalPanel implements Editor<UVPackData
 		FileUploadForm uploadForm=FileUtils.createSingleTextFileUploadForm(new DataURLListener() {
 			@Override
 			public void uploaded(File file, String value) {
-				fileNameEditor.setText(file.getFileName());
+				modelFileNameEditor.setText(file.getFileName());
 				
 			
 				
@@ -137,6 +156,7 @@ public class UVPackDataEditor extends VerticalPanel implements Editor<UVPackData
 		}, true);
 		uploadForm.setAccept(Lists.newArrayList(".js",".json"));//file name filter
 		
+		uploadForm.setShowDragOverBorder(true);
 		
 		add(fPanel);
 		fPanel.add(createLabel("Model"));
@@ -153,7 +173,8 @@ public class UVPackDataEditor extends VerticalPanel implements Editor<UVPackData
 		FileUploadForm imageForm=FileUtils.createSingleFileUploadForm(new DataURLListener() {
 			@Override
 			public void uploaded(File file, String value) {
-				LogUtils.log(value);
+				textureFileNameEditor.setText(file.getFileName());
+				
 				ImageElement element=ImageElementUtils.create(value);
 				
 				//imageSizeLabel.setText(element.getWidth()+"x"+element.getHeight());
@@ -164,6 +185,8 @@ public class UVPackDataEditor extends VerticalPanel implements Editor<UVPackData
 		}, true);
 		imageForm.setAccept(Lists.newArrayList(".jpg",".png",".webp"));//file name filter
 		fPanel.add(imageForm);
+		
+		imageForm.setShowDragOverBorder(true);
 		
 		
 	}

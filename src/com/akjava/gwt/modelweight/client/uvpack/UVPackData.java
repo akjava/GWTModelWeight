@@ -8,19 +8,33 @@ public class UVPackData {
 private JSONModelFile modelFile;
 private Geometry geometry;
 public UVPackData(){
-	this(null,null,0,2,0,0,null);
+	this(null,null,0,2,0,0,null,null);
 }
-public UVPackData(JSONModelFile modelFile, String fileName, int faceType, int split, int x, int y, ImageElement texture) {
+public UVPackData(JSONModelFile modelFile, String fileName, int faceType, int split, int x, int y, ImageElement texture,String textureFileName) {
 	super();
 	this.modelFile = modelFile;
-	this.fileName = fileName;
+	this.modelFileName = fileName;
 	this.faceType = faceType;
 	this.split = split;
 	this.x = x;
 	this.y = y;
 	this.texture = texture;
+	this.textureFileName=textureFileName;
 }
-private String fileName;
+private String textureFileName;
+public String getTextureFileName() {
+	return textureFileName;
+}
+public void setTextureFileName(String textureFileName) {
+	this.textureFileName = textureFileName;
+}
+private String modelFileName;
+public String getModelFileName() {
+	return modelFileName;
+}
+public void setModelFileName(String modelFileName) {
+	this.modelFileName = modelFileName;
+}
 public JSONModelFile getModelFile() {
 	return modelFile;
 }
@@ -33,12 +47,7 @@ public Geometry getGeometry() {
 public void setGeometry(Geometry geometry) {
 	this.geometry = geometry;
 }
-public String getFileName() {
-	return fileName;
-}
-public void setFileName(String fileName) {
-	this.fileName = fileName;
-}
+
 public int getFaceType() {
 	return faceType;
 }
