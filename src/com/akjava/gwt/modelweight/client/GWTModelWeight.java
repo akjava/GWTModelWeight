@@ -1648,7 +1648,8 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		JSONModelFile file=(JSONModelFile) lastJsonObject.getJavaScriptObject();
 		file.getMetaData().setGeneratedBy(getGeneratedBy());
 		
-		return lastJsonObject.toString();
+		return stringify(lastJsonObject.getJavaScriptObject());
+		//return lastJsonObject.toString();
 	}
 	public static String getGeneratedBy(){
 		return "GWTModel-Weight ver"+GWTModelWeight.version;
@@ -1688,6 +1689,10 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		String url="data:text/plain;charset="+encode+","+text;
 		Window.open(url, wname, null);
 	}
+	//export json pretty way
+	public native final String stringify(JavaScriptObject json)/*-{
+	return $wnd.JSON.stringify(json,null,2);
+	}-*/;
 	
 	
 	public native final void exportTextChrome(String text,String wname)/*-{
