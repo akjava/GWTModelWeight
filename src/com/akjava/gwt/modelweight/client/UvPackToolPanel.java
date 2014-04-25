@@ -22,6 +22,7 @@ import com.akjava.gwt.three.client.js.core.Geometry;
 import com.akjava.gwt.three.client.js.math.Vector2;
 import com.google.common.collect.Lists;
 import com.google.gwt.canvas.client.Canvas;
+import com.google.gwt.canvas.dom.client.Context2d.LineCap;
 import com.google.gwt.cell.client.NumberCell;
 import com.google.gwt.core.client.JsArray;
 import com.google.gwt.core.client.JsArrayNumber;
@@ -152,6 +153,16 @@ public class UvPackToolPanel extends DeckLayoutPanel{
 						            }
 						        };
 						        table.addColumn(y,"y");
+						        
+						        
+						        TextColumn<UVPackData> scale=new TextColumn<UVPackData>() {
+									@Override
+									public String getValue(UVPackData object) {
+
+										return object.getModelFileName();
+									}
+								};
+								table.addColumn(scale,"scale");//TODO add scale for check
 						        
 						        HtmlColumn<UVPackData> img=new HtmlColumn<UVPackData>() {
 									@Override
@@ -301,7 +312,7 @@ public class UvPackToolPanel extends DeckLayoutPanel{
 		
 		uvCanvas.getContext2d().setStrokeStyle(uvLineColorBox.getValue());
 		uvCanvas.getContext2d().setLineWidth(uvLineWidthBox.getValue());
-		
+		uvCanvas.getContext2d().setLineCap(LineCap.ROUND);
 		/*
 		for(UVPackData data:easyCellTableObjects.getDatas()){
 			createUvImage(uvCanvas,data.getModelFile(),data.getGeometry(),data.getSplit(),data.getX(),data.getY());
