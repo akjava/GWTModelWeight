@@ -21,6 +21,16 @@ public UVPackData(JSONModelFile modelFile, String fileName, int faceType, int sp
 	this.texture = texture;
 	this.textureFileName=textureFileName;
 }
+
+private String comment;
+
+public String getComment() {
+	return comment;
+}
+public void setComment(String comment) {
+	this.comment = comment;
+}
+
 private String textureFileName;
 public String getTextureFileName() {
 	return textureFileName;

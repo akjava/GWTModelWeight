@@ -28,6 +28,7 @@ import com.google.gwt.json.client.JSONValue;
 import com.google.gwt.text.shared.Renderer;
 import com.google.gwt.user.client.ui.HorizontalPanel;
 import com.google.gwt.user.client.ui.Label;
+import com.google.gwt.user.client.ui.TextBox;
 import com.google.gwt.user.client.ui.ValueListBox;
 import com.google.gwt.user.client.ui.VerticalPanel;
 import com.google.gwt.user.client.ui.Widget;
@@ -46,6 +47,8 @@ public class UVPackDataEditor extends VerticalPanel implements Editor<UVPackData
 	ValueListBox<Integer> splitEditor;
 	//ValueListBox<Integer> 
 	
+	TextBox commentEditor;
+	
 	@Ignore
 	private Label imageSizeLabel;
 	public UVPackDataEditor(){
@@ -55,6 +58,8 @@ public class UVPackDataEditor extends VerticalPanel implements Editor<UVPackData
 		modelFileEditor=SimpleEditor.of();
 		
 		HorizontalPanel h=new HorizontalPanel();
+		add(h);
+		
 		Label l=new Label("Model:");
 		l.setWidth("60px");
 		h.add(l);
@@ -64,15 +69,18 @@ public class UVPackDataEditor extends VerticalPanel implements Editor<UVPackData
 		h.add(modelFileNameEditor);
 		
 		
+		HorizontalPanel h1=new HorizontalPanel();
+		add(h1);
 		Label l2=new Label("Texture:");
 		l2.setWidth("60px");
-		h.add(l2);
+		h1.add(l2);
 		
-		add(h);
+		
+		
 		
 		textureFileNameEditor=new Label();
 		textureFileNameEditor.setWidth("160px");
-		h.add(textureFileNameEditor);
+		h1.add(textureFileNameEditor);
 		
 		
 		imageSizeLabel=new Label();
@@ -82,21 +90,8 @@ public class UVPackDataEditor extends VerticalPanel implements Editor<UVPackData
 		textureEditor=SimpleEditor.of();
 		geometryEditor=SimpleEditor.of();
 		
-		List<Integer> xylist=Lists.newArrayList(0,1,2,3,4,5,6,7);
-		
-		splitEditor=createToStringListBox(Lists.newArrayList(1,2,4,8),2);
-		add(new Label("split"));
-		add(splitEditor);
-		
-		xEditor=createToStringListBox(xylist,0);
-		add(new Label("x"));
-		add(xEditor);
-		yEditor=createToStringListBox(xylist,0);
-		add(new Label("y"));
-		add(yEditor);
 		
 		
-		HorizontalPanel fPanel=new HorizontalPanel();
 		
 		
 	
@@ -158,9 +153,7 @@ public class UVPackDataEditor extends VerticalPanel implements Editor<UVPackData
 		
 		uploadForm.setShowDragOverBorder(true);
 		
-		add(fPanel);
-		fPanel.add(createLabel("Model"));
-		fPanel.add(uploadForm);
+		h.add(uploadForm);
 		
 		
 		
@@ -168,7 +161,6 @@ public class UVPackDataEditor extends VerticalPanel implements Editor<UVPackData
 		HorizontalPanel imagePanel=new HorizontalPanel();
 		imagePanel=new HorizontalPanel();
 		add(imagePanel);
-		fPanel.add(createLabel("Texture"));
 		
 		FileUploadForm imageForm=FileUtils.createSingleFileUploadForm(new DataURLListener() {
 			@Override
@@ -184,11 +176,34 @@ public class UVPackDataEditor extends VerticalPanel implements Editor<UVPackData
 			}
 		}, true);
 		imageForm.setAccept(Lists.newArrayList(".jpg",".png",".webp"));//file name filter
-		fPanel.add(imageForm);
+		h1.add(imageForm);
 		
 		imageForm.setShowDragOverBorder(true);
 		
 		
+		HorizontalPanel h2=new HorizontalPanel();
+		add(h2);
+		
+		List<Integer> xylist=Lists.newArrayList(0,1,2,3,4,5,6,7);
+		
+		splitEditor=createToStringListBox(Lists.newArrayList(1,2,4,8),2);
+		h2.add(new Label("split"));
+		h2.add(splitEditor);
+		
+		xEditor=createToStringListBox(xylist,0);
+		h2.add(new Label("X:"));
+		h2.add(xEditor);
+		yEditor=createToStringListBox(xylist,0);
+		h2.add(new Label("Y:"));
+		h2.add(yEditor);
+		
+		
+		HorizontalPanel h3=new HorizontalPanel();
+		add(h3);
+		h3.add(new Label("comment:"));
+		commentEditor=new TextBox();
+		commentEditor.setWidth("200px");
+		h3.add(commentEditor);
 	}
 	
 	private Widget createLabel(String string) {

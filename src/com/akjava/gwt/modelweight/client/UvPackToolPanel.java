@@ -12,6 +12,7 @@ import com.akjava.gwt.lib.client.widget.cell.EasyCellTableObjects;
 import com.akjava.gwt.lib.client.widget.cell.HtmlColumn;
 import com.akjava.gwt.lib.client.widget.cell.ListEditorGenerator;
 import com.akjava.gwt.lib.client.widget.cell.SimpleCellTable;
+import com.akjava.gwt.modelweight.client.uvpack.ToStringValueListBox;
 import com.akjava.gwt.modelweight.client.uvpack.UVPackData;
 import com.akjava.gwt.modelweight.client.uvpack.UVPackDataEditor;
 import com.akjava.gwt.modelweight.client.uvpack.UVPackDataEditor.UVPackDataEditorDriver;
@@ -20,6 +21,7 @@ import com.akjava.gwt.three.client.java.utils.GWTGeometryUtils;
 import com.akjava.gwt.three.client.js.core.Face3;
 import com.akjava.gwt.three.client.js.core.Geometry;
 import com.akjava.gwt.three.client.js.math.Vector2;
+import com.akjava.lib.common.io.FileType;
 import com.google.common.collect.Lists;
 import com.google.gwt.canvas.client.Canvas;
 import com.google.gwt.canvas.dom.client.Context2d.LineCap;
@@ -30,6 +32,8 @@ import com.google.gwt.core.shared.GWT;
 import com.google.gwt.dom.client.ImageElement;
 import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
+import com.google.gwt.event.logical.shared.ValueChangeEvent;
+import com.google.gwt.event.logical.shared.ValueChangeHandler;
 import com.google.gwt.text.shared.Renderer;
 import com.google.gwt.user.cellview.client.CellTable;
 import com.google.gwt.user.cellview.client.Column;
@@ -42,7 +46,6 @@ import com.google.gwt.user.client.ui.HorizontalPanel;
 import com.google.gwt.user.client.ui.Image;
 import com.google.gwt.user.client.ui.Label;
 import com.google.gwt.user.client.ui.ScrollPanel;
-import com.google.gwt.user.client.ui.TextBox;
 import com.google.gwt.user.client.ui.ValueListBox;
 import com.google.gwt.user.client.ui.VerticalPanel;
 
@@ -54,12 +57,13 @@ public class UvPackToolPanel extends DeckLayoutPanel{
 	private Button packButton;
 	private Label file2Label;
 
-	private TextBox saveFileBox;
+	//private TextBox saveFileBox;
 	
 	private UVPackDataEditorDriver driver=GWT.create(UVPackDataEditorDriver.class);
 	private EasyCellTableObjects<UVPackData> easyCellTableObjects;
 	
 	private Canvas textureCanvas;
+	private int canvasSize=512;
 	public UvPackToolPanel(){
 		
 		ScrollPanel scroll=new ScrollPanel();
@@ -74,7 +78,7 @@ public class UvPackToolPanel extends DeckLayoutPanel{
 		
 		HorizontalPanel h1=new HorizontalPanel();
 		root.add(h1);
-		h1.add(new Label("uv-line-size"));
+		h1.add(new Label("uv-line:size"));
 		
 		
 		
@@ -101,7 +105,29 @@ public class UvPackToolPanel extends DeckLayoutPanel{
 		uvLineColorBox.setValue("#000000");
 		h1.add(uvLineColorBox);
 		
-		textureCanvas=CanvasUtils.createCanvas(512, 512);
+		h1.add(new Label("image:size"));
+		imageSizeValueListBox = new ToStringValueListBox<Integer>(Lists.newArrayList(512,1024,2048),canvasSize);
+		imageSizeValueListBox.addValueChangeHandler(new ValueChangeHandler<Integer>() {
+
+			@Override
+			public void onValueChange(ValueChangeEvent<Integer> event) {
+				canvasSize=event.getValue();
+				textureCanvas=CanvasUtils.createCanvas(textureCanvas,canvasSize, canvasSize);//TODO ondeman?
+				
+				if(uvCanvas!=null){//null canvas create on demand
+					CanvasUtils.createCanvas(uvCanvas,canvasSize, canvasSize);
+				}
+			}
+			
+		});
+		h1.add(imageSizeValueListBox);
+		imageTypeValueListBox = new ToStringValueListBox<FileType>(Lists.newArrayList(FileType.PNG,FileType.JPEG,FileType.WEBP),FileType.PNG);
+		h1.add(new Label("type"));
+		h1.add(imageTypeValueListBox);
+		
+		
+		
+		textureCanvas=CanvasUtils.createCanvas(canvasSize, canvasSize);
 		SimpleCellTable<UVPackData> uvPackTable=new SimpleCellTable<UVPackData>(999) {
 			@Override
 			public void addColumns(CellTable<UVPackData> table) {
@@ -158,12 +184,24 @@ public class UvPackToolPanel extends DeckLayoutPanel{
 						        TextColumn<UVPackData> scale=new TextColumn<UVPackData>() {
 									@Override
 									public String getValue(UVPackData object) {
-
-										return object.getModelFileName();
+										if(object.getModelFile()!=null){
+										return ""+object.getModelFile().getScale();
+										}else{
+											return "";
+										}
 									}
 								};
 								table.addColumn(scale,"scale");//TODO add scale for check
 						        
+								  TextColumn<UVPackData> comment=new TextColumn<UVPackData>() {
+										@Override
+										public String getValue(UVPackData object) {
+
+											return object.getComment();
+										}
+									};
+									table.addColumn(comment,"comment");//TODO add scale for check
+									
 						        HtmlColumn<UVPackData> img=new HtmlColumn<UVPackData>() {
 									@Override
 									public String toHtml(UVPackData object) {
@@ -201,12 +239,7 @@ public class UvPackToolPanel extends DeckLayoutPanel{
 		root.add(editor);
 		
 		
-		HorizontalPanel fileNames=new HorizontalPanel();
-		root.add(fileNames);
-		fileNames.add(new Label("SaveName:"));
-		saveFileBox = new TextBox();
-		saveFileBox.setText("uvpacked.js");
-		fileNames.add(saveFileBox);
+	
 		
 		
 		
@@ -214,6 +247,17 @@ public class UvPackToolPanel extends DeckLayoutPanel{
 		packButton.setEnabled(false);
 		
 		root.add(packButton);
+		
+		
+		/*
+		HorizontalPanel fileNames=new HorizontalPanel();
+		root.add(fileNames);
+		fileNames.add(new Label("SaveName:"));
+		saveFileBox = new TextBox();
+		saveFileBox.setText("uvpacked.js");
+		fileNames.add(saveFileBox);
+		*/
+		
 		final HorizontalPanel linkContainer=new HorizontalPanel();
 		root.add(linkContainer);
 		packButton.addClickHandler(new ClickHandler() {
@@ -237,7 +281,7 @@ public class UvPackToolPanel extends DeckLayoutPanel{
 							anchror.removeFromParent();
 							anchror=null;
 						}
-						anchror = new HTML5Download().generateTextDownloadLink(modelFile.getJsonText(), saveFileBox.getText(), "Download object");
+						anchror = new HTML5Download().generateTextDownloadLink(modelFile.getJsonText(), "uvpacked.js", "Download js-model");
 						anchror.addClickHandler(new ClickHandler() {
 							
 							@Override
@@ -301,12 +345,16 @@ public class UvPackToolPanel extends DeckLayoutPanel{
 	private ValueListBox<Double> uvLineWidthBox;
 
 	private ColorBox uvLineColorBox;
+
+	private ToStringValueListBox<Integer> imageSizeValueListBox;
+
+	private ToStringValueListBox<FileType> imageTypeValueListBox;
 	private String createUvImage(JSONModelFile modelFile){
 		
 	
 		
 		if(uvCanvas==null){
-			uvCanvas=CanvasUtils.createCanvas(2048, 2048);
+			uvCanvas=CanvasUtils.createCanvas(canvasSize, canvasSize);
 		}else{
 			CanvasUtils.clear(uvCanvas);
 		}
@@ -426,10 +474,10 @@ public class UvPackToolPanel extends DeckLayoutPanel{
 	}
 	
 	private String getImageMime(){
-		return "jpeg";
+		return imageTypeValueListBox.getValue().getSubtype();
 	}
 	private String getImageExtension(){
-		return "jpg";
+		return imageTypeValueListBox.getValue().getExtension();
 	}
 	private String createPackedImage() {
 		//resize canvas 
