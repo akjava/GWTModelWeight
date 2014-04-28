@@ -288,7 +288,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		//loadBVH("pose.bvh");//no motion
 	}
 	
-	private boolean debugTab=false;
+	private boolean debugTab=true;
 	
 	//private PopupPanel bottomPanel;//TODO future
 	private void createTabs(){

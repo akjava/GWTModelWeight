@@ -51,7 +51,7 @@ public class UvPackToolPanel extends DeckLayoutPanel{
 	private Geometry file1Object;
 
 	private Geometry file2Object;
-	private Button copyButton;
+	private Button packButton;
 	private Label file2Label;
 
 	private TextBox saveFileBox;
@@ -179,7 +179,12 @@ public class UvPackToolPanel extends DeckLayoutPanel{
 		};
 		UVPackDataEditor editor=new UVPackDataEditor(); 
 		ListEditorGenerator<UVPackData> generator=new ListEditorGenerator<UVPackData>(){
-
+			@Override
+			public void onUpdateData(){
+				updateButton();
+			}
+			
+			
 			@Override
 			public UVPackData createNewData() {
 				// TODO Auto-generated method stub
@@ -205,18 +210,19 @@ public class UvPackToolPanel extends DeckLayoutPanel{
 		
 		
 		
-		copyButton = new Button("Pack Uv");
-		//copyButton.setEnabled(false);
-		root.add(copyButton);
+		packButton = new Button("Pack Uv");
+		packButton.setEnabled(false);
+		
+		root.add(packButton);
 		final HorizontalPanel linkContainer=new HorizontalPanel();
 		root.add(linkContainer);
-		copyButton.addClickHandler(new ClickHandler() {
+		packButton.addClickHandler(new ClickHandler() {
 			
 			private Anchor anchror;
 
 			@Override
 			public void onClick(ClickEvent event) {
-				copyButton.setEnabled(false);
+				packButton.setEnabled(false);
 				Timer timer=new Timer(){
 					@Override
 					public void run() {
@@ -240,7 +246,7 @@ public class UvPackToolPanel extends DeckLayoutPanel{
 							}
 						});
 						linkContainer.add(anchror);
-						copyButton.setEnabled(true);
+						packButton.setEnabled(true);
 						
 						//create images
 						 
@@ -255,7 +261,7 @@ public class UvPackToolPanel extends DeckLayoutPanel{
 						});
 						linkContainer.add(anchror);
 						linkContainer.add(imageAnchor);
-						copyButton.setEnabled(true);
+						packButton.setEnabled(true);
 						Image img=new Image(url);
 						linkContainer.add(img);
 						
@@ -276,7 +282,7 @@ public class UvPackToolPanel extends DeckLayoutPanel{
 						linkContainer.add(uvImg);
 						
 						
-						copyButton.setEnabled(true);
+						packButton.setEnabled(true);
 					
 					}
 
@@ -549,12 +555,8 @@ public class UvPackToolPanel extends DeckLayoutPanel{
 	}-*/;
 	
 	private void updateButton(){
-		boolean status=false;
-		if(file1Object!=null && file2Object!=null){
-			//check same weight
-			status=true;
-		}
-		copyButton.setEnabled(status);
+		boolean status=easyCellTableObjects.getDatas().size()>0;
+		packButton.setEnabled(status);
 	}
 	//copy
 	
