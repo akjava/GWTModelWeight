@@ -22,7 +22,12 @@ public UVPackData(JSONModelFile modelFile, String fileName, int faceType, int sp
 	this.textureFileName=textureFileName;
 }
 
-private String comment;
+public String toString(){
+	//for pack csv
+	return split+","+x+","+y+","+(comment!=null?comment.replace(",", " "):"");
+}
+
+private String comment="";//not allow null
 
 public String getComment() {
 	return comment;
@@ -89,7 +94,7 @@ public void setTexture(ImageElement texture) {
 	this.texture = texture;
 }
 private int faceType;//first byte of face datas.//use for every data same?
-private int split;
+private int split=1;//0 is invalid
 private int x;
 private int y;
 private ImageElement texture;//use in future
