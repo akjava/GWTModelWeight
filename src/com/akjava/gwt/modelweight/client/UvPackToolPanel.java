@@ -6,6 +6,7 @@ import java.util.List;
 
 import com.akjava.gwt.html5.client.download.HTML5Download;
 import com.akjava.gwt.html5.client.input.ColorBox;
+import com.akjava.gwt.lib.client.CanvasResizer;
 import com.akjava.gwt.lib.client.CanvasUtils;
 import com.akjava.gwt.lib.client.LogUtils;
 import com.akjava.gwt.lib.client.StorageControler;
@@ -26,6 +27,7 @@ import com.akjava.gwt.three.client.java.utils.GWTGeometryUtils;
 import com.akjava.gwt.three.client.js.core.Face3;
 import com.akjava.gwt.three.client.js.core.Geometry;
 import com.akjava.gwt.three.client.js.math.Vector2;
+import com.akjava.gwt.three.client.js.renderers.CanvasRenderer;
 import com.akjava.lib.common.io.FileType;
 import com.google.common.collect.Lists;
 import com.google.gwt.canvas.client.Canvas;
@@ -272,7 +274,7 @@ public class UvPackToolPanel extends DeckLayoutPanel{
 
 			@Override
 			public void setValue(String value) {
-				LogUtils.log("set value:"+value);
+				
 				try {
 					storageControler.setValue(KEY_UV_SET, value);
 				} catch (StorageException e) {
@@ -282,7 +284,7 @@ public class UvPackToolPanel extends DeckLayoutPanel{
 
 			@Override
 			public String getValue() {
-				LogUtils.log("need value:");
+				
 				return storageControler.getValue(KEY_UV_SET,"");
 			}
 		});
@@ -348,6 +350,7 @@ public class UvPackToolPanel extends DeckLayoutPanel{
 							}
 						});
 						linkContainer.add(anchror);
+						
 						}
 						
 						
@@ -362,7 +365,7 @@ public class UvPackToolPanel extends DeckLayoutPanel{
 								imageAnchor.removeFromParent();
 							}
 						});
-						linkContainer.add(anchror);
+						
 						linkContainer.add(imageAnchor);
 				
 						Image img=new Image(url);
@@ -527,13 +530,21 @@ public class UvPackToolPanel extends DeckLayoutPanel{
 		}
 	}
 	
+	private Canvas resizeCanvas;
 	private void packUVImage(ImageElement element,int split,int x,int y){
+		
 		if(element==null){
 			return;
 		}
 		int canvasSize=textureCanvas.getCoordinateSpaceWidth();
 		int unitSize=canvasSize/split;
-		textureCanvas.getContext2d().drawImage(element, unitSize*x, unitSize*y,unitSize,unitSize);
+		
+		if(resizeCanvas==null){
+			resizeCanvas=Canvas.createIfSupported();
+		}
+		Canvas resized=CanvasResizer.on(resizeCanvas).image(element).width(unitSize).downscale(true).toCanvas();
+		
+		textureCanvas.getContext2d().drawImage(resized.getCanvasElement(), unitSize*x, unitSize*y);
 	}
 	
 	private String getImageMime(){
@@ -543,14 +554,15 @@ public class UvPackToolPanel extends DeckLayoutPanel{
 		return imageTypeValueListBox.getValue().getExtension();
 	}
 	private String createPackedImage() {
+		
 		//resize canvas 
 		CanvasUtils.clear(textureCanvas);
 		
 		for(int i=0;i<easyCellTableObjects.getDatas().size();i++){
 			UVPackData data=easyCellTableObjects.getDatas().get(i);
-			if(data.getTexture()!=null){
+			
 			packUVImage(data.getTexture(),data.getSplit(),data.getX(),data.getY());
-			}
+			
 		}
 		
 		return textureCanvas.toDataUrl("image/"+getImageMime());
@@ -586,9 +598,11 @@ public class UvPackToolPanel extends DeckLayoutPanel{
 		JSONModelFile baseModelFile=easyCellTableObjects.getDatas().get(0).getModelFile();
 		if(baseModelFile==null){
 			//maybe preset
+			LogUtils.log("model-1 is null");
 			return null;
 		}
 		//keep original clean for re-try
+		LogUtils.log(baseModelFile);
 		Geometry geometry=GWTGeometryUtils.clonePlusWeights(easyCellTableObjects.getDatas().get(0).getGeometry());
 		
 		
@@ -600,6 +614,9 @@ public class UvPackToolPanel extends DeckLayoutPanel{
 		
 		for(int i=1;i<easyCellTableObjects.getDatas().size();i++){
 			data=easyCellTableObjects.getDatas().get(i);
+			if(data.getGeometry()==null){
+				continue;
+			}
 			LogUtils.log("model-"+(i+1));
 			
 			

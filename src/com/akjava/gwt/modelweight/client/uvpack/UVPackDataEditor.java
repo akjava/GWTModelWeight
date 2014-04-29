@@ -168,10 +168,6 @@ public class UVPackDataEditor extends VerticalPanel implements Editor<UVPackData
 				textureFileNameEditor.setText(file.getFileName());
 				
 				ImageElement element=ImageElementUtils.create(value);
-				
-				//imageSizeLabel.setText(element.getWidth()+"x"+element.getHeight());
-				
-				element.setWidth(64);
 				textureEditor.setValue(element);
 			}
 		}, true);

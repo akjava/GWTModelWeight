@@ -29,10 +29,11 @@ public class ToStringValueListBox<T> extends ValueListBox<T> {
 				
 			}
 		});
+		this.setValue(value);
 		if(accepts!=null){
 		this.setAcceptableValues(accepts);
 		}
-		this.setValue(value);
+		
 	}
 
 }
