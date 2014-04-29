@@ -1,0 +1,7 @@
+1,0,0,body
+8,0,0,eye
+8,5,0,hair/hat
+8,6,0,jacket
+8,7,0,shirt
+8,6,7,pantu
+8,7,7,shoes
