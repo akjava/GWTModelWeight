@@ -542,7 +542,7 @@ public class UvPackToolPanel extends DeckLayoutPanel{
 		if(resizeCanvas==null){
 			resizeCanvas=Canvas.createIfSupported();
 		}
-		Canvas resized=CanvasResizer.on(resizeCanvas).image(element).width(unitSize).downscale(true).toCanvas();
+		Canvas resized=CanvasResizer.on(resizeCanvas).image(element).width(unitSize).downscale(false).toCanvas();//downscale transparent problem
 		
 		textureCanvas.getContext2d().drawImage(resized.getCanvasElement(), unitSize*x, unitSize*y);
 	}
