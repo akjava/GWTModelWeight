@@ -2285,9 +2285,9 @@ public void onError(Request request, Throwable exception) {
 	}
 		
 		
-	private String textureUrl="uvpack.jpg";
-	private String bvhUrl="dummy.bvh";
-	private String modelUrl="mk_men0001.js";
+	private String textureUrl="model001.png";
+	private String bvhUrl="tpose.bvh";
+	private String modelUrl="model001_female1848_bone19.js";
 	
 	private Texture texture;
 	private void generateTexture(){
