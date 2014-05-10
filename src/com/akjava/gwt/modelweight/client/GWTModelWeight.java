@@ -123,8 +123,8 @@ import com.google.gwt.user.client.ui.VerticalPanel;
 public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 	public static final String version="0.4(for r64)";//for three.js r64
 	
-	
-	private double posScale=0.1;
+	double baseScale=10;
+	private double posScale=0.1*baseScale;
 	@Override
 	protected void beforeUpdate(WebGLRenderer renderer) {
 		
@@ -174,7 +174,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 	private Mesh mouseClickCatcher;
 	@Override
 	protected void initializeOthers(WebGLRenderer renderer) {
-		cameraZ=5;
+		cameraZ=30;
 		
 		
 		//Window.open("text/plain:test.txt:"+url, "test", null);
@@ -621,7 +621,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 	}
 	
 	private int getVertexColor(int index){
-		double index1=bodyIndices.get(index).getX();
+		double index1=bodyIndices.get(index).getX();//first one
 		boolean isIndex1=false;
 		if(index1==selectionBoneIndex){
 			isIndex1=true;
@@ -767,7 +767,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 	int rotX;
 	int rotY;
 	double posX;
-	double posY=-1;
+	double posY=-10;
 	@Override
 	public void onMouseMove(MouseMoveEvent event) {
 		
@@ -960,7 +960,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		h6.add(reset6);
 		//move left-side
 		//positionYRange.setValue(-13);
-		positionXRange.setValue(-20);
+		positionXRange.setValue(-10);
 		
 		pauseBt = new Button("Pause/Play SkinnedMesh");
 		parent.add(pauseBt);
@@ -1254,7 +1254,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		showControl();
 	}
 	
-	double baseScale=1;
+	
 	protected void onTotalSizeChanged(Boolean value) {
 		
 		
@@ -1421,9 +1421,10 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		//LogUtils.log(geometry.getSkinIndices());
 		//LogUtils.log(""+geometry.getSkinIndices().length());
 		if(geometry.getSkinIndices().length()==0){
+			LogUtils.log("loaded geometry has no indices:do nothing");
 			return;
 		}
-		
+		int updated=0;
 		for(int i=0;i<geometry.vertices().length();i++){
 			int loadedIndex=findSameIndex(loadedGeometry.vertices(), geometry.vertices().get(i));
 		//	LogUtils.log(i+" find:"+loadedIndex);
@@ -1434,9 +1435,11 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 				
 				bodyWeight.get(loadedIndex).setX(geometry.getSkinWeight().get(i).getX());
 				bodyWeight.get(loadedIndex).setY(geometry.getSkinWeight().get(i).getY());
+				updated++;
 				
 			}
 		}
+		LogUtils.log("updated weight:"+updated);
 		updateVertexColor();
 	}
 	private int findSameIndex(JsArray<Vector3> vertexList,Vector3 checkVertex){
@@ -1786,15 +1789,15 @@ public void onError(Request request, Throwable exception) {
 	private int [] toColorByDouble(double v){
 		return toColor((int) (255*v));
 	}
-	
+	//i get this somewhere internet
 	//0-255
 	private int[] toColor(int v){
 		int[] rgb=new int[3];
 		double phase = (double)v/255;
 		double shift =Math.PI+Math.PI/4;
-		 rgb[0]=(int) (255*(Math.sin(1.5*Math.PI*phase + shift + Math.PI ) + 1)/2.0) ;
+		 rgb[2]=(int) (255*(Math.sin(1.5*Math.PI*phase + shift + Math.PI ) + 1)/2.0) ;
 		 rgb[1]=(int) (255*(Math.sin(1.5*Math.PI*phase + shift + Math.PI/2 ) + 1)/2.0) ;
-		 rgb[2]=(int) (255*(Math.sin(1.5*Math.PI*phase + shift  ) + 1)/2.0) ;
+		 rgb[0]=(int) (255*(Math.sin(1.5*Math.PI*phase + shift  ) + 1)/2.0) ;
 		return rgb;
 	}
 	
@@ -2285,9 +2288,9 @@ public void onError(Request request, Throwable exception) {
 	}
 		
 		
-	private String textureUrl="model001.png";
-	private String bvhUrl="tpose.bvh";
-	private String modelUrl="model001_female1848_bone19.js";
+	private String textureUrl="blond_skin.png";
+	private String bvhUrl="new-standing-hand-fixed.bvh";
+	private String modelUrl="hair_breast.js";
 	
 	private Texture texture;
 	private void generateTexture(){
@@ -2315,7 +2318,7 @@ public void onError(Request request, Throwable exception) {
 	}
 	@Override
 	public void onMouseWheel(MouseWheelEvent event) {
-		double tzoom=0.05;
+		double tzoom=0.05*baseScale;
 		//TODO make class
 		long t=System.currentTimeMillis();
 		if(mouseLast+100>t){
