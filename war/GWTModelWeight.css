@@ -1,0 +1,82 @@
+/** Add css rules here for your application. */
+
+.html5dragOverBorder {border-style: dashed;border-color: #888}
+.gray{color:#888}
+.darkgray{color:#880000;}
+
+.listedit_infolabel{
+font-weight: bold;
+color:#f00;
+}
+
+/** Example rules used by the template application (remove for your app) */
+h1 {
+  font-size: 2em;
+  font-weight: bold;
+  color: #777777;
+  margin: 40px 0px 70px;
+  text-align: center;
+}
+
+.sendButton {
+  display: block;
+  font-size: 16pt;
+}
+
+/** Most GWT widgets already have a style name defined */
+.gwt-DialogBox {
+  width: 400px;
+}
+
+.dialogVPanel {
+  margin: 5px;
+}
+
+.serverResponseLabelError {
+  color: red;
+}
+.text{
+	font-size:12px;
+	color:#ccc;
+}
+/** Set ids using widget.getElement().setId("idOfElement") */
+#closeButton {
+  margin: 15px 6px 6px;
+}
+
+.zero{
+	margin: 0px;
+	padding: 0px;
+}
+
+.gwt-TabPanel {
+  margin-top: 0px;
+}
+
+.gwt-TabPanelBottom {
+  background-color: #E8E8E8;
+}
+
+.gwt-TabBar {
+  padding-top: 0px;
+  border-bottom: 4px solid #878787;
+  background-color: #fff;
+}
+
+.gwt-TabBarItem {
+  padding: 0px;
+  cursor: pointer;
+  background-color: #e8e8e8;
+  border-bottom: 2px solid white;
+  margin-right: 2px;
+}
+
+.gwt-TabBarItem-selected {
+  padding: 0px;
+  font-weight: bold;
+  cursor: default;
+
+  background-color: #878787;
+  border-bottom: 2px solid #87ffff;
+  margin-right: 2px;
+}

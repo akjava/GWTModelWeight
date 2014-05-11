@@ -121,7 +121,7 @@ import com.google.gwt.user.client.ui.VerticalPanel;
  * Entry point classes define <code>onModuleLoad()</code>.
  */
 public class GWTModelWeight extends SimpleTabDemoEntryPoint{
-	public static final String version="0.4(for r64)";//for three.js r64
+	public static final String version="0.5(for r66)";//for three.js r64
 	
 	double baseScale=10;
 	private double posScale=0.1*baseScale;
@@ -2288,9 +2288,9 @@ public void onError(Request request, Throwable exception) {
 	}
 		
 		
-	private String textureUrl="blond_skin.png";
-	private String bvhUrl="new-standing-hand-fixed.bvh";
-	private String modelUrl="hair_breast.js";
+	private String textureUrl="asian_blondhair_tshirt.png";
+	private String bvhUrl="standing2.bvh";
+	private String modelUrl="model001_female2661_bone19.js";
 	
 	private Texture texture;
 	private void generateTexture(){
