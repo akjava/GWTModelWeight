@@ -1311,10 +1311,11 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 			
 			
 		}
+		
 		infoPanel.getGeometryAnimationObjects().setDatas(abList);
-		infoPanel.getGeometryAnimationObjects().update(true);
+		infoPanel.getGeometryAnimationObjects().update(false);//
 		
-		
+		LogUtils.log("geometry-bone-info updated");
 		if(useBone.getValue()){
 			/*
 			BVHConverter converter=new BVHConverter();
@@ -1804,7 +1805,7 @@ public void onError(Request request, Throwable exception) {
 	
 	private void setBvh(BVH bv){
 
-		LogUtils.log("root-pos:"+bv.getHiearchy().getOffset());
+		LogUtils.log("setBvh:root-pos:"+bv.getHiearchy().getOffset());
 		
 		bvh=bv;
 		
