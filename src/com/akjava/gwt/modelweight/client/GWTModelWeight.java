@@ -6,14 +6,10 @@ import java.util.List;
 import java.util.Map;
 
 import com.akjava.bvh.client.BVH;
-import com.akjava.bvh.client.BVHMotion;
 import com.akjava.bvh.client.BVHNode;
 import com.akjava.bvh.client.BVHParser;
-import com.akjava.bvh.client.BVHParser.InvalidLineException;
-import com.akjava.bvh.client.BVHWriter;
 import com.akjava.bvh.client.BVHParser.ParserListener;
 import com.akjava.bvh.client.Vec3;
-import com.akjava.gwt.bvh.client.poseframe.PoseFrameData;
 import com.akjava.gwt.bvh.client.threejs.AnimationBoneConverter;
 import com.akjava.gwt.bvh.client.threejs.AnimationDataConverter;
 import com.akjava.gwt.bvh.client.threejs.BVHConverter;
@@ -1249,6 +1245,22 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		
 		stackPanel.showWidget(2);//load
 		
+		
+		//other controls
+		CheckBox showBoneCheck=new CheckBox("showWireBody");
+		showBoneCheck.setValue(true);
+		parent.add(showBoneCheck);
+		showBoneCheck.addValueChangeHandler(new ValueChangeHandler<Boolean>() {
+			
+			@Override
+			public void onValueChange(ValueChangeEvent<Boolean> event) {
+				if(wireBody!=null){
+					wireBody.setVisible(event.getValue());
+				}
+			}
+		});
+		
+		
 		createTabs();
 		//loadAndExport.add(new Label("Dont export large BVH.large(10M?) text data crash browser"));
 		showControl();
@@ -1317,6 +1329,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		
 		LogUtils.log("geometry-bone-info updated");
 		if(useBone.getValue()){
+			LogUtils.log(geoBones);
 			/*
 			BVHConverter converter=new BVHConverter();
 			LogUtils.log("geo-bone:"+geoBones);
@@ -1822,6 +1835,9 @@ public void onError(Request request, Throwable exception) {
 		infoPanel.getBvhObjects().setDatas(bvhNodes);
 		infoPanel.getBvhObjects().update(true);
 		
+		for(int i=0;i<bvhNodes.size();i++){
+			LogUtils.log(bvhNodes.get(i).getName()+","+bvhNodes.get(i).getOffset().toString()+","+bvhNodes.get(i).getOffset().getX());
+		}
 		
 		//bvh.setSkips(10);
 		//bvh.setSkips(skipFrames);
@@ -1869,7 +1885,9 @@ public void onError(Request request, Throwable exception) {
 			dataConverter.setSkipFirst(false);
 			frameRange.setMax(bvh.getFrames());
 		}else{
-			frameRange.setMax(bvh.getFrames()-1);
+			dataConverter.setSkipFirst(false);//need skip first option
+			//frameRange.setMax(bvh.getFrames()-1);
+			frameRange.setMax(bvh.getFrames());
 		}
 		
 		animationData = dataConverter.convertJsonAnimation(bones,bvh);
@@ -2153,7 +2171,7 @@ public void onError(Request request, Throwable exception) {
 	private void createWireBody(){
 		wireBodyPoints.clear();
 		bodyGeometry=GeometryUtils.clone(loadedGeometry);
-		Mesh wireBody=THREE.Mesh(bodyGeometry, THREE.MeshBasicMaterial().wireFrame(true).color(0xffffff).build());
+		wireBody = THREE.Mesh(bodyGeometry, THREE.MeshBasicMaterial().wireFrame(true).color(0xffffff).build());
 		
 		
 		
@@ -3136,6 +3154,8 @@ private Vector4 findNearSpecial(List<NameAndPosition> nameAndPositions,Vector3 p
 
 
 	private Button pauseBt;
+
+	private Mesh wireBody;
 	
 	protected void onDrop(DropEvent event){
 		LogUtils.log("root-drop");
