@@ -1266,6 +1266,16 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 			}
 		});
 		
+		Button makeDot=new Button("makedot",new ClickHandler() {
+			
+			@Override
+			public void onClick(ClickEvent event) {
+				// TODO Auto-generated method stub
+				
+			}
+		});
+		parent.add(makeDot);
+		
 		
 		createTabs();
 		//loadAndExport.add(new Label("Dont export large BVH.large(10M?) text data crash browser"));
