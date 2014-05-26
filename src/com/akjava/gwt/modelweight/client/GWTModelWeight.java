@@ -297,14 +297,14 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 					stats.setVisible(true);
 					showControl();
 					//bottomPanel.setVisible(true);
-					dialog2.setVisible(true);
+					popupPanel.setVisible(true);
 					resized(screenWidth,screenHeight);//for some blackout;
 				}else{
 				stats.setVisible(false);
 				//bottomPanel.setVisible(false);
 				hideControl();
-				if(dialog2!=null){//debug mode call this
-					dialog2.setVisible(false);
+				if(popupPanel!=null){//debug mode call this
+					popupPanel.setVisible(false);
 					}
 				}
 				
@@ -526,7 +526,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 			Intersect sect=intersects.get(i);
 			
 			Object3D target=sect.getObject();
-			LogUtils.log(target);
+			//LogUtils.log(target);
 			if(!target.getName().isEmpty()){//only point: and bone name
 				if(target.getName().startsWith("point:")){
 					if(!target.getVisible()){
@@ -628,6 +628,11 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 			v=bodyWeight.get(index).getX();
 		}else{
 			v=bodyWeight.get(index).getY();
+		}
+		
+		//if both index is same value is 1
+		if(bodyIndices.get(index).getX()==bodyIndices.get(index).getY()){
+			v=1;
 		}
 		
 		
@@ -734,7 +739,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		}
 	}
 	private void selectVertexsByBone(int selectedBoneIndex) {
-		LogUtils.log("selectVertexsByBone");
+		//LogUtils.log("selectVertexsByBone");
 		for(int i=0;i<bodyGeometry.vertices().length();i++){
 			Vector4 index=bodyIndices.get(i);
 			Mesh mesh=vertexMeshs.get(i);
@@ -1073,6 +1078,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		autoWeightListBox.addItem("NearSingleBon", "0");
 		autoWeightListBox.addItem("NearSpecial", "1");
 		autoWeightListBox.addItem("Root All", "7");
+		autoWeightListBox.addItem("Makehuman SecondLife-19", "8");
 		
 		autoWeightListBox.setSelectedIndex(1);
 		boneAndWeight.add(autoWeightListBox);
@@ -1589,7 +1595,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		Vector4 in=bodyIndices.get(index);
 		Vector4 we=bodyWeight.get(index);
 		
-		//LogUtils.log("select:"+index+","+we.getX()+","+we.getY());
+		LogUtils.log("select:"+index+","+we.getX()+","+we.getY());
 		
 		//change selected point to selection color,multiple selection is avaiable and to detect change point color.
 		vertexMeshs.get(index).getMaterial().gwtGetColor().setHex(selectColor);
@@ -1836,7 +1842,7 @@ public void onError(Request request, Throwable exception) {
 		infoPanel.getBvhObjects().update(true);
 		
 		for(int i=0;i<bvhNodes.size();i++){
-			LogUtils.log(bvhNodes.get(i).getName()+","+bvhNodes.get(i).getOffset().toString()+","+bvhNodes.get(i).getOffset().getX());
+			LogUtils.log(i+","+bvhNodes.get(i).getName()+","+bvhNodes.get(i).getOffset().toString()+","+bvhNodes.get(i).getOffset().getX());
 		}
 		
 		//bvh.setSkips(10);

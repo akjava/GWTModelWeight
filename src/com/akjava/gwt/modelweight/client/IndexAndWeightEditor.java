@@ -5,6 +5,7 @@ import com.akjava.gwt.html5.client.InputRangeListener;
 import com.akjava.gwt.three.client.gwt.animation.AnimationBone;
 import com.akjava.gwt.three.client.js.math.Vector4;
 import com.google.gwt.core.client.JsArray;
+import com.google.gwt.user.client.ui.HorizontalPanel;
 import com.google.gwt.user.client.ui.Label;
 import com.google.gwt.user.client.ui.ListBox;
 import com.google.gwt.user.client.ui.VerticalPanel;
@@ -14,6 +15,8 @@ public class IndexAndWeightEditor extends VerticalPanel{
 
 	private ListBox index1;
 	private ListBox index2;
+	private Label index1ValueLabel;
+	private Label index2ValueLabel;
 	private HTML5InputRange balance;
 	private Label nameLabel;
 	private int ind=-1;
@@ -22,13 +25,23 @@ public class IndexAndWeightEditor extends VerticalPanel{
 		nameLabel = new Label();
 		add(nameLabel);
 		
+		HorizontalPanel h1=new HorizontalPanel();
+		h1.setVerticalAlignment(ALIGN_MIDDLE);
 		add(new Label("Index1"));
+		add(h1);
 		index1 = new ListBox();
-		add(index1);
+		h1.add(index1);
+		index1ValueLabel=new Label();
+		h1.add(index1ValueLabel);
 		
+		HorizontalPanel h2=new HorizontalPanel();
+		h1.setVerticalAlignment(ALIGN_MIDDLE);
 		add(new Label("Index2"));
+		add(h2);
 		index2 = new ListBox();
-		add(index2);
+		h2.add(index2);
+		index2ValueLabel=new Label();
+		h2.add(index2ValueLabel);
 		
 		balance = new HTML5InputRange();
 		balance.setMin(0);
@@ -61,6 +74,9 @@ public class IndexAndWeightEditor extends VerticalPanel{
 		index2.setSelectedIndex((int) index.getY());
 		int v=(int) (100-weight.getX()*100);
 		balance.setValue(v);
+		
+		index1ValueLabel.setText(""+weight.getX());
+		index2ValueLabel.setText(""+weight.getY());
 	}
 	
 	public int getArrayIndex(){
