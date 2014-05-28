@@ -1078,7 +1078,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		autoWeightListBox.addItem("NearSingleBon", "0");
 		autoWeightListBox.addItem("NearSpecial", "1");
 		autoWeightListBox.addItem("Root All", "7");
-		autoWeightListBox.addItem("Makehuman SecondLife-19", "8");
+		autoWeightListBox.addItem("Makehuman SecondLife-19", ""+MakehumanWeightBuilder.MODE_MAKEHUMAN_SECOND_LIFE19);
 		
 		autoWeightListBox.setSelectedIndex(1);
 		boneAndWeight.add(autoWeightListBox);
@@ -1266,6 +1266,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 			}
 		});
 		
+		/*
 		Button makeDot=new Button("makedot",new ClickHandler() {
 			
 			@Override
@@ -1275,7 +1276,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 			}
 		});
 		parent.add(makeDot);
-		
+		*/
 		
 		createTabs();
 		//loadAndExport.add(new Label("Dont export large BVH.large(10M?) text data crash browser"));
@@ -1500,7 +1501,11 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 			bodyWeight = (JsArray<Vector4>) JsArray.createArray();
 			
 			if(loadedGeometry.getSkinIndices().length()!=0 && loadedGeometry.getSkinWeight().length()!=0){
-				WeightBuilder.autoWeight(loadedGeometry, bones, endSites,selectedValue, bodyIndices, bodyWeight);
+				if(selectedValue<100){
+					WeightBuilder.autoWeight(loadedGeometry, bones, endSites,selectedValue, bodyIndices, bodyWeight);
+				}else{
+					MakehumanWeightBuilder.autoWeight(loadedGeometry, bones, endSites,selectedValue, bodyIndices, bodyWeight);
+				}
 			}else{
 				//cant select geometry
 				if(selectedValue==WeightBuilder.MODE_FROM_GEOMETRY){
