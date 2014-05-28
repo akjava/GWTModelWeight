@@ -1103,21 +1103,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		VerticalPanel loadAndExport=new VerticalPanel();
 		stackPanel.add(loadAndExport,"Load Datas",30);
 		
-		loadAndExport.add(new Label("Bone(BVH Motion file)"));
-		bvhSelection = new Label("selection:"+bvhUrl);
-		bvhSelection.setStylePrimaryName("gray");
-		loadAndExport.add(bvhSelection);
 		
-		final FileUploadForm bvhUpload=FileUtils.createSingleTextFileUploadForm(new DataURLListener() {
-			@Override
-			public void uploaded(File file, String value) {
-				onBVHFileUploaded(file, value);
-			}
-		}, true);
-		bvhUpload.setShowDragOverBorder(true);
-		
-		
-		loadAndExport.add(bvhUpload);
 		/*
 		bvhUpload.getFileUpload().addChangeHandler(new ChangeHandler() {
 			
@@ -1142,9 +1128,9 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		});
 		*/
 		
-		Label label1=new Label("Character(Three.js model file)");
-		label1.setStylePrimaryName("darkgray");
-		loadAndExport.add(label1);
+		Label jsonTitleLabel=new Label("Character(Three.js model file)");
+		//label1.setStylePrimaryName("darkgray");
+		loadAndExport.add(jsonTitleLabel);
 		modelSelection = new Label("selection:"+modelUrl);
 		modelSelection.setStylePrimaryName("gray");
 		loadAndExport.add(modelSelection);
@@ -1157,7 +1143,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 			}
 		}, true);
 		meshUpload.setShowDragOverBorder(true);
-		meshUpload.getFileUpload().setStylePrimaryName("darkgray");
+		//meshUpload.getFileUpload().setStylePrimaryName("darkgray");
 		loadAndExport.add(meshUpload);
 	
 		//makehuman export bvh somehow large,and try to fix it ,but this make problem
@@ -1165,7 +1151,30 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		//loadAndExport.add(force10x);
 		
 		useBone = new CheckBox("use bone in model");
+		useBone.setValue(true);
 		loadAndExport.add(useBone);
+		
+		
+		
+		Label bvhTitleLabel=new Label("Another Bone(BVH Motion file)");
+		loadAndExport.add(bvhTitleLabel);
+		bvhTitleLabel.setStylePrimaryName("darkgray");
+		bvhSelection = new Label("selection:"+bvhUrl);
+		bvhSelection.setStylePrimaryName("gray");
+		loadAndExport.add(bvhSelection);
+		
+		final FileUploadForm bvhUpload=FileUtils.createSingleTextFileUploadForm(new DataURLListener() {
+			@Override
+			public void uploaded(File file, String value) {
+				onBVHFileUploaded(file, value);
+			}
+		}, true);
+		bvhUpload.setShowDragOverBorder(true);
+		
+		
+		loadAndExport.add(bvhUpload);
+		
+		
 		
 		loadAndExport.add(new Label("Texture(PNG or JPEG)"));
 		textureSelection = new Label("selection:"+textureUrl);
