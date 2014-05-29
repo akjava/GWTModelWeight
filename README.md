@@ -9,6 +9,8 @@ This is written with not javascript but GWT/Java.
 part of BVH Motion Creator Project
 https://github.com/akjava/BVH-Motion-Creator
 
+only works on Chrome Browser
+
 Usage case
 --------
 ###fix three.js model from makehuman
