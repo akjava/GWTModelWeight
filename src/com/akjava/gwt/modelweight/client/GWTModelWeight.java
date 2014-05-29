@@ -855,6 +855,10 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 	private InputRangeWidget rotationZRange;
 
 	private CheckBox useBone;
+
+	private Button updateIndexOnlyButton;
+
+	private Button updateWeightOnlyButton;
 	@Override
 	public void createControl(DropVerticalPanelBase parent) {
 		nearCamera=0.01;
@@ -862,7 +866,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		parent.add(debugLabel);
 		
 		stackPanel = new StackLayoutPanel(Unit.PX);
-		stackPanel.setSize("220px","400px");
+		stackPanel.setSize("220px","440px");
 		parent.add(stackPanel);
 		
 		VerticalPanel modelPositionAndRotation=new VerticalPanel();
@@ -996,6 +1000,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		//editor
 		
 		VerticalPanel boneAndWeight=new VerticalPanel();
+		boneAndWeight.setWidth("100%");
 		stackPanel.add(boneAndWeight,"Bone & Weight",30);
 		
 		boneAndWeight.add(new Label("Bone Selection"));
@@ -1032,7 +1037,9 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		indexWeightEditor.setWidth("200px");
 		boneAndWeight.add(indexWeightEditor);
 		
-		updateWeightButton = new Button("Update Weight");
+		
+		updateWeightButton = new Button("Update Both");
+		updateWeightButton.setWidth("100%");
 		updateWeightButton.addClickHandler(new ClickHandler() {
 			
 			@Override
@@ -1067,11 +1074,81 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		});
 		boneAndWeight.add(updateWeightButton);
 		
+		HorizontalPanel update2=new HorizontalPanel();
+		update2.setWidth("100%");
+		boneAndWeight.add(update2);
+		updateIndexOnlyButton = new Button("Update Index");
+		//updateIndexOnlyButton.setWidth("50%");
+		updateIndexOnlyButton.addClickHandler(new ClickHandler() {
+			
+			@Override
+			public void onClick(ClickEvent event) {
+				int index=indexWeightEditor.getArrayIndex();
+				if(index==-1){
+					return;
+				}
+				
+				Vector4 in=bodyIndices.get(index);
+				in.setX(indexWeightEditor.getIndex1());
+				in.setY(indexWeightEditor.getIndex2());
+				
+				
+				if(selections.size()>0){
+					for(int selectedIndex:selections){
+					in=bodyIndices.get(selectedIndex);
+					in.setX(indexWeightEditor.getIndex1());
+					in.setY(indexWeightEditor.getIndex2());
+					
+					}
+				}
+				
+				//LogUtils.log("new-ind-weight:"+in.getX()+","+in.getY()+","+we.getX()+","+we.getY());
+				createSkinnedMesh();
+				selectVertexsByBone(selectionBoneIndex);
+			}
+		});
+		update2.add(updateIndexOnlyButton);
+		
+		updateWeightOnlyButton = new Button("Update Weight");
+		//updateWeightOnlyButton.setWidth("50%");
+		updateWeightOnlyButton.addClickHandler(new ClickHandler() {
+			
+			@Override
+			public void onClick(ClickEvent event) {
+				int index=indexWeightEditor.getArrayIndex();
+				if(index==-1){
+					return;
+				}
+				
+				
+				Vector4 we=bodyWeight.get(index);
+				
+				we.setX(indexWeightEditor.getWeight1());
+				we.setY(indexWeightEditor.getWeight2());
+				
+				if(selections.size()>0){
+					for(int selectedIndex:selections){
+					
+					we=bodyWeight.get(selectedIndex);
+					
+					we.setX(indexWeightEditor.getWeight1());
+					we.setY(indexWeightEditor.getWeight2());
+					}
+				}
+				
+				createSkinnedMesh();
+				selectVertexsByBone(selectionBoneIndex);
+			}
+		});
+		update2.add(updateWeightOnlyButton);
+		
+		
+		
 		boneAndWeight.add(new Label("Re Auto-Weight"));
 		
 		autoWeightListBox = new ListBox();
 		autoWeightListBox.addItem("From Geometry", "4");
-		autoWeightListBox.addItem("Half ParentAndChildrenAgressive", "6");
+		autoWeightListBox.addItem("Half ParentAndChildrenAg", "6");
 		autoWeightListBox.addItem("ParentAndChildren Agressive", "5");
 		autoWeightListBox.addItem("ParentAndChildren", "3");
 		autoWeightListBox.addItem("NearAgressive", "2");
@@ -1150,7 +1227,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		//force10x = new CheckBox("force multiple x10");
 		//loadAndExport.add(force10x);
 		
-		useBone = new CheckBox("use bone in model");
+		useBone = new CheckBox("use bone inside model when load");
 		useBone.setValue(true);
 		loadAndExport.add(useBone);
 		
