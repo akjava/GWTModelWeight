@@ -866,7 +866,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		parent.add(debugLabel);
 		
 		stackPanel = new StackLayoutPanel(Unit.PX);
-		stackPanel.setSize("220px","440px");
+		stackPanel.setSize("220px","460px");
 		parent.add(stackPanel);
 		
 		VerticalPanel modelPositionAndRotation=new VerticalPanel();
@@ -1159,17 +1159,17 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		
 		autoWeightListBox.setSelectedIndex(1);
 		boneAndWeight.add(autoWeightListBox);
-		autoWeightListBox.addChangeHandler(new ChangeHandler() {
+		
+		Button weightExec=new Button("Exec Weight",new ClickHandler() {
 			
 			@Override
-			public void onChange(ChangeEvent event) {
-				//if(callAutoWeight){//when model loaded do autoweight and sync the way do it without re-update
-				LogUtils.log("autoweight-changed");
+			public void onClick(ClickEvent event) {
+				LogUtils.log("Exec weight");
 				updateAutoWeight(autoWeightListBox.getValue(autoWeightListBox.getSelectedIndex()));
 				createSkinnedMesh();
-				//}
 			}
 		});
+		boneAndWeight.add(weightExec);
 		
 		
 		//DONT need?
@@ -2536,6 +2536,7 @@ public void onError(Request request, Throwable exception) {
 				LogUtils.log("before skinned");
 				LogUtils.log(geometry);
 				skinnedMesh = THREE.SkinnedMesh(geometry, material);
+				
 				root.add(skinnedMesh);
 				
 				
@@ -2548,6 +2549,10 @@ public void onError(Request request, Throwable exception) {
 					animation = THREE.Animation( skinnedMesh, animationName );
 					LogUtils.log(animation);
 					animation.play(true,0);
+					//right now animation already ignore position in animation
+				}else{
+					
+					skinnedMesh.getPosition().sub(skinnedMesh.getBones().get(0).getPosition());
 				}
 				
 					
