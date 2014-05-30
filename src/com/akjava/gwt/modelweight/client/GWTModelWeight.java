@@ -1497,8 +1497,9 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		createWireBody();
 		
 		modelSelection.setText("selection:"+fileName);
+		
 		if(fileName.endsWith(".js")){
-			fileName=FileNames.getRemovedExtensionName(fileName)+".json";//replace .js to .json i prefer
+		//	fileName=FileNames.getRemovedExtensionName(fileName)+".js";//replace .js to .json i prefer
 		}
 		saveFileBox.setText(fileName);
 		
