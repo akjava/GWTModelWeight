@@ -1541,7 +1541,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 			LogUtils.log("loaded geometry has no indices:do nothing");
 			return;
 		}
-		int updated=0;
+		
 		for(int i=0;i<geometry.vertices().length();i++){
 			int loadedIndex=findSameIndex(loadedGeometry.vertices(), geometry.vertices().get(i));
 		//	LogUtils.log(i+" find:"+loadedIndex);
@@ -1552,7 +1552,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 				
 				bodyWeight.get(loadedIndex).setX(geometry.getSkinWeight().get(i).getX());
 				bodyWeight.get(loadedIndex).setY(geometry.getSkinWeight().get(i).getY());
-				updated++;
+				
 				
 			}
 		}
