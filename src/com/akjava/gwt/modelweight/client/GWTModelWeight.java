@@ -64,7 +64,6 @@ import com.akjava.gwt.three.client.js.objects.SkinnedMesh;
 import com.akjava.gwt.three.client.js.renderers.WebGLRenderer;
 import com.akjava.gwt.three.client.js.textures.Texture;
 import com.akjava.lib.common.utils.ColorUtils;
-import com.akjava.lib.common.utils.FileNames;
 import com.google.common.collect.Lists;
 import com.google.gwt.canvas.client.Canvas;
 import com.google.gwt.core.client.JavaScriptObject;
@@ -103,6 +102,7 @@ import com.google.gwt.user.client.Window;
 import com.google.gwt.user.client.ui.Anchor;
 import com.google.gwt.user.client.ui.Button;
 import com.google.gwt.user.client.ui.CheckBox;
+import com.google.gwt.user.client.ui.HTML;
 import com.google.gwt.user.client.ui.HorizontalPanel;
 import com.google.gwt.user.client.ui.Image;
 import com.google.gwt.user.client.ui.Label;
@@ -866,7 +866,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		parent.add(debugLabel);
 		
 		stackPanel = new StackLayoutPanel(Unit.PX);
-		stackPanel.setSize("220px","440px");
+		stackPanel.setSize("220px","450px");
 		parent.add(stackPanel);
 		
 		VerticalPanel modelPositionAndRotation=new VerticalPanel();
@@ -1206,7 +1206,8 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		*/
 		
 		Label jsonTitleLabel=new Label("Character(Three.js model file)");
-		//label1.setStylePrimaryName("darkgray");
+		jsonTitleLabel.setStylePrimaryName("subtitle");
+		
 		loadAndExport.add(jsonTitleLabel);
 		modelSelection = new Label("selection:"+modelUrl);
 		modelSelection.setStylePrimaryName("gray");
@@ -1232,10 +1233,11 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		loadAndExport.add(useBone);
 		
 		
+		loadAndExport.add(new HTML("&nbsp;"));
 		
-		Label bvhTitleLabel=new Label("Another Bone(BVH Motion file)");
+		Label bvhTitleLabel=new Label("Another Bone(BVH Motion)");
 		loadAndExport.add(bvhTitleLabel);
-		bvhTitleLabel.setStylePrimaryName("darkgray");
+		bvhTitleLabel.setStylePrimaryName("subtitle");
 		bvhSelection = new Label("selection:"+bvhUrl);
 		bvhSelection.setStylePrimaryName("gray");
 		loadAndExport.add(bvhSelection);
@@ -1251,9 +1253,10 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		
 		loadAndExport.add(bvhUpload);
 		
-		
-		
-		loadAndExport.add(new Label("Texture(PNG or JPEG)"));
+		loadAndExport.add(new HTML("&nbsp;"));
+		Label textureLabel=new Label("Texture(PNG or JPEG)");
+		textureLabel.setStylePrimaryName("subtitle");
+		loadAndExport.add(textureLabel);
 		textureSelection = new Label("selection:"+textureUrl);
 		textureSelection.setStylePrimaryName("gray");
 		final FileUploadForm textureUpload=FileUtils.createSingleFileUploadForm(new DataURLListener() {	
@@ -1267,9 +1270,9 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		
 		loadAndExport.add(textureSelection);
 		loadAndExport.add(textureUpload);
-		
-		Label label2=new Label("Weights and Idecis(json)");
-		label2.setStylePrimaryName("darkgray");
+		loadAndExport.add(new HTML("&nbsp;"));
+		Label label2=new Label("Weights and Idecis(js/json)");
+		label2.setStylePrimaryName("subtitle");
 		loadAndExport.add(label2);
 		weightSelection = new Label("selection:");
 		weightSelection.setStylePrimaryName("gray");
@@ -1281,7 +1284,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		}, true);
 		weightUpload.setShowDragOverBorder(true);
 		weightUpload.setTitle("upload json model but only load weight&indecis");
-		weightUpload.getFileUpload().setStylePrimaryName("darkgray");
+		//weightUpload.getFileUpload().setStylePrimaryName("darkgray");
 		
 		loadAndExport.add(weightSelection);
 		loadAndExport.add(weightUpload);
@@ -1289,7 +1292,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		VerticalPanel export=new VerticalPanel();
 		stackPanel.add(export,"Export Datas",30);
 		
-		export.add(new Label("you can load form pose editor preference"));
+		//export.add(new Label("you can load form pose editor preference"));
 		Button webstorage=new Button("Export in WebStorage");
 		webstorage.addClickHandler(new ClickHandler() {
 			
@@ -1298,7 +1301,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 				exportWebStorage();
 			}
 		});
-		export.add(webstorage);
+		//export.add(webstorage);
 		
 		
 		export.add(new Label("three.js model format"));
