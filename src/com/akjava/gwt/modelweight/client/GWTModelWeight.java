@@ -866,7 +866,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		parent.add(debugLabel);
 		
 		stackPanel = new StackLayoutPanel(Unit.PX);
-		stackPanel.setSize("220px","460px");
+		stackPanel.setSize("220px","440px");
 		parent.add(stackPanel);
 		
 		VerticalPanel modelPositionAndRotation=new VerticalPanel();
@@ -1164,7 +1164,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 			
 			@Override
 			public void onClick(ClickEvent event) {
-				LogUtils.log("Exec weight");
+				//LogUtils.log("Exec weight");
 				updateAutoWeight(autoWeightListBox.getValue(autoWeightListBox.getSelectedIndex()));
 				createSkinnedMesh();
 			}
@@ -1401,7 +1401,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 	
 	private void onModelLoaded(String fileName,Geometry geometry){
 		LogUtils.log("onModelLoaded");
-		LogUtils.log(geometry);
+		//LogUtils.log(geometry);
 		
 		
 		if(lastJsonObject!=null){
@@ -1430,9 +1430,9 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		infoPanel.getGeometryAnimationObjects().setDatas(abList);
 		infoPanel.getGeometryAnimationObjects().update(false);//
 		
-		LogUtils.log("geometry-bone-info updated");
+		//LogUtils.log("geometry-bone-info updated");
 		if(useBone.getValue()){
-			LogUtils.log(geoBones);
+			//LogUtils.log(geoBones);
 			/*
 			BVHConverter converter=new BVHConverter();
 			LogUtils.log("geo-bone:"+geoBones);
@@ -1556,7 +1556,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 				
 			}
 		}
-		LogUtils.log("updated weight:"+updated);
+		//LogUtils.log("updated weight:"+updated);
 		updateVertexColor();
 	}
 	private int findSameIndex(JsArray<Vector3> vertexList,Vector3 checkVertex){
