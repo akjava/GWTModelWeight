@@ -963,9 +963,15 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 			}
 		});
 		h6.add(reset6);
+		
+		
 		//move left-side
 		//positionYRange.setValue(-13);
 		positionXRange.setValue(-10);
+		
+		//really need?
+		modelPositionAndRotation.add(new Label("ALT+Mouse move wire-bone"));
+		modelPositionAndRotation.add(new Label("Center+Mouse rotate charactor"));
 		
 		pauseBt = new Button("Pause/Play SkinnedMesh");
 		parent.add(pauseBt);
@@ -2267,7 +2273,7 @@ public void onError(Request request, Throwable exception) {
 		//bo.setPosition(-30, 0, 0);
 		boneAndVertex.add(bo);
 		
-		double selectionSize=0.05*baseScale;
+		double selectionSize=0.02*baseScale;
 		
 		selectionPointIndicateMesh=THREE.Mesh(THREE.CubeGeometry(selectionSize, selectionSize, selectionSize), THREE.MeshBasicMaterial().color(selectColor).transparent(true).wireFrame(true).build());
 		boneAndVertex.add(selectionPointIndicateMesh);
