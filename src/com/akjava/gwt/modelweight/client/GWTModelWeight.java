@@ -1277,7 +1277,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		loadAndExport.add(textureSelection);
 		loadAndExport.add(textureUpload);
 		loadAndExport.add(new HTML("&nbsp;"));
-		Label label2=new Label("Weights and Idecis(js/json)");
+		Label label2=new Label("Weights and Indices(js/json)");
 		label2.setStylePrimaryName("subtitle");
 		loadAndExport.add(label2);
 		weightSelection = new Label("selection:");
