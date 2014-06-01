@@ -16,7 +16,9 @@ only works on Chrome Browser
 
 Usage case
 --------
-###fix three.js model from makehuman
+###fix three.js model exported from makehuman
+somehow weight/indices broken
+
 ###pack uvs
 pack many uv & model to single image and json-model for easy handle skinmesh.
 ###merge bvh-animation exported from BVH-PoseEditor
