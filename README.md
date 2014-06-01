@@ -1,5 +1,8 @@
 GWT Model Weight
 ========
+
+![](http://www.akjava.com/img4/modelweight.jpg)
+
 What is this
 --------
 This is modify skinIndice and skinWeight for three.js model.
