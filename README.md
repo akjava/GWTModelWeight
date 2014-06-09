@@ -23,6 +23,11 @@ somehow weight/indices broken
 pack many uv & model to single image and json-model for easy handle skinmesh.
 ###merge bvh-animation exported from BVH-PoseEditor
 
+Document
+-------
+http://www.akjava.com/en/webapps/modelweight/ (English)
+
+http://www.akjava.com/en/webapps/modelweight/ (Japanese)
 Demo
 -------
 http://game.akjava.com/weight/weight.html
