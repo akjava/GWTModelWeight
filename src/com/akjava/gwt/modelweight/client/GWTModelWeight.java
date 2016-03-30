@@ -120,7 +120,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 	public static final String version="5.1.2(for r66)";//for three.js r64
 	
 	
-	double baseScale=10;
+	double baseScale=1;
 	private double posScale=0.1*baseScale;
 	@Override
 	protected void beforeUpdate(WebGLRenderer renderer) {
@@ -2427,7 +2427,9 @@ public void onError(Request request, Throwable exception) {
 		
 	private String textureUrl="asian_blondhair_tshirt.png";
 	private String bvhUrl="standing2.bvh";
-	private String modelUrl="model001_female2661_bone19.js";
+	
+	//private String modelUrl="model001_female2661_bone19.js";
+	private String modelUrl="untitled2.json";
 	
 	private Texture texture;
 	private void generateTexture(){
