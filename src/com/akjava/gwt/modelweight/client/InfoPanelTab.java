@@ -7,7 +7,7 @@ import com.akjava.bvh.client.BVHNode;
 import com.akjava.bvh.client.Channels;
 import com.akjava.gwt.lib.client.widget.cell.EasyCellTableObjects;
 import com.akjava.gwt.lib.client.widget.cell.SimpleCellTable;
-import com.akjava.gwt.three.client.gwt.animation.AnimationBone;
+import com.akjava.gwt.three.client.gwt.boneanimation.AnimationBone;
 import com.google.common.base.Joiner;
 import com.google.gwt.cell.client.NumberCell;
 import com.google.gwt.core.client.JsArrayNumber;

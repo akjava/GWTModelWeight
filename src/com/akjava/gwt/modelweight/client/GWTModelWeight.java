@@ -30,10 +30,14 @@ import com.akjava.gwt.lib.client.StorageControler;
 import com.akjava.gwt.lib.client.StorageDataList;
 import com.akjava.gwt.modelweight.client.weight.GWTWeightData;
 import com.akjava.gwt.modelweight.client.weight.WeighDataParser;
+import com.akjava.gwt.three.client.examples.animation.Animation;
+import com.akjava.gwt.three.client.examples.animation.AnimationHandler;
+import com.akjava.gwt.three.client.examples.utils.GeometryUtils;
+import com.akjava.gwt.three.client.gwt.GWTParamUtils;
 import com.akjava.gwt.three.client.gwt.JSONModelFile;
-import com.akjava.gwt.three.client.gwt.animation.AnimationBone;
-import com.akjava.gwt.three.client.gwt.animation.AnimationData;
-import com.akjava.gwt.three.client.gwt.animation.AnimationHierarchyItem;
+import com.akjava.gwt.three.client.gwt.boneanimation.AnimationBone;
+import com.akjava.gwt.three.client.gwt.boneanimation.AnimationData;
+import com.akjava.gwt.three.client.gwt.boneanimation.AnimationHierarchyItem;
 import com.akjava.gwt.three.client.gwt.collada.ColladaData;
 import com.akjava.gwt.three.client.gwt.core.Intersect;
 import com.akjava.gwt.three.client.gwt.materials.LineBasicMaterialParameter;
@@ -44,13 +48,11 @@ import com.akjava.gwt.three.client.java.ui.SimpleTabDemoEntryPoint;
 import com.akjava.gwt.three.client.java.utils.GWTGeometryUtils;
 import com.akjava.gwt.three.client.java.utils.GWTThreeUtils;
 import com.akjava.gwt.three.client.js.THREE;
+import com.akjava.gwt.three.client.js.cameras.Camera;
 import com.akjava.gwt.three.client.js.core.Geometry;
 import com.akjava.gwt.three.client.js.core.Object3D;
-import com.akjava.gwt.three.client.js.core.Projector;
-import com.akjava.gwt.three.client.js.extras.GeometryUtils;
+import com.akjava.gwt.three.client.js.core.Raycaster;
 import com.akjava.gwt.three.client.js.extras.ImageUtils;
-import com.akjava.gwt.three.client.js.extras.animation.Animation;
-import com.akjava.gwt.three.client.js.extras.animation.AnimationHandler;
 import com.akjava.gwt.three.client.js.lights.Light;
 import com.akjava.gwt.three.client.js.loaders.JSONLoader;
 import com.akjava.gwt.three.client.js.loaders.JSONLoader.JSONLoadHandler;
@@ -190,10 +192,12 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		pointLight2.setPosition(0, 10, -300);
 		scene.add(pointLight2);
 		
-		projector=THREE.Projector();
+		//projector=THREEExp.Projector();
 		
 		//TODO is this really need?
-		mouseClickCatcher=THREE.Mesh(THREE.PlaneGeometry(100, 100, 10, 10), THREE.MeshBasicMaterial().color(0xffff00).wireFrame().build());
+		mouseClickCatcher=THREE.Mesh(THREE.PlaneGeometry(100, 100, 10, 10),
+				
+				THREE.MeshBasicMaterial(GWTParamUtils.MeshBasicMaterial().color(0xffff00).wireframe(true)));
 		mouseClickCatcher.setVisible(false);
 		scene.add(mouseClickCatcher);
 		/*
@@ -364,7 +368,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		
 		for(int i=0;i<bones.length();i++){
 			AnimationBone bone=bones.get(i);
-			Geometry cube=THREE.CubeGeometry(boneCoreSize, boneCoreSize, boneCoreSize);
+			Geometry cube=THREE.BoxGeometry(boneCoreSize, boneCoreSize, boneCoreSize);
 			
 			
 			Mesh mesh=THREE.Mesh(cube, THREE.MeshLambertMaterial(MeshLambertMaterialParameter.create().color(boneCoreColor)));
@@ -385,7 +389,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 				double length=ppos.clone().sub(pos).length();
 				
 				//half
-				Mesh halfMesh=THREE.Mesh(THREE.CubeGeometry(halfBonecore, halfBonecore, length), THREE.MeshLambertMaterial(MeshLambertMaterialParameter.create().color(boneJointColor)));
+				Mesh halfMesh=THREE.Mesh(THREE.BoxGeometry(halfBonecore, halfBonecore, length), THREE.MeshLambertMaterial(MeshLambertMaterialParameter.create().color(boneJointColor)));
 				group.add(halfMesh);
 				halfMesh.setPosition(half);
 				halfMesh.lookAt(pos);
@@ -399,7 +403,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 			//this mesh is for helping auto-weight
 			List<Vector3> sites=endSites.get(i);
 			for(Vector3 end:sites){
-				Mesh endMesh=THREE.Mesh(THREE.CubeGeometry(sitesBonecore, sitesBonecore, sitesBonecore), THREE.MeshLambertMaterial(MeshLambertMaterialParameter.create().color(0x00a00aa)));
+				Mesh endMesh=THREE.Mesh(THREE.BoxGeometry(sitesBonecore, sitesBonecore, sitesBonecore), THREE.MeshLambertMaterial(MeshLambertMaterialParameter.create().color(0x00a00aa)));
 				if(end.getX()==0 && end.getY()==0 && end.getZ()==0){
 					continue;//ignore 0 
 				}else{
@@ -498,7 +502,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 	}*/
 	
 	
-	private Projector projector;
+	//private Projector projector;
 	Label debugLabel;
 	List<Integer> selections=new ArrayList<Integer>();
 
@@ -510,6 +514,28 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		super.onMouseUp(event);
 		selectedObject=null;
 	}
+	
+	//TODO method and move
+	private JsArray<Intersect> pickIntersects(double mx,double my,double sw,double sh,Camera camera,JsArray<? extends Object3D> objects){
+		Vector3 screenPosition=THREE.Vector3(( mx / sw ) * 2 - 1, - ( my / sh ) * 2 + 1,1 );//no idea why 0.5
+		screenPosition.unproject(camera);
+		Raycaster ray=THREE.Raycaster(camera.getPosition(), screenPosition.sub( camera.getPosition() ).normalize());
+	
+		JsArray<Intersect> intersects=ray.intersectObjects(objects);
+		return intersects;
+	}
+	
+	public final native Ray gwtCreateRay(int mx,int my,int sw,int sh,Camera camera)/*-{
+
+	var vector = new $wnd.THREE.Vector3( ( mx / sw ) * 2 - 1, - ( my / sh ) * 2 + 1, 0.5 );
+				vector.unproject(camera );
+
+				var ray = new $wnd.THREE.Raycaster( camera.position, vector.sub( camera.position ).normalize() );
+
+				return  ray;
+
+	}-*/;
+	
 	@Override
 	public void onMouseDown(MouseDownEvent event) {
 		super.onMouseDown(event);
@@ -521,7 +547,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 			return;
 		}*/
 		//LogUtils.log("screen:"+screenWidth+"x"+screenHeight);
-		JsArray<Intersect> intersects=projector.gwtPickIntersects(event.getX(), event.getY(), screenWidth, screenHeight, camera,objects);
+		JsArray<Intersect> intersects=pickIntersects(event.getX(), event.getY(), screenWidth, screenHeight, camera,objects);
 		//LogUtils.log("intersects:"+intersects.length());
 		for(int i=0;i<intersects.length();i++){
 			Intersect sect=intersects.get(i);
@@ -530,7 +556,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 			//LogUtils.log(target);
 			if(!target.getName().isEmpty()){//only point: and bone name
 				if(target.getName().startsWith("point:")){
-					if(!target.getVisible()){
+					if(!target.isVisible()){
 						//not selected bone
 						continue;
 					}
@@ -581,7 +607,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 					}
 					
 					selectedObject=target;
-					Ray ray=projector.gwtCreateRay(x, y, screenWidth, screenHeight, camera);
+					Ray ray=gwtCreateRay(x, y, screenWidth, screenHeight, camera);
 					
 					
 					
@@ -715,7 +741,9 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		//right now off boneSelectionMesh
 		double boneSelectionSize=0.1*baseScale;
 		if(boneSelectionMesh==null){
-			boneSelectionMesh=THREE.Mesh(THREE.CubeGeometry(boneSelectionSize, boneSelectionSize, boneSelectionSize), THREE.MeshLambertMaterial().color(0x00ff00).build());
+			boneSelectionMesh=THREE.Mesh(THREE.BoxGeometry(boneSelectionSize, boneSelectionSize, boneSelectionSize), THREE.MeshLambertMaterial(
+					GWTParamUtils.MeshLambertMaterial().color(0x00ff00)
+					));
 			boneAndVertex.add(boneSelectionMesh);
 		}else{
 			
@@ -733,7 +761,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		selectVertexsByBone(selectionBoneIndex);
 		
 		int selectionIndex=indexWeightEditor.getArrayIndex();
-		if(selectionIndex!=-1 && !vertexMeshs.get(selectionIndex).getVisible()){
+		if(selectionIndex!=-1 && !vertexMeshs.get(selectionIndex).isVisible()){
 			indexWeightEditor.setAvailable(false);
 			updateWeightButton.setEnabled(false);
 			selectionPointIndicateMesh.setVisible(false);
@@ -1672,13 +1700,13 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 	protected void selectPrevVertex() {
 		int currentSelection=indexWeightEditor.getArrayIndex();
 		for(int i=currentSelection-1;i>=0;i--){
-			if(vertexMeshs.get(i).getVisible()){
+			if(vertexMeshs.get(i).isVisible()){
 				selectVertex(i);
 				return;
 			}
 		}
 		for(int i=vertexMeshs.size()-1;i>currentSelection;i--){
-			if(vertexMeshs.get(i).getVisible()){
+			if(vertexMeshs.get(i).isVisible()){
 				selectVertex(i);
 				return;
 			}
@@ -1687,13 +1715,13 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 	protected void selectNextVertex() {
 		int currentSelection=indexWeightEditor.getArrayIndex();
 		for(int i=currentSelection+1;i<vertexMeshs.size();i++){
-			if(vertexMeshs.get(i).getVisible()){
+			if(vertexMeshs.get(i).isVisible()){
 				selectVertex(i);
 				return;
 			}
 		}
 		for(int i=0;i<currentSelection;i++){
-			if(vertexMeshs.get(i).getVisible()){
+			if(vertexMeshs.get(i).isVisible()){
 				selectVertex(i);
 				return;
 			}
@@ -2276,7 +2304,7 @@ public void onError(Request request, Throwable exception) {
 		
 		double selectionSize=0.02*baseScale;
 		
-		selectionPointIndicateMesh=THREE.Mesh(THREE.CubeGeometry(selectionSize, selectionSize, selectionSize), THREE.MeshBasicMaterial().color(selectColor).transparent(true).wireFrame(true).build());
+		selectionPointIndicateMesh=THREE.Mesh(THREE.BoxGeometry(selectionSize, selectionSize, selectionSize), THREE.MeshBasicMaterial(GWTParamUtils.MeshBasicMaterial().color(selectColor).transparent(true).wireframe(true)));
 		boneAndVertex.add(selectionPointIndicateMesh);
 		selectionPointIndicateMesh.setVisible(false);	
 		
@@ -2289,7 +2317,10 @@ public void onError(Request request, Throwable exception) {
 	private void createWireBody(){
 		wireBodyPoints.clear();
 		bodyGeometry=GeometryUtils.clone(loadedGeometry);
-		wireBody = THREE.Mesh(bodyGeometry, THREE.MeshBasicMaterial().wireFrame(true).color(0xffffff).build());
+		wireBody = THREE.Mesh(bodyGeometry, 
+				
+				THREE.MeshBasicMaterial(GWTParamUtils.MeshBasicMaterial().wireframe(true).color(0xffffff))
+				);
 		
 		
 		
@@ -2304,7 +2335,7 @@ public void onError(Request request, Throwable exception) {
 		
 		boneAndVertex.add(selectVertex);
 		double bmeshSize=0.01*baseScale;
-		Geometry cube=THREE.CubeGeometry(bmeshSize, bmeshSize, bmeshSize);
+		Geometry cube=THREE.BoxGeometry(bmeshSize, bmeshSize, bmeshSize);
 		
 		for(int i=0;i<bodyGeometry.vertices().length();i++){
 			/*
@@ -2446,7 +2477,7 @@ public void onError(Request request, Throwable exception) {
 				canvas.setCoordinateSpaceWidth(img.getWidth());
 				canvas.setCoordinateSpaceHeight(img.getHeight());
 				canvas.getContext2d().drawImage(ImageElement.as(img.getElement()),0,0);
-				texture=THREE.Texture(canvas.getCanvasElement());
+				texture=THREE.CanvasTexture(canvas.getCanvasElement());
 				texture.setNeedsUpdate(true);
 				//Window.open(canvas.toDataUrl(), "test", null);
 				img.removeFromParent();
@@ -2487,9 +2518,10 @@ public void onError(Request request, Throwable exception) {
 		}
 		
 		if(useBasicMaterial.getValue()){
-			material=THREE.MeshBasicMaterial().skinning(true).color(0xffffff).map(texture).build();
+			material=THREE.MeshBasicMaterial(GWTParamUtils.MeshBasicMaterial()
+					.skinning(true).color(0xffffff).map(texture));
 		}else{
-			material=THREE.MeshLambertMaterial().skinning(true).color(0xffffff).map(texture).build();
+			material=THREE.MeshLambertMaterial(GWTParamUtils.MeshBasicMaterial().skinning(true).color(0xffffff).map(texture));
 		}
 		
 		
@@ -2513,10 +2545,10 @@ public void onError(Request request, Throwable exception) {
 				}
 				Material material=null;
 				if(useBasicMaterial.getValue()){
-					material=THREE.MeshBasicMaterial().skinning(true).color(0xffffff).map(texture).build();
+					material=THREE.MeshBasicMaterial(GWTParamUtils.MeshBasicMaterial().skinning(true).color(0xffffff).map(texture));
 					
 				}else{
-					material=THREE.MeshLambertMaterial().skinning(true).color(0xffffff).map(texture).build();
+					material=THREE.MeshLambertMaterial(GWTParamUtils.MeshLambertMaterial().skinning(true).color(0xffffff).map(texture));
 				}
 				
 				//try to better ,but seems faild

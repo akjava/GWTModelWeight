@@ -27,7 +27,6 @@ import com.akjava.gwt.three.client.java.utils.GWTGeometryUtils;
 import com.akjava.gwt.three.client.js.core.Face3;
 import com.akjava.gwt.three.client.js.core.Geometry;
 import com.akjava.gwt.three.client.js.math.Vector2;
-import com.akjava.gwt.three.client.js.renderers.CanvasRenderer;
 import com.akjava.lib.common.io.FileType;
 import com.google.common.collect.Lists;
 import com.google.gwt.canvas.client.Canvas;

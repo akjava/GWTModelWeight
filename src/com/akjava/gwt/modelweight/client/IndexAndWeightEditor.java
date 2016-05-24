@@ -2,7 +2,7 @@ package com.akjava.gwt.modelweight.client;
 
 import com.akjava.gwt.html5.client.HTML5InputRange;
 import com.akjava.gwt.html5.client.InputRangeListener;
-import com.akjava.gwt.three.client.gwt.animation.AnimationBone;
+import com.akjava.gwt.three.client.gwt.boneanimation.AnimationBone;
 import com.akjava.gwt.three.client.js.math.Vector4;
 import com.google.gwt.core.client.JsArray;
 import com.google.gwt.user.client.ui.HorizontalPanel;

@@ -4,8 +4,11 @@
 	<classpathentry kind="con" path="com.google.gwt.eclipse.core.GWT_CONTAINER"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="lib" path="lib/akjavastatgwt_120820.jar"/>
-	<classpathentry kind="lib" path="lib/akjavalibgwt-dep_140512.jar"/>
-	<classpathentry kind="lib" path="lib/akjavalibbvh_140528.jar"/>
-	<classpathentry kind="lib" path="lib/akjavathreegwt_140528_for_r66.jar"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/GWTLib2011"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/threeTest"/>
+	<classpathentry kind="lib" path="/GWTLib2011/lib/guava-gwt.jar"/>
+	<classpathentry kind="lib" path="/GWTLib2011/lib/guava-sources.jar"/>
+	<classpathentry kind="lib" path="/GWTLib2011/lib/guava.jar" sourcepath="/GWTLib2011/lib/guava-sources.jar"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/GWTBVH"/>
 	<classpathentry kind="output" path="war/WEB-INF/classes"/>
 </classpath>

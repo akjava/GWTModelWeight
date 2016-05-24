@@ -3,8 +3,8 @@ package com.akjava.gwt.modelweight.client;
 import java.util.List;
 
 import com.akjava.gwt.lib.client.LogUtils;
-import com.akjava.gwt.three.client.gwt.animation.AnimationBone;
-import com.akjava.gwt.three.client.gwt.animation.NameAndVector3;
+import com.akjava.gwt.three.client.gwt.boneanimation.AnimationBone;
+import com.akjava.gwt.three.client.gwt.boneanimation.NameAndVector3;
 import com.akjava.gwt.three.client.java.animation.WeightBuilder;
 import com.akjava.gwt.three.client.js.THREE;
 import com.akjava.gwt.three.client.js.core.Geometry;
