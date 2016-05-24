@@ -2156,7 +2156,7 @@ public void onError(Request request, Throwable exception) {
 		}
 		
 		//overwrite same name
-		AnimationHandler.add(animationData);
+		//AnimationHandler.add(animationData);
 		//LogUtils.log(data);
 		//LogUtils.log(bones);
 		
@@ -2588,18 +2588,19 @@ public void onError(Request request, Throwable exception) {
 				
 				
 				if(animation!=null){
-					AnimationHandler.removeFromUpdate(animation);
+				//	AnimationHandler.removeFromUpdate(animation);
 				}
 				
 				//i guess this crash,if animation length is 1 
 				if(animationName!=null){//animation setted when set bvh
-					animation = THREE.Animation( skinnedMesh, animationName );
-					LogUtils.log(animation);
-					animation.play(true,0);
+					LogUtils.log("unsupport animatin now");
+					//animation = THREE.Animation( skinnedMesh, animationName );
+					//LogUtils.log(animation);
+					//animation.play(true,0);
 					//right now animation already ignore position in animation
 				}else{
 					
-					skinnedMesh.getPosition().sub(skinnedMesh.getBones().get(0).getPosition());
+					skinnedMesh.getPosition().sub(skinnedMesh.getSkeleton().getBones().get(0).getPosition());
 				}
 				
 					
