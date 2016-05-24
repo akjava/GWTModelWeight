@@ -3,5 +3,8 @@
 8,5,0,hair/hat
 8,6,0,jacket
 8,7,0,shirt
-8,7,7,pantu
 8,0,2,shoes
+8,0,3,pantu
+8,0,4,pantu
+8,0,5,pantu
+8,0,6,pantu

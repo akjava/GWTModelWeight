@@ -120,7 +120,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 	public static final String version="5.1.2(for r66)";//for three.js r64
 	
 	
-	double baseScale=1;
+	double baseScale=0.5;//it's better if i can modify this.
 	private double posScale=0.1*baseScale;
 	@Override
 	protected void beforeUpdate(WebGLRenderer renderer) {
@@ -769,7 +769,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 	int rotX;
 	int rotY;
 	double posX;
-	double posY=-10;
+	double posY=-1;//TODO check bounds and center
 	@Override
 	public void onMouseMove(MouseMoveEvent event) {
 		
@@ -862,7 +862,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 	private Button updateWeightOnlyButton;
 	@Override
 	public void createControl(DropVerticalPanelBase parent) {
-		nearCamera=0.01;
+		nearCamera=0.001;
 		debugLabel=new Label();
 		parent.add(debugLabel);
 		
@@ -2307,6 +2307,7 @@ public void onError(Request request, Throwable exception) {
 		Geometry cube=THREE.CubeGeometry(bmeshSize, bmeshSize, bmeshSize);
 		
 		for(int i=0;i<bodyGeometry.vertices().length();i++){
+			/*
 			Material mt=THREE.MeshBasicMaterial().color(getVertexColor(i)).build();
 			Vector3 vx=bodyGeometry.vertices().get(i);
 			Mesh point=THREE.Mesh(cube, mt);
@@ -2316,6 +2317,7 @@ public void onError(Request request, Throwable exception) {
 			selectVertex.add(point);
 			vertexMeshs.add(point);
 			wireBodyPoints.add(point);
+			*/
 		}
 	}
 	/* call change listener ,this is not good
@@ -2429,7 +2431,7 @@ public void onError(Request request, Throwable exception) {
 	private String bvhUrl="standing2.bvh";
 	
 	//private String modelUrl="model001_female2661_bone19.js";
-	private String modelUrl="untitled2.json";
+	private String modelUrl="model001_female2661_bone19.js";
 	
 	private Texture texture;
 	private void generateTexture(){

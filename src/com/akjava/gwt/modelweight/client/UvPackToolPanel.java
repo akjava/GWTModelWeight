@@ -601,6 +601,12 @@ public class UvPackToolPanel extends DeckLayoutPanel{
 			LogUtils.log("model-1 is null");
 			return null;
 		}
+		
+		if(baseModelFile.getSkinIndices()==null){
+			Window.alert("no skin indices:must export with skinning.index="+0);
+			return null;
+		}
+		
 		//keep original clean for re-try
 		LogUtils.log(baseModelFile);
 		Geometry geometry=GWTGeometryUtils.clonePlusWeights(easyCellTableObjects.getDatas().get(0).getGeometry());
@@ -626,6 +632,12 @@ public class UvPackToolPanel extends DeckLayoutPanel{
 			
 			
 			packUV(second,data.getSplit(),data.getX(),data.getY());
+			
+			
+			if(second.getSkinIndices()==null){
+				Window.alert("no skin indices:must export with skinning.index="+i);
+				return null;
+			}
 			
 			geometry=GWTGeometryUtils.mergeGeometryPlusWeights(geometry, second);
 			
@@ -669,8 +681,15 @@ public class UvPackToolPanel extends DeckLayoutPanel{
 			LogUtils.log("invalid face-size:must be "+predictFaces+", but value is "+baseModelFile.getFaces().length());
 		}
 		
+		if(baseModelFile.getSkinIndices()!=null){
+		
+			
+		
+			
 		if(baseModelFile.getSkinIndices().length()>0){
 			baseModelFile.setSkinIndicesAndWeights(geometry.getSkinIndices(),geometry.getSkinWeight());
+		}
+		
 		}
 		
 		return baseModelFile;
