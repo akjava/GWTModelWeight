@@ -49,6 +49,7 @@ import com.akjava.gwt.three.client.java.utils.GWTGeometryUtils;
 import com.akjava.gwt.three.client.java.utils.GWTThreeUtils;
 import com.akjava.gwt.three.client.js.THREE;
 import com.akjava.gwt.three.client.js.cameras.Camera;
+import com.akjava.gwt.three.client.js.core.Face3;
 import com.akjava.gwt.three.client.js.core.Geometry;
 import com.akjava.gwt.three.client.js.core.Object3D;
 import com.akjava.gwt.three.client.js.core.Raycaster;
@@ -119,10 +120,10 @@ import com.google.gwt.user.client.ui.VerticalPanel;
  * Entry point classes define <code>onModuleLoad()</code>.
  */
 public class GWTModelWeight extends SimpleTabDemoEntryPoint{
-	public static final String version="5.1.2(for r66)";//for three.js r64
+	public static final String version="5.2(for r74)";//for three.js r74
 	
 	
-	double baseScale=0.5;//it's better if i can modify this.
+	double baseScale=0.5;//it's better if i can modify this.//TODO move outside ?
 	private double posScale=0.1*baseScale;
 	@Override
 	protected void beforeUpdate(WebGLRenderer renderer) {
@@ -173,7 +174,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 	private Mesh mouseClickCatcher;
 	@Override
 	protected void initializeOthers(WebGLRenderer renderer) {
-		cameraZ=30;
+		cameraZ=3;
 		
 		
 		//Window.open("text/plain:test.txt:"+url, "test", null);
@@ -197,8 +198,9 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		//TODO is this really need?
 		mouseClickCatcher=THREE.Mesh(THREE.PlaneGeometry(100, 100, 10, 10),
 				
-				THREE.MeshBasicMaterial(GWTParamUtils.MeshBasicMaterial().color(0xffff00).wireframe(true)));
-		mouseClickCatcher.setVisible(false);
+				THREE.MeshBasicMaterial(GWTParamUtils.MeshBasicMaterial().color(0xffff00).wireframe(true).visible(false)));
+		mouseClickCatcher.setVisible(true); //now Ray only check visible object and to hide use material's visible
+		
 		scene.add(mouseClickCatcher);
 		/*
 		//write test
@@ -546,16 +548,15 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 			screenMove(x,y);
 			return;
 		}*/
-		//LogUtils.log("screen:"+screenWidth+"x"+screenHeight);
 		JsArray<Intersect> intersects=pickIntersects(event.getX(), event.getY(), screenWidth, screenHeight, camera,objects);
-		//LogUtils.log("intersects:"+intersects.length());
+		
 		for(int i=0;i<intersects.length();i++){
 			Intersect sect=intersects.get(i);
 			
 			Object3D target=sect.getObject();
 			//LogUtils.log(target);
 			if(!target.getName().isEmpty()){//only point: and bone name
-				if(target.getName().startsWith("point:")){
+				if(target.getName().startsWith("point:")){//never happen no far
 					if(!target.isVisible()){
 						//not selected bone
 						continue;
@@ -620,12 +621,17 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 					//mouseClickCatcher.lookAt(camera.getPosition());
 					
 					JsArray<Intersect> pintersects=ray.intersectObject(mouseClickCatcher);
+					if(pintersects.length()==0){
+						LogUtils.log("some how empty result:ray.intersectObject(mouseClickCatcher)");
+						return;
+					}
 					//LogUtils.log("plain:"+ThreeLog.get(pintersects.get(0).getPoint()));
 					offset.copy(pintersects.get(0).getPoint()).sub(mouseClickCatcher.getPosition());
 					
 					
 					
 				clearBodyPointSelections();
+				
 				selectBone(target);
 				break;
 				}
@@ -643,24 +649,41 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		selections.clear();
 	}
 	
-	private int getVertexColor(int index){
-		double index1=bodyIndices.get(index).getX();//first one
+	private int getVertexColor(int vertexIndex){
+		return getVertexColor(vertexIndex,selectionBoneIndex);
+	}
+	//4 point supported
+	private int getVertexColor(int vertexIndex,int boneIndex){
+		/*
+		double index1=bodyIndices.get(vertexIndex).getX();//first one
 		boolean isIndex1=false;
-		if(index1==selectionBoneIndex){
+		
+		if(index1==boneIndex){
 			isIndex1=true;
 		}
+		*/
 		
 		double v=0;
+		
+		Vector4 indices=bodyIndices.get(vertexIndex);
+		for(int i=0;i<4;i++){
+			if(indices.gwtGet(i)==boneIndex){
+				v+=bodyWeight.get(vertexIndex).gwtGet(i);
+			}
+		}
+		
+		/*
 		if(isIndex1){
-			v=bodyWeight.get(index).getX();
+			v=bodyWeight.get(vertexIndex).getX();
 		}else{
-			v=bodyWeight.get(index).getY();
+			v=bodyWeight.get(vertexIndex).getY();
 		}
 		
 		//if both index is same value is 1
-		if(bodyIndices.get(index).getX()==bodyIndices.get(index).getY()){
+		if(bodyIndices.get(vertexIndex).getX()==bodyIndices.get(vertexIndex).getY()){
 			v=1;
 		}
+		*/
 		
 		
 		if(v==1){
@@ -737,6 +760,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 	}
 	
 	private void selectBone(Object3D target) {
+		
 		lastSelection=-1;
 		//right now off boneSelectionMesh
 		double boneSelectionSize=0.1*baseScale;
@@ -761,13 +785,45 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		selectVertexsByBone(selectionBoneIndex);
 		
 		int selectionIndex=indexWeightEditor.getArrayIndex();
+		
+		
+		if(vertexMeshs.size()<=selectionIndex){
+			LogUtils.log("some how vertexMesh index problem:"+vertexMeshs.size());
+			return;
+		}
+		
 		if(selectionIndex!=-1 && !vertexMeshs.get(selectionIndex).isVisible()){
 			indexWeightEditor.setAvailable(false);
 			updateWeightButton.setEnabled(false);
 			selectionPointIndicateMesh.setVisible(false);
 		}
+		
 	}
 	private void selectVertexsByBone(int selectedBoneIndex) {
+		
+		for(int i=0;i<wireBody.getGeometry().getFaces().length();i++){
+			Face3 face=wireBody.getGeometry().getFaces().get(i);
+			//LogUtils.log("color-size:"+face.getVertexColors().length());
+			for(int j=0;j<3;j++){
+				int vertexIndex=face.gwtGet(j);
+				Vector4 index=bodyIndices.get(vertexIndex);
+				int color=getVertexColor(vertexIndex);
+				if(index.getX()==selectedBoneIndex || index.getY()==selectedBoneIndex){//TODO convert 4point
+					//LogUtils.log("indexed:"+color);
+				}
+				
+				//LogUtils.log("set color:"+i+","+j);
+				
+				//http://stackoverflow.com/questions/37358419/how-to-update-colors-after-vertex-colors-are-changed/37368746#37368746
+				//can't replace color object
+				//face.getVertexColors().set(j, THREE.Color(color));//
+				face.getVertexColors().get(j).setHex(color);
+			}
+		}
+		wireBody.getGeometry().setColorsNeedUpdate(true);
+		
+		
+		/*
 		//LogUtils.log("selectVertexsByBone");
 		for(int i=0;i<bodyGeometry.vertices().length();i++){
 			Vector4 index=bodyIndices.get(i);
@@ -782,6 +838,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 				mesh.getMaterial().gwtGetColor().setHex(getVertexColor(i));
 			}
 		}
+		*/
 	}
 	private int findBoneIndex(String name){
 		int ret=0;
@@ -2317,14 +2374,34 @@ public void onError(Request request, Throwable exception) {
 	private void createWireBody(){
 		wireBodyPoints.clear();
 		bodyGeometry=GeometryUtils.clone(loadedGeometry);
+		
+		
+		LogUtils.log("body-size:"+bodyGeometry.getFaces().length());
+		
+		//test set random color
+				
+				
+				
+		
 		wireBody = THREE.Mesh(bodyGeometry, 
 				
-				THREE.MeshBasicMaterial(GWTParamUtils.MeshBasicMaterial().wireframe(true).color(0xffffff))
+				THREE.MeshPhongMaterial(GWTParamUtils.MeshBasicMaterial()
+						.wireframe(true)
+						.color(0xffffff)
+						.vertexColors(THREE.VertexColors)
+						)
 				);
 		
+		//watch out once set color can't replace color.use setHex()
+		for(int i=0;i<bodyGeometry.getFaces().length();i++){
+			Face3 face=bodyGeometry.getFaces().get(i);
+			for(int j=0;j<3;j++){
+				face.getVertexColors().set(j, THREE.Color(0));
+			}
+		}
+	
+		wireBody.getGeometry().setColorsNeedUpdate(true);
 		
-		
-		//
 		
 		
 		
@@ -2462,7 +2539,7 @@ public void onError(Request request, Throwable exception) {
 	private String bvhUrl="standing2.bvh";
 	
 	//private String modelUrl="model001_female2661_bone19.js";
-	private String modelUrl="model001_female2661_bone19.js";
+	private String modelUrl="model11-4f.json";//testing 4-point
 	
 	private Texture texture;
 	private void generateTexture(){
