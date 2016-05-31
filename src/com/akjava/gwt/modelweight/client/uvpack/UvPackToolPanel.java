@@ -1,4 +1,4 @@
-package com.akjava.gwt.modelweight.client;
+package com.akjava.gwt.modelweight.client.uvpack;
 
 
 import java.io.IOException;
@@ -17,10 +17,6 @@ import com.akjava.gwt.lib.client.widget.cell.ListEditorGenerator;
 import com.akjava.gwt.lib.client.widget.cell.ListEditorGenerator.ValueControler;
 import com.akjava.gwt.lib.client.widget.cell.SimpleCellTable;
 import com.akjava.gwt.modelweight.client.resorces.Bundles;
-import com.akjava.gwt.modelweight.client.uvpack.ToStringValueListBox;
-import com.akjava.gwt.modelweight.client.uvpack.UVPackData;
-import com.akjava.gwt.modelweight.client.uvpack.UVPackDataConverter;
-import com.akjava.gwt.modelweight.client.uvpack.UVPackDataEditor;
 import com.akjava.gwt.modelweight.client.uvpack.UVPackDataEditor.UVPackDataEditorDriver;
 import com.akjava.gwt.three.client.gwt.JSONModelFile;
 import com.akjava.gwt.three.client.java.utils.GWTGeometryUtils;

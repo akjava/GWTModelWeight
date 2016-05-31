@@ -28,6 +28,8 @@ import com.akjava.gwt.lib.client.IStorageControler;
 import com.akjava.gwt.lib.client.LogUtils;
 import com.akjava.gwt.lib.client.StorageControler;
 import com.akjava.gwt.lib.client.StorageDataList;
+import com.akjava.gwt.modelweight.client.morphmerge.MorphMergeToolPanel;
+import com.akjava.gwt.modelweight.client.uvpack.UvPackToolPanel;
 import com.akjava.gwt.modelweight.client.weight.GWTWeightData;
 import com.akjava.gwt.modelweight.client.weight.WeighDataParser;
 import com.akjava.gwt.three.client.examples.animation.Animation;
@@ -327,11 +329,12 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		tabPanel.add(new ConvertToolPanel(),"Convert");
 		
 		tabPanel.add(new UvPackToolPanel(),"UvPack");
-		
+		tabPanel.add(new MorphMergeToolPanel(),"MorphMerge");
 		//for special debug
 		if(debugTab){
-			tabPanel.selectTab(5);
+			
 			}
+		tabPanel.selectTab(6);
 	}
 	
 	
