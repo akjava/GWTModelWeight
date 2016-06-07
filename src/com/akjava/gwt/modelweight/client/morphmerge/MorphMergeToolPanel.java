@@ -27,12 +27,15 @@ import com.google.gwt.core.client.JsArray;
 import com.google.gwt.core.client.JsArrayNumber;
 import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
+import com.google.gwt.event.logical.shared.ValueChangeEvent;
+import com.google.gwt.event.logical.shared.ValueChangeHandler;
 import com.google.gwt.json.client.JSONArray;
 import com.google.gwt.json.client.JSONObject;
 import com.google.gwt.json.client.JSONValue;
 import com.google.gwt.user.client.Window;
 import com.google.gwt.user.client.ui.Anchor;
 import com.google.gwt.user.client.ui.Button;
+import com.google.gwt.user.client.ui.CheckBox;
 import com.google.gwt.user.client.ui.HorizontalPanel;
 import com.google.gwt.user.client.ui.Label;
 import com.google.gwt.user.client.ui.TextBox;
@@ -145,7 +148,20 @@ public class MorphMergeToolPanel extends VerticalPanel{
 	
 	Geometry baseGeometry;
 
+	private boolean applyAxisAngle=true;
 	public MorphMergeToolPanel(){
+		
+		
+		CheckBox applyCheck=new CheckBox("applyAxisAngle(for r74 mbl3d)");
+		applyCheck.setValue(true);
+		applyCheck.addValueChangeHandler(new ValueChangeHandler<Boolean>() {
+			
+			@Override
+			public void onValueChange(ValueChangeEvent<Boolean> event) {
+				applyAxisAngle=event.getValue();
+			}
+		});
+		add(applyCheck);
 		
 		//for easy debug
 		final String fileName="model11-moved_eyelid-extendhair4.json";
@@ -357,7 +373,7 @@ public class MorphMergeToolPanel extends VerticalPanel{
 	
 	JSONModelFile baseModelFile;
 	protected void onLoadBaseGeometry(String fileName, String text) {
-		JSONValue value=new Mbl3dLoader().parse(text, new JSONLoadHandler() {
+		JSONValue value=new Mbl3dLoader().applyAxisAngle(applyAxisAngle).parse(text, new JSONLoadHandler() {
 			@Override
 			public void loaded(Geometry geometry, JsArray<Material> materials) {
 				baseGeometry=geometry;
