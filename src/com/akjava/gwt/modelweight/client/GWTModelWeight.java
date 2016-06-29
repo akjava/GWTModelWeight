@@ -34,6 +34,8 @@ import com.akjava.gwt.modelweight.client.weight.GWTWeightData;
 import com.akjava.gwt.modelweight.client.weight.WeighDataParser;
 import com.akjava.gwt.three.client.examples.animation.Animation;
 import com.akjava.gwt.three.client.examples.animation.AnimationHandler;
+import com.akjava.gwt.three.client.examples.js.THREEExp;
+import com.akjava.gwt.three.client.examples.js.controls.TrackballControls;
 import com.akjava.gwt.three.client.examples.utils.GeometryUtils;
 import com.akjava.gwt.three.client.gwt.GWTParamUtils;
 import com.akjava.gwt.three.client.gwt.JSONModelFile;
@@ -45,6 +47,7 @@ import com.akjava.gwt.three.client.gwt.core.Intersect;
 import com.akjava.gwt.three.client.gwt.materials.LineBasicMaterialParameter;
 import com.akjava.gwt.three.client.gwt.materials.MeshLambertMaterialParameter;
 import com.akjava.gwt.three.client.java.JClock;
+import com.akjava.gwt.three.client.java.ThreeLog;
 import com.akjava.gwt.three.client.java.animation.WeightBuilder;
 import com.akjava.gwt.three.client.java.ui.SimpleTabDemoEntryPoint;
 import com.akjava.gwt.three.client.java.utils.GWTGeometryUtils;
@@ -122,7 +125,7 @@ import com.google.gwt.user.client.ui.VerticalPanel;
  * Entry point classes define <code>onModuleLoad()</code>.
  */
 public class GWTModelWeight extends SimpleTabDemoEntryPoint{
-	public static final String version="5.2(for r74)";//for three.js r74
+	public static final String version="6(for r74)";//for three.js r74
 	
 	
 	double baseScale=0.5;//it's better if i can modify this.//TODO move outside ?
@@ -130,11 +133,15 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 	@Override
 	protected void beforeUpdate(WebGLRenderer renderer) {
 		
+		if(trackballControls!=null){
+			trackballControls.update();
+			//LogUtils.log(camera.getUuid());
+		}
 		
 		if(root!=null){
 			
-			boneAndVertex.getRotation().set(Math.toRadians(rotX),Math.toRadians(rotY),0,Euler.XYZ);
-			boneAndVertex.getPosition().set(posX,posY,0);
+		//	boneAndVertex.getRotation().set(Math.toRadians(rotX),Math.toRadians(rotY),0,Euler.XYZ);
+		//	boneAndVertex.getPosition().set(posX,posY,0);
 			
 			
 			root.setPosition(posScale*positionXRange.getValue(), posScale*positionYRange.getValue(), posScale*positionZRange.getValue());
@@ -177,7 +184,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 	@Override
 	protected void initializeOthers(WebGLRenderer renderer) {
 		cameraZ=3;
-		
+		cameraY=0;
 		
 		//Window.open("text/plain:test.txt:"+url, "test", null);
 		
@@ -288,9 +295,34 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		LogUtils.log("debug tab mode:main widget not work because of lack of base bvh");	
 		
 		}else{//this action generate skinned mesh and this freeze on debug-mode
-		loadBVH(bvhUrl);
+			//loadBVH(bvhUrl);
+			loadModel(modelUrl,
+			new  JSONLoadHandler() {
+				//loader.load("men3smart.js", new  LoadHandler() {
+					@Override
+					public void loaded(Geometry geometry,JsArray<Material> materials) {
+						loadedGeometry=geometry;
+						onModelLoaded(modelUrl,geometry);
+						//createSkinnedMesh();
+					}
+				
+				});
+			
 		}
 		//loadBVH("pose.bvh");//no motion
+		
+		nearCamera=0.01;
+		updateCamera(scene,screenWidth , screenHeight);
+		
+		
+		camera.getPosition().set(cameraX, cameraY, cameraZ);
+		
+		trackballControls=THREEExp.TrackballControls(camera);
+		trackballControls.setNoZoom(false);//controls.noZoom = false;
+		trackballControls.setNoPan(false);//controls.noPan = false;
+		trackballControls.setRotateSpeed(10);
+		trackballControls.setTarget(THREE.Vector3());
+		autoUpdateCameraPosition=false;
 	}
 	
 	private boolean debugTab=false;
@@ -334,7 +366,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		if(debugTab){
 			
 			}
-		tabPanel.selectTab(6);
+		tabPanel.selectTab(0);
 	}
 	
 	
@@ -798,7 +830,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		if(selectionIndex!=-1 && !vertexMeshs.get(selectionIndex).isVisible()){
 			indexWeightEditor.setAvailable(false);
 			updateWeightButton.setEnabled(false);
-			selectionPointIndicateMesh.setVisible(false);
+			boneSelectionIndicateBoxMesh.setVisible(false);
 		}
 		
 	}
@@ -857,10 +889,12 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 	int rotX;
 	int rotY;
 	double posX;
-	double posY=-1;//TODO check bounds and center
+	double posY=0;//TODO check bounds and center
 	@Override
 	public void onMouseMove(MouseMoveEvent event) {
-		
+		if(useTrackball){
+			return;
+		}
 		
 		/*
 		if(selectedObject!=null && event.getNativeButton()==NativeEvent.BUTTON_MIDDLE){
@@ -1056,7 +1090,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		
 		//move left-side
 		//positionYRange.setValue(-13);
-		positionXRange.setValue(-10);
+		positionXRange.setValue(-30);
 		
 		//really need?
 		modelPositionAndRotation.add(new Label("ALT+Mouse move wire-bone"));
@@ -1478,8 +1512,8 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		meshs.addAll(endPointMeshs);
 		
 		
-		if(selectionPointIndicateMesh!=null){
-		meshs.add(selectionPointIndicateMesh);
+		if(boneSelectionIndicateBoxMesh!=null){
+		meshs.add(boneSelectionIndicateBoxMesh);
 		}
 		if(boneSelectionMesh!=null){
 			meshs.add(boneSelectionMesh);
@@ -1524,6 +1558,8 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 			
 			
 		}
+		
+		loadedGeometry=geometry;
 		
 		infoPanel.getGeometryAnimationObjects().setDatas(abList);
 		infoPanel.getGeometryAnimationObjects().update(false);//
@@ -1580,7 +1616,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		
 		initializeObject();
 		
-		loadedGeometry=geometry;
+		
 		
 		//each time model loaded,check model format and set flipY
 		if(texture!=null){
@@ -1806,9 +1842,9 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		indexWeightEditor.setValue(index, in, we);
 		
 		//show which point selection,with wireframe weight-color
-		selectionPointIndicateMesh.setVisible(true);
-		selectionPointIndicateMesh.setPosition(vertexMeshs.get(index).getPosition());
-		selectionPointIndicateMesh.getMaterial().gwtGetColor().setHex(getVertexColor(index));
+		boneSelectionIndicateBoxMesh.setVisible(true);
+		boneSelectionIndicateBoxMesh.setPosition(vertexMeshs.get(index).getPosition());
+		boneSelectionIndicateBoxMesh.getMaterial().gwtGetColor().setHex(getVertexColor(index));
 		
 		stackPanel.showWidget(1); //bone & weight panel
 		lastSelection=index;
@@ -2252,6 +2288,7 @@ public void onError(Request request, Throwable exception) {
 			createSkinnedMesh();
 			createWireBody();
 			updateSelectableObjects();
+			
 		}
 		//LogUtils.log("before create");
 		//Mesh mesh=THREE.Mesh(cube, THREE.MeshLambertMaterial().skinning(false).color(0xff0000).build());
@@ -2328,10 +2365,13 @@ public void onError(Request request, Throwable exception) {
 	private String animationName;
 	private Geometry loadedGeometry;
 
-	private Mesh selectionPointIndicateMesh;
+	private Mesh boneSelectionIndicateBoxMesh;
 	
 	//used for mouse selection ,added mesh's eash point and bone-joint.
 	JsArray<Object3D> objects;
+
+
+	private TrackballControls trackballControls;
 	
 	@SuppressWarnings("unchecked")
 	private void initializeObject(){
@@ -2341,8 +2381,8 @@ public void onError(Request request, Throwable exception) {
 		if(root!=null){
 			scene.remove(root);
 		}
-		root=THREE.Object3D();
 		
+		root=THREE.Object3D();
 		scene.add(root);
 		
 			
@@ -2364,9 +2404,12 @@ public void onError(Request request, Throwable exception) {
 		
 		double selectionSize=0.02*baseScale;
 		
-		selectionPointIndicateMesh=THREE.Mesh(THREE.BoxGeometry(selectionSize, selectionSize, selectionSize), THREE.MeshBasicMaterial(GWTParamUtils.MeshBasicMaterial().color(selectColor).transparent(true).wireframe(true)));
-		boneAndVertex.add(selectionPointIndicateMesh);
-		selectionPointIndicateMesh.setVisible(false);	
+		//what is this?
+		boneSelectionIndicateBoxMesh=THREE.Mesh(THREE.BoxGeometry(selectionSize, selectionSize, selectionSize), THREE.MeshBasicMaterial(GWTParamUtils.MeshBasicMaterial().color(selectColor).transparent(true).wireframe(true)));
+		boneAndVertex.add(boneSelectionIndicateBoxMesh);
+		boneSelectionIndicateBoxMesh.setVisible(false);	
+		
+		camera.lookAt(root.getPosition());
 		
 	}
 	private int selectColor=0xb362ff;
@@ -2394,6 +2437,11 @@ public void onError(Request request, Throwable exception) {
 						.vertexColors(THREE.VertexColors)
 						)
 				);
+		wireBody.getGeometry().computeBoundingBox();
+		
+		//ThreeLog.log("wire",wireBody.getGeometry().getBoundingBox());
+		//ThreeLog.log("pos",wireBody.getPosition());
+		//ThreeLog.log("scale",wireBody.getScale());
 		
 		//watch out once set color can't replace color.use setHex()
 		for(int i=0;i<bodyGeometry.getFaces().length();i++){
@@ -2407,7 +2455,7 @@ public void onError(Request request, Throwable exception) {
 		
 		
 		
-		
+		//
 		boneAndVertex.add(wireBody);
 		
 		selectVertex=THREE.Object3D();
@@ -2507,6 +2555,10 @@ public void onError(Request request, Throwable exception) {
 	
 	//this is original loaded text,dont edit it
 	private String lastLoadedText;
+	
+	/*
+	 * need json-text and json-model for export
+	 */
 	private void loadModel(String path,final JSONLoadHandler handler){
 		
 		RequestBuilder builder = new RequestBuilder(RequestBuilder.GET, URL.encode(path));
@@ -2538,11 +2590,11 @@ public void onError(Request request, Throwable exception) {
 	}
 		
 		
-	private String textureUrl="asian_blondhair_tshirt.png";
+	private String textureUrl="underware-nonipple.png";
 	private String bvhUrl="standing2.bvh";
 	
 	//private String modelUrl="model001_female2661_bone19.js";
-	private String modelUrl="model11-4f.json";//testing 4-point
+	private String modelUrl="merged3.json";//testing 4-point
 	
 	private Texture texture;
 	private void generateTexture(){
@@ -2568,8 +2620,12 @@ public void onError(Request request, Throwable exception) {
 		
 		
 	}
+	boolean useTrackball=true;
 	@Override
 	public void onMouseWheel(MouseWheelEvent event) {
+		if(useTrackball){
+			return;
+		}
 		double tzoom=0.05*baseScale;
 		//TODO make class
 		long t=System.currentTimeMillis();
@@ -2664,6 +2720,11 @@ public void onError(Request request, Throwable exception) {
 				LogUtils.log(geometry);
 				skinnedMesh = THREE.SkinnedMesh(geometry, material);
 				
+				skinnedMesh.getGeometry().computeBoundingBox();
+				//ThreeLog.log("skinned",skinnedMesh.getGeometry().getBoundingBox());
+				//ThreeLog.log("pos",skinnedMesh.getPosition());
+				//ThreeLog.log("scale",skinnedMesh.getScale());
+				
 				root.add(skinnedMesh);
 				
 				
@@ -2679,8 +2740,8 @@ public void onError(Request request, Throwable exception) {
 					//animation.play(true,0);
 					//right now animation already ignore position in animation
 				}else{
-					
-					skinnedMesh.getPosition().sub(skinnedMesh.getSkeleton().getBones().get(0).getPosition());
+					//what is this hell?
+					//skinnedMesh.getPosition().sub(skinnedMesh.getSkeleton().getBones().get(0).getPosition());
 				}
 				
 					

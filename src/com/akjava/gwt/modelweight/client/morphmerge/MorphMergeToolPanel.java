@@ -164,6 +164,7 @@ public class MorphMergeToolPanel extends VerticalPanel{
 		add(applyCheck);
 		
 		//for easy debug
+		/*
 		final String fileName="model11-moved_eyelid-extendhair4.json";
 		THREE.XHRLoader().load(fileName, new XHRLoadHandler() {
 			@Override
@@ -171,6 +172,7 @@ public class MorphMergeToolPanel extends VerticalPanel{
 				onLoadBaseGeometry(fileName, text);
 			}
 		});
+		*/
 		
 		add(new Label("base-noMorph(broken morph)"));
 		final Label file1Label=new Label("choose three.js model file");
