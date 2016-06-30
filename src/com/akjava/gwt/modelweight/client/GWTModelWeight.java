@@ -514,7 +514,11 @@ protected void createEditingWireMesh(){
 			total+=vector4.gwtGet(i);
 		}
 		for(int i=0;i<4;i++){
+			if(total!=0){
 			vector4.gwtSet(i, vector4.gwtGet(i)/total);
+			}else{
+			vector4.gwtSet(i,0);//need?
+			}
 		}
 	}
 
@@ -551,8 +555,13 @@ protected void createEditingWireMesh(){
 		//TODO bone check
 		
 		//TODO make gwtCloneWithBones()
+		
+		
 		editingGeometry=THREE.JSONLoader().parse(json.isObject().get("data").isObject().getJavaScriptObject()).getGeometry();
 	
+		double influencesPerVertex=json.isObject().get("data").isObject().get("influencesPerVertex").isNumber().doubleValue();
+		editingGeometry.gwtSetInfluencesPerVertex((int)influencesPerVertex);//used when export
+		
 		LogUtils.log(editingGeometry);
 		if(editingGeometry.getSkinIndices()==null || editingGeometry.getSkinIndices().length()==0){
 			Window.alert("has no skin indices");
