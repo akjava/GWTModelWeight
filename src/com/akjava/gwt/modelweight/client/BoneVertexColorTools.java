@@ -1,5 +1,6 @@
 package com.akjava.gwt.modelweight.client;
 
+import com.akjava.gwt.lib.client.LogUtils;
 import com.akjava.gwt.three.client.js.THREE;
 import com.akjava.gwt.three.client.js.core.Face3;
 import com.akjava.gwt.three.client.js.core.Geometry;
@@ -33,6 +34,11 @@ public int getVertexColor(int vertexIndex,int boneIndex){
 	double v=0;
 	
 	Vector4 indices=geometry.getSkinIndices().get(vertexIndex);
+	
+	if(indices==null){
+		LogUtils.log("no skinIndices: at "+vertexIndex+","+(geometry.getSkinIndices()==null?"null indices":"length="+geometry.getSkinIndices().length()));
+	}
+	
 	for(int i=0;i<4;i++){
 		if(indices.gwtGet(i)==boneIndex){
 			v+=geometry.getSkinWeights().get(vertexIndex).gwtGet(i);
