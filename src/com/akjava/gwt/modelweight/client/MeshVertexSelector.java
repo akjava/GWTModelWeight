@@ -148,7 +148,8 @@ public class MeshVertexSelector extends Object3DMouseSelecter{
 		Geometry geo = THREE.Geometry();//var geo = new THREE.Geometry();
 		geo.getVertices().push( THREE.Vector3(  ));//geo.vertices.push( new THREE.Vector3( pos1[0], pos1[1], pos1[2] ) );
 		geo.getVertices().push( THREE.Vector3(  ));//geo.vertices.push( new THREE.Vector3( pos2[0], pos2[1], pos2[2] ) );
-		selectedLine = THREE.Line(geo, THREE.LineBasicMaterial(GWTParamUtils.LineBasicMaterial().color(0xff0000).linewidth(1)));
+		//TODO support color
+		selectedLine = THREE.Line(geo, THREE.LineBasicMaterial(GWTParamUtils.LineBasicMaterial().color(0xff00ff).linewidth(1)));
 		lineContainer.add(selectedLine);
 		}
 		selectedLine.setVisible(visible);

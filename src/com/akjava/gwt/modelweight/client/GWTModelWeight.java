@@ -17,9 +17,12 @@ import com.akjava.gwt.three.client.examples.js.controls.OrbitControls;
 import com.akjava.gwt.three.client.gwt.GWTParamUtils;
 import com.akjava.gwt.three.client.gwt.boneanimation.AnimationBone;
 import com.akjava.gwt.three.client.java.ThreeLog;
+import com.akjava.gwt.three.client.java.bone.CloseVertexAutoWeight;
 import com.akjava.gwt.three.client.java.ui.SimpleTabDemoEntryPoint;
 import com.akjava.gwt.three.client.java.ui.experiments.Vector4Editor;
 import com.akjava.gwt.three.client.js.THREE;
+import com.akjava.gwt.three.client.js.animation.AnimationClip;
+import com.akjava.gwt.three.client.js.animation.AnimationMixer;
 import com.akjava.gwt.three.client.js.core.Geometry;
 import com.akjava.gwt.three.client.js.extras.helpers.VertexNormalsHelper;
 import com.akjava.gwt.three.client.js.lights.Light;
@@ -31,6 +34,7 @@ import com.akjava.gwt.three.client.js.objects.Mesh;
 import com.akjava.gwt.three.client.js.objects.SkinnedMesh;
 import com.akjava.gwt.three.client.js.renderers.WebGLRenderer;
 import com.akjava.gwt.three.client.js.textures.Texture;
+import com.google.gwt.core.client.JavaScriptObject;
 import com.google.gwt.core.client.JsArray;
 import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
@@ -70,6 +74,11 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 
 	@Override
 	protected void beforeUpdate(WebGLRenderer renderer) {
+		
+		if(mixer!=null){
+			mixer.update(1.0/60);
+		}
+		
 		if(trackballControls!=null){
 			trackballControls.update();
 			//LogUtils.log(camera.getUuid());
@@ -185,11 +194,16 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 				createBoneMeshs();
 				updateBoneListBox();
 				
+				vertexBoneDataEditor.setBone(baseSkinnedModelGeometry.getBones());
+				
+				mixer=THREE.AnimationMixer(baseSkinnedModelMesh);
+				
 				//test
-				THREE.XHRLoader().load("geometry.json", new XHRLoadHandler() {
+				final String url="tshirt.json";
+				THREE.XHRLoader().load(url, new XHRLoadHandler() {
 					@Override
 					public void onLoad(String text) {
-						loadEditingGeometry("geometry.json", text);
+						loadEditingGeometry(url, text);
 					}
 				});
 			}
@@ -247,7 +261,6 @@ protected void createEditingWireMesh(){
 		}
 		
 		
-		
 		editingGeometryWireMesh = THREE.Mesh(editingGeometry, 
 				
 				THREE.MeshPhongMaterial(GWTParamUtils.MeshBasicMaterial()
@@ -300,13 +313,23 @@ protected void createEditingWireMesh(){
 		MeshPhongMaterial material=THREE.MeshPhongMaterial(GWTParamUtils.MeshBasicMaterial().skinning(true).color(0x880000));
 		
 		if(editingGeometryMesh!=null){
-			scene.remove(editingGeometryMesh);
+			//not scene ,
+			baseSkinnedModelMesh.remove(editingGeometryMesh);
 		}
-		editingGeometryMesh = THREE.SkinnedMesh(editingGeometry, material);
 		
-		editingGeometryMesh.setSkeleton(baseSkinnedModelMesh.getSkeleton());
+		//can't use editingGeometry,maybe Indices & weights registered somewhere.need new geometry to update indicis&weight
+		Geometry geometry=editingGeometry.clone();
+		//lightCopy
+		geometry.setSkinIndices(editingGeometry.getSkinIndices());
+		geometry.setSkinWeights(editingGeometry.getSkinWeights());
+		geometry.setBones(editingGeometry.getBones());
+		
+		editingGeometryMesh = THREE.SkinnedMesh(geometry, material);
+		
+		editingGeometryMesh.setSkeleton(baseSkinnedModelMesh.getSkeleton());//share bone to work same mixer
 		baseSkinnedModelMesh.add(editingGeometryMesh);//share same position,rotation
 		
+		LogUtils.log("createEditingGeometrySkinnedMesh");
 	}
 
 	@Override
@@ -320,7 +343,12 @@ protected void createEditingWireMesh(){
 		if(selectedTabIndex==WEIGHT_TAB_INDEX){
 			if(editingGeometryVertexSelector!=null){
 				int vertex=editingGeometryVertexSelector.pickVertex(event);
-				LogUtils.log("picked "+vertex);
+				//LogUtils.log("picked "+vertex);
+				if(vertex!=-1){
+					vertexBoneDataEditor.setValue(VertexBoneData.createFromdMesh(editingGeometry, vertex));
+				}else{
+					vertexBoneDataEditor.setValue(null);
+				}
 			}
 			
 			return;
@@ -421,20 +449,105 @@ protected void createEditingWireMesh(){
 		tab.add(createWeightPanel(),"Weight");
 		
 		
-		tab.selectTab(3);
+		
+		
+		
+		
+		tab.add(createAnimationPanel(),"Animation");
+		
+		tab.selectTab(4);
+		
 		
 		tab.addSelectionHandler(new SelectionHandler<Integer>() {
-			
 			@Override
 			public void onSelection(SelectionEvent<Integer> event) {
 				selectedTabIndex=event.getSelectedItem();
 				updateSelectedTabIndex();
 			}
 		});
-		
 		showControl();
 	}
+	
+	private Button makeAnimationButton(String name,final String url){
+		return new Button(name,new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+				THREE.XHRLoader().load(url, new XHRLoadHandler() {
+					
+					@Override
+					public void onLoad(String text) {
+						loadAnimation(text);
+					}
 
+					
+				});
+			}
+		});
+	}
+	private Panel createAnimationPanel(){
+		VerticalPanel animationPanel=new VerticalPanel();
+		HorizontalPanel controls=new HorizontalPanel();
+		animationPanel.add(controls);
+		controls.add(new Button("Stop",new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+				stopAnimation();
+			}
+		}));
+		controls.add(new Button("Pause",new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+				mixer.setTimeScale(0);
+			}
+		}));
+		controls.add(new Button("UnPause",new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+				mixer.setTimeScale(1);
+			}
+		}));
+		controls.add(new Button("Step",new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+				mixer.setTimeScale(1);
+				mixer.update(1.0/60);
+				mixer.setTimeScale(0);
+			}
+		}));
+		HorizontalPanel animations=new HorizontalPanel();
+		animationPanel.add(animations);
+		animations.add(makeAnimationButton("animation1", "animation/animation0.json"));
+		animations.add(makeAnimationButton("animation2", "animation/animation2.json"));
+		animations.add(makeAnimationButton("animation3", "animation/animation4.json"));
+		return animationPanel;
+	}
+
+	public void stopAnimation() {
+		if(mixer==null){
+			return;
+		}
+		mixer.stopAllAction();
+		
+		//characterMesh.getGeometry().getBones().get(60).setRotq(q)
+	}
+	
+	private AnimationMixer mixer;
+	private void loadAnimation(String text) {
+		JSONValue object=JSONParser.parseStrict(text);
+		JavaScriptObject js=object.isObject().getJavaScriptObject();
+		AnimationClip animationClip = AnimationClip.parse(js);
+		
+		playAnimation(animationClip);
+	}
+	
+	public void playAnimation(AnimationClip clip) {
+		mixer.setTimeScale(1);//if paused
+		mixer.stopAllAction();
+		mixer.uncacheClip(clip);//reset can cache
+		mixer.clipAction(clip).play();
+		
+	}
+	
 	private Panel createLoadExportPanel(){
 		VerticalPanel loadExportPanel=new VerticalPanel();
 		HorizontalPanel f1=new HorizontalPanel();
@@ -472,11 +585,35 @@ protected void createEditingWireMesh(){
 	
 	private Panel createWeightPanel(){
 		VerticalPanel weightPanel=new VerticalPanel();
-		
-		Button removeInfluenceButton=new Button("Remove selected influence",new ClickHandler() {
+	
+		Button testClearAll=new Button("Test clear all",new ClickHandler() {
 			
 			@Override
 			public void onClick(ClickEvent event) {
+				for(int i=0;i<editingGeometry.getSkinIndices().length();i++){
+					
+					for(int j=0;j<4;j++){
+						editingGeometry.getSkinIndices().get(i).gwtSet(j, 0);
+						editingGeometry.getSkinWeights().get(i).gwtSet(j, 0);
+					}
+				}
+				createEditingGeometrySkinnedMesh();//weight updated
+				LogUtils.log(editingGeometryMesh);
+				//editingGeometryMesh.setVisible(false);
+					AnimationBone bone=boneListBox.getValue();
+					if(bone!=null){
+						onBoneSelectionChanged(bone);
+					}
+				
+			}
+		});
+		weightPanel.add(testClearAll);
+		
+		Button removeInfluenceButton=new Button("Remove selected bone influence",new ClickHandler() {
+			
+			@Override
+			public void onClick(ClickEvent event) {
+				 boolean neddUpdate=false;
 				AnimationBone bone=boneListBox.getValue();
 				if(bone!=null){
 					int boneIndex=boneMouseSelector.getBoneIndex(bone);
@@ -490,6 +627,7 @@ protected void createEditingWireMesh(){
 							if(index==boneIndex){
 								weights.get(i).gwtSet(j, 0);
 								modified=true;
+								neddUpdate=true;
 							}
 						}
 						if(modified){
@@ -498,14 +636,80 @@ protected void createEditingWireMesh(){
 					}
 					
 				}
-				
+				if(neddUpdate){
+					createEditingGeometrySkinnedMesh();//weight updated
+				}
 				onBoneSelectionChanged(bone);
 			}
 		});
 		weightPanel.add(removeInfluenceButton);
 		
+		weightPanel.add(new HTML("<h4>Skinning Indices & Weight</h4>"));
+		vertexBoneDataEditor = new VertexBoneDataEditor();
+		weightPanel.add(vertexBoneDataEditor);
+		//for test
+		
+		//need set bone
+		HorizontalPanel buttons=new HorizontalPanel();
+		weightPanel.add(buttons);
+		Button applyBt=new Button("Apply",new ClickHandler() {
+			
+			@Override
+			public void onClick(ClickEvent event) {
+				if(vertexBoneDataEditor.getValue()==null){
+					return;
+				}
+				int index=vertexBoneDataEditor.getValue().getVertexIndex();
+				vertexBoneDataEditor.flush();
+				createEditingGeometrySkinnedMesh();
+				ThreeLog.log("vertex-index:"+index);
+				ThreeLog.log("indices:",editingGeometryMesh.getGeometry().getSkinIndices().get(index));
+				ThreeLog.log("weight:",editingGeometryMesh.getGeometry().getSkinWeights().get(index));
+			}
+		});
+		buttons.add(applyBt);
+		applyBt.setWidth("120px");
+		Button cancelBt=new Button("Cancel Edit",new ClickHandler() {
+			
+			@Override
+			public void onClick(ClickEvent event) {
+				if(vertexBoneDataEditor.getValue()==null){
+					return;
+				}
+				int index=vertexBoneDataEditor.getValue().getVertexIndex();
+				vertexBoneDataEditor.setValue(VertexBoneData.createFromdMesh(editingGeometry, index));
+				//no effect when flushd
+				//vertexBoneDataEditor.flush();
+				//createEditingGeometrySkinnedMesh();
+			}
+		});
+		buttons.add(cancelBt);
+		
+		Button resetBt=new Button("Rest Origin",new ClickHandler() {
+			
+			@Override
+			public void onClick(ClickEvent event) {
+				if(vertexBoneDataEditor.getValue()==null){
+					return;
+				}
+				int index=vertexBoneDataEditor.getValue().getVertexIndex();
+				vertexBoneDataEditor.setValue(VertexBoneData.createFromdMesh(editingGeometryOrigin, index));
+				vertexBoneDataEditor.flush();
+				createEditingGeometrySkinnedMesh();
+			}
+		});
+		buttons.add(resetBt);
 		
 		return weightPanel;
+	}
+	
+	/** @deprecated
+	 *  i don know how to update,without recreate skinnedmesh maybe attribute?
+	 * @param index
+	 */
+	public void copyIndicesAndWeightToSkinningMesh(int index){
+		editingGeometryMesh.getGeometry().getSkinIndices().get(index).copy(editingGeometry.getSkinIndices().get(index));
+		editingGeometryMesh.getGeometry().getSkinWeights().get(index).copy(editingGeometry.getSkinWeights().get(index));
 	}
 	
 	protected void autobalanceWeight(Vector4 vector4) {
@@ -544,27 +748,42 @@ protected void createEditingWireMesh(){
 	private Mesh editingGeometryWireMesh;
 	private VertexNormalsHelper editingGeometryNormalsHelper;
 	private MeshVertexSelector editingGeometryVertexSelector;
+	private VertexBoneDataEditor vertexBoneDataEditor;
 	protected void loadEditingGeometry(String fileName, String text) {
 		editingGeometryName.setText(fileName);
 		
 		JSONValue json=JSONParser.parseStrict(text);
 		
 		//TODO check version & type
-		editingGeometryOrigin=THREE.JSONLoader().parse(json.isObject().get("data").isObject().getJavaScriptObject()).getGeometry();
+		
+		JSONObject jsonObject=json.isObject();
+		
+		boolean hasData=jsonObject.get("data")!=null;//4.* format has this
+		
+		if(hasData){
+			jsonObject=jsonObject.get("data").isObject();
+		}
+		
+		
+		
+		editingGeometryOrigin=THREE.JSONLoader().parse(jsonObject.getJavaScriptObject()).getGeometry();
 		
 		//TODO bone check
 		
 		//TODO make gwtCloneWithBones()
 		
 		
-		editingGeometry=THREE.JSONLoader().parse(json.isObject().get("data").isObject().getJavaScriptObject()).getGeometry();
+		editingGeometry=THREE.JSONLoader().parse(jsonObject.getJavaScriptObject()).getGeometry();
 	
-		double influencesPerVertex=json.isObject().get("data").isObject().get("influencesPerVertex").isNumber().doubleValue();
+		double influencesPerVertex=jsonObject.get("influencesPerVertex")!=null?jsonObject.get("influencesPerVertex").isNumber().doubleValue():2;
 		editingGeometry.gwtSetInfluencesPerVertex((int)influencesPerVertex);//used when export
 		
 		LogUtils.log(editingGeometry);
 		if(editingGeometry.getSkinIndices()==null || editingGeometry.getSkinIndices().length()==0){
-			Window.alert("has no skin indices");
+			//Window.alert("has no skin indices");
+			LogUtils.log("No skin indices.it would auto weight.");
+			new CloseVertexAutoWeight().autoWeight(editingGeometry, baseSkinnedModelGeometry).insertToGeometry(editingGeometry);
+			editingGeometry.gwtSetInfluencesPerVertex(baseSkinnedModelGeometry.gwtGetInfluencesPerVertex());
 		}
 		
 		createEditingGeometrySkinnedMesh();
@@ -578,7 +797,7 @@ protected void createEditingWireMesh(){
 		}
 		double lineWidth=0.1;
 		double size=0.01;
-		editingGeometryNormalsHelper = THREE.VertexNormalsHelper(editingGeometryWireMesh, size, 0x0000aa, lineWidth);
+		editingGeometryNormalsHelper = THREE.VertexNormalsHelper(editingGeometryWireMesh, size, 0xffff00, lineWidth);
 		scene.add(editingGeometryNormalsHelper);
 		
 		if(editingGeometryVertexSelector!=null){
