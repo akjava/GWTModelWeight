@@ -619,6 +619,16 @@ protected void createEditingWireMesh(){
 			}
 		});
 		
+		Button unselectBone=new Button("unselect",new ClickHandler() {
+
+			@Override
+			public void onClick(ClickEvent event) {
+				boneListBox.setValue(null);
+			}
+		});
+		bonePanel.add(unselectBone);
+		
+		
 		CheckBox gpuSkinning=new CheckBox("GPU Skinning");
 		bonePanel.add(gpuSkinning);
 		gpuSkinning.addValueChangeHandler(new ValueChangeHandler<Boolean>() {
@@ -716,12 +726,7 @@ bonePanel.add(removeInfluenceButton);
 		VerticalPanel animationPanel=new VerticalPanel();
 		HorizontalPanel controls=new HorizontalPanel();
 		animationPanel.add(controls);
-		controls.add(new Button("Play",new ClickHandler() {
-			@Override
-			public void onClick(ClickEvent event) {
-				playAnimation(lastAnimationClip);
-			}
-		}));
+		
 		controls.add(new Button("Stop",new ClickHandler() {
 			@Override
 			public void onClick(ClickEvent event) {
@@ -764,8 +769,40 @@ bonePanel.add(removeInfluenceButton);
 		animations.add(makeAnimationButton("animation1", "animation/animation0.json"));
 		animations.add(makeAnimationButton("animation2", "animation/animation2.json"));
 		animations.add(makeAnimationButton("animation3", "animation/animation4.json"));
+		
+		
+		
+		HorizontalPanel filePanel=new HorizontalPanel();
+		filePanel.setVerticalAlignment(HorizontalPanel.ALIGN_MIDDLE);
+		filePanel.add(new Button("Play",new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+				if(uploadAnimationText==null){
+					return;
+				}
+				loadAnimation(uploadAnimationText);
+			}
+		}));
+		
+		animationPanel.add(filePanel);
+		final Label fileNameLabel=new Label();
+		fileNameLabel.setWidth("140px");
+		filePanel.add(fileNameLabel);
+		FileUploadForm upload=FileUtils.createSingleTextFileUploadForm(new DataURLListener() {
+			
+			@Override
+			public void uploaded(File file, String text) {
+				fileNameLabel.setText(file.getFileName());
+				uploadAnimationText=text;
+				loadAnimation(text);
+			}
+		}, true);
+		filePanel.add(upload);
+		
+		
 		return animationPanel;
 	}
+	private String uploadAnimationText;
 
 	public void stopAnimation() {
 		if(mixer==null){
@@ -947,7 +984,7 @@ bonePanel.add(removeInfluenceButton);
 		}
 	}
 
-	protected void onBoneSelectionChanged(AnimationBone value) {
+	protected void onBoneSelectionChanged(@Nullable AnimationBone value) {
 		if(value==null){
 		baseVertexColorTools.clearVertexsColor();	
 		}else{
