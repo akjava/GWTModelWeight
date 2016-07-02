@@ -163,11 +163,19 @@ public class VertexBoneDataEditor extends Composite implements Editor<VertexBone
 				this.value=value;
 				if(value==null){
 					vertexIndexLabel.setText("");
-						
+					
+					vector4Editor.setEnabled(false);
+					for(int i=0;i<4;i++){
+						indexEditors.get(i).setEnabled(false);
+					}
 					return;
 				}else{
 					//set enable
-					
+					vector4Editor.setEnabled(true);
+					vector4Editor.setVisible(true);
+					for(int i=0;i<4;i++){
+						indexEditors.get(i).setEnabled(true);
+					}
 				}
 				
 				for(int i=0;i<4;i++){
@@ -177,5 +185,22 @@ public class VertexBoneDataEditor extends Composite implements Editor<VertexBone
 				vector4Editor.setValue(THREE.Vector4().copy(value.getWeights()));
 				
 				vertexIndexLabel.setText(String.valueOf(value.getVertexIndex()));
+			}
+
+
+			public void copyValue(VertexBoneData copyFrom) {
+				if(value==null){
+					LogUtils.log("selection is null");
+					return;
+				}
+				if(value.getVertexIndex()!=copyFrom.getVertexIndex()){
+					LogUtils.log("vertexindex not same");
+					return;
+				}
+				
+				value.getIndices().copy(copyFrom.getIndices());
+				value.getWeights().copy(copyFrom.getWeights());
+				setValue(value);
+				
 			}
 	}

@@ -2,6 +2,7 @@ package com.akjava.gwt.modelweight.client;
 
 import com.akjava.gwt.three.client.gwt.GWTParamUtils;
 import com.akjava.gwt.three.client.gwt.core.Intersect;
+import com.akjava.gwt.three.client.java.ThreeLog;
 import com.akjava.gwt.three.client.js.THREE;
 import com.akjava.gwt.three.client.js.cameras.Camera;
 import com.akjava.gwt.three.client.js.core.Face3;
@@ -76,21 +77,24 @@ public class MeshVertexSelector extends Object3DMouseSelecter{
 			selection=mesh.getGeometry().getVertices().get(face.getC());
 		}
 		
-		setSelectionVertex(faceIndex,vertexOfFaceIndex);
-		
-		
 		
 		Face3 face2=mesh.getGeometry().getFaces().get(faceIndex);
-		int vertexIndex=face2.gwtGet(vertexOfFaceIndex);
+		int vertex = face2.gwtGet(vertexOfFaceIndex);
+		
+		setSelectionVertex(vertex);
 		
 		
-		return vertexIndex;
+		
+		
+		
+		
+		return selectecVertexIndex;
 	}
 	protected Vector3 matrixedPoint(Vector3 vec){
 		return vec.clone().applyMatrix4(mesh.getMatrixWorld());
 	}
 	
-	private boolean visible;
+	private boolean visible=true;
 	public boolean isVisible() {
 		return visible;
 	}
@@ -109,12 +113,35 @@ public class MeshVertexSelector extends Object3DMouseSelecter{
 	}
 	private double lineLength=0.1;
 	private Line selectedLine;
+	private int selectecVertexIndex=-1;//-1 means no selection
 	
 	
-	public void setSelectionVertex(int faceIndex,int vertexOfFaceIndex){
-		Face3 face=mesh.getGeometry().getFaces().get(faceIndex);
-		int vertexIndex=face.gwtGet(vertexOfFaceIndex);
+	public void setSelectionVertex(int vertexIndex){
 		
+		selectecVertexIndex=vertexIndex;
+		
+		
+		if(selectecVertexIndex==-1){
+			
+			selected=false;
+			if(selectedLine!=null){
+				selectedLine.setVisible(false);
+			}
+			return;
+		}
+		
+		
+		Vector3 normal=THREE.Vector3();
+		for(int i=0;i<mesh.getGeometry().getFaces().length();i++){
+			Face3 face3=mesh.getGeometry().getFaces().get(i);
+			for(int j=0;j<3;j++){
+				int vindex=face3.gwtGet(j);
+				if(vindex==vertexIndex){
+					normal.add(face3.getVertexNormals().get(j));
+				}
+			}
+		}
+		normal.normalize();
 		
 		
 		Vector3 selection=mesh.getGeometry().getVertices().get(vertexIndex);
@@ -130,19 +157,19 @@ public class MeshVertexSelector extends Object3DMouseSelecter{
 		
 		normalMatrix.getNormalMatrix( mesh.getMatrixWorld());
 		
-		Vector3 normal = face.getVertexNormals().get(vertexOfFaceIndex);
+		//Vector3 normal = face.getVertexNormals().get(vertexOfFaceIndex);
 
 		v1.copy( selection ).applyMatrix4( mesh.getMatrixWorld() );
 
 		v2.copy( normal ).applyMatrix3( normalMatrix ).normalize().multiplyScalar( lineLength ).add( v1 );
 		
 		updateLine(v1,v2);
-		
-		selectedLine.setVisible(visible);
-		
 }
 	
 	
+	public int getSelectecVertex() {
+		return selectecVertexIndex;
+	}
 	public void updateLine(Vector3 v1,Vector3 v2){
 		if(selectedLine==null){
 		Geometry geo = THREE.Geometry();//var geo = new THREE.Geometry();
@@ -157,5 +184,8 @@ public class MeshVertexSelector extends Object3DMouseSelecter{
 		selectedLine.getGeometry().getVertices().get(0).copy(v1);
 		selectedLine.getGeometry().getVertices().get(1).copy(v2);
 		selectedLine.getGeometry().setVerticesNeedUpdate(true);
+	}
+	public void update() {
+		setSelectionVertex(selectecVertexIndex);
 	}
 }

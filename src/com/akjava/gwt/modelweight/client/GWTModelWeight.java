@@ -3,6 +3,8 @@ package com.akjava.gwt.modelweight.client;
 import java.io.IOException;
 import java.util.List;
 
+import javax.annotation.Nullable;
+
 import com.akjava.gwt.html5.client.download.HTML5Download;
 import com.akjava.gwt.html5.client.file.File;
 import com.akjava.gwt.html5.client.file.FileUploadForm;
@@ -16,6 +18,7 @@ import com.akjava.gwt.three.client.examples.js.THREEExp;
 import com.akjava.gwt.three.client.examples.js.controls.OrbitControls;
 import com.akjava.gwt.three.client.gwt.GWTParamUtils;
 import com.akjava.gwt.three.client.gwt.boneanimation.AnimationBone;
+import com.akjava.gwt.three.client.java.SkinningVertexCalculator;
 import com.akjava.gwt.three.client.java.ThreeLog;
 import com.akjava.gwt.three.client.java.bone.CloseVertexAutoWeight;
 import com.akjava.gwt.three.client.java.ui.SimpleTabDemoEntryPoint;
@@ -25,10 +28,14 @@ import com.akjava.gwt.three.client.js.animation.AnimationClip;
 import com.akjava.gwt.three.client.js.animation.AnimationMixer;
 import com.akjava.gwt.three.client.js.core.Geometry;
 import com.akjava.gwt.three.client.js.extras.helpers.VertexNormalsHelper;
+import com.akjava.gwt.three.client.js.extras.helpers.WireframeHelper;
 import com.akjava.gwt.three.client.js.lights.Light;
 import com.akjava.gwt.three.client.js.loaders.XHRLoader.XHRLoadHandler;
 import com.akjava.gwt.three.client.js.materials.MeshPhongMaterial;
+import com.akjava.gwt.three.client.js.math.Quaternion;
+import com.akjava.gwt.three.client.js.math.Vector3;
 import com.akjava.gwt.three.client.js.math.Vector4;
+import com.akjava.gwt.three.client.js.objects.Bone;
 import com.akjava.gwt.three.client.js.objects.Group;
 import com.akjava.gwt.three.client.js.objects.Mesh;
 import com.akjava.gwt.three.client.js.objects.SkinnedMesh;
@@ -51,6 +58,7 @@ import com.google.gwt.text.shared.Renderer;
 import com.google.gwt.user.client.Window;
 import com.google.gwt.user.client.ui.Anchor;
 import com.google.gwt.user.client.ui.Button;
+import com.google.gwt.user.client.ui.CheckBox;
 import com.google.gwt.user.client.ui.HTML;
 import com.google.gwt.user.client.ui.HorizontalPanel;
 import com.google.gwt.user.client.ui.Label;
@@ -72,12 +80,49 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 
 	//private TrackballControls trackballControls;
 
+	
+	private boolean gpuSkinning;
+	
+	public boolean isGpuSkinning() {
+		return gpuSkinning;
+	}
+
+	public void setGpuSkinning(boolean gpuSkinning) {
+		//i have no idea somehow problem
+		//trackballControls.reset();
+		//trackballControls.setTarget(THREE.Vector3(0,cameraY,0));
+		
+		
+		
+		this.gpuSkinning = gpuSkinning;
+		createBaseSkinnedMesh();
+		
+		if(hasEditingGeometry()){
+		createEditingGeometrySkinnedMesh();
+		
+		if(gpuSkinning){
+			editingGeometryMesh.getMaterial().gwtCastMeshPhongMaterial().setShading(THREE.SmoothShading);
+		}else{
+			editingGeometryMesh.getMaterial().gwtCastMeshPhongMaterial().setShading(THREE.FlatShading);
+			
+		}
+		editingGeometryMeshNormalsHelper.setVisible(!gpuSkinning);
+		editingGeometryMeshVertexSelector.setVisible(!gpuSkinning);
+		editingGeometryMeshWireframeHelperMesh.setVisible(!gpuSkinning);
+		}
+		
+		playAnimation(lastAnimationClip);
+		ThreeLog.log("scale:",editingGeometryMesh.getScale());
+	}
+
 	@Override
 	protected void beforeUpdate(WebGLRenderer renderer) {
 		
 		if(mixer!=null){
 			mixer.update(1.0/60);
 		}
+		
+		
 		
 		if(trackballControls!=null){
 			trackballControls.update();
@@ -86,6 +131,11 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		
 		if(baseSkinnedModelMesh!=null){
 		baseSkinnedModelMesh.getPosition().set(basePosEditor.getX(), basePosEditor.getY(), basePosEditor.getZ());
+		
+		if(!gpuSkinning){
+			skinningbyHand(baseSkinnedModelMesh,baseSkinnedModelGeometry);
+			baseSkinnedModelMesh.getGeometry().computeBoundingSphere();
+			}
 		}
 		
 		if(baseSkinnedModelWireMesh!=null){
@@ -96,6 +146,25 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		if(editingGeometryNormalsHelper!=null){
 			editingGeometryNormalsHelper.update();//need?
 		}
+		
+		
+		
+		
+		if(editingGeometryMesh!=null){
+			if(!gpuSkinning){
+			skinningbyHand(editingGeometryMesh,editingGeometry);
+			editingGeometryMesh.getGeometry().computeBoundingSphere();
+			
+			if(editingGeometryMeshVertexSelector.getSelectecVertex()!=-1){
+				editingGeometryMeshVertexSelector.update();
+			}
+			
+			}
+		}
+		
+		if(editingGeometryMeshNormalsHelper!=null){
+			editingGeometryMeshNormalsHelper.update();
+		}
 	}
 
 	private String textureUrl="underware-nonipple.png";
@@ -104,13 +173,33 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 	
 	private int selectedTabIndex;
 	final int WEIGHT_TAB_INDEX=3;
+	final int BONE_TAB_INDEX=1;
 	public void updateSelectedTabIndex(){
-		if(selectedTabIndex==WEIGHT_TAB_INDEX){
-			editingGeometryVertexSelector.setVisible(true);
+		if(selectedTabIndex!=BONE_TAB_INDEX){
+			if(editingGeometryWireVertexSelector!=null){
+			editingGeometryWireVertexSelector.setVisible(true);
+			}
+			if(editingGeometryNormalsHelper!=null){
 			editingGeometryNormalsHelper.setVisible(true);
+			}
+			
+			if(editingGeometryMeshNormalsHelper!=null){
+				if(!gpuSkinning){
+					editingGeometryMeshNormalsHelper.setVisible(true);
+				}
+			}
+			
 		}else{
-			editingGeometryVertexSelector.setVisible(false);
+			if(editingGeometryWireVertexSelector!=null){
+			editingGeometryWireVertexSelector.setVisible(false);
+			}
+			if(editingGeometryNormalsHelper!=null){
 			editingGeometryNormalsHelper.setVisible(false);
+			}
+			
+			if(editingGeometryMeshNormalsHelper!=null){
+				editingGeometryMeshNormalsHelper.setVisible(false);
+			}
 		}
 	}
 	
@@ -176,18 +265,20 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 	private BoneMeshMouseSelector boneMouseSelector;
 	private Label editingGeometryName;
 	private Vector4Editor wirePosEditor;
+	private Mesh editingGeometryMeshWireframeHelperMesh;
 	private void loadBaseSkinnedModel(String modelUrl) {
 		THREE.XHRLoader().load(modelUrl, new XHRLoadHandler() {
 			@Override
 			public void onLoad(String text) {
-				JSONValue jsonValue=JSONParser.parseStrict(text);
-				JSONObject object=jsonValue.isObject();
+				JSONObject object=parseJSONGeometry(text);
 				if(object==null){
 					Window.alert("invalid model");
 					return;
 				}
 				baseSkinnedModelJson=object;
 				baseSkinnedModelGeometry=THREE.JSONLoader().parse(baseSkinnedModelJson.getJavaScriptObject()).getGeometry();
+				
+				setInfluencePerVertexFromJSON(baseSkinnedModelGeometry,object);
 				
 				createBaseSkinnedMesh();
 				createBaseWireMesh();
@@ -196,19 +287,50 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 				
 				vertexBoneDataEditor.setBone(baseSkinnedModelGeometry.getBones());
 				
-				mixer=THREE.AnimationMixer(baseSkinnedModelMesh);
+				
+				createOrbitControler();//based skinned mesh height
+				
 				
 				//test
-				final String url="tshirt.json";
+				/*
+				final String url="tshirt2.json";
 				THREE.XHRLoader().load(url, new XHRLoadHandler() {
 					@Override
 					public void onLoad(String text) {
 						loadEditingGeometry(url, text);
 					}
 				});
+				*/
 			}
 		});
 	}
+	
+	private void createOrbitControler(){
+baseSkinnedModelGeometry.computeBoundingBox();
+		
+		
+		cameraY=baseSkinnedModelGeometry.getBoundingBox().getMax().getY()/2;
+		
+		
+		//this position used 
+		camera.getPosition().set(cameraX, cameraY, cameraZ);
+		
+		
+		if(trackballControls!=null){
+			trackballControls.dispose();
+		}
+		
+		//trackball initialize here
+		
+		//i feeel orbit is much stable on y-axis
+		trackballControls=THREEExp.OrbitControls(camera,canvas.getElement());
+		
+	//	trackballControls=THREEExp.TrackballControls(camera,canvas.getElement());
+		//trackballControls.setRotateSpeed(10);
+		
+		trackballControls.setTarget(THREE.Vector3(0,cameraY,0));
+	}
+	
 
 	protected void createBoneMeshs() {
 		BoneMeshTools bmt=new BoneMeshTools();
@@ -264,60 +386,68 @@ protected void createEditingWireMesh(){
 		editingGeometryWireMesh = THREE.Mesh(editingGeometry, 
 				
 				THREE.MeshPhongMaterial(GWTParamUtils.MeshBasicMaterial()
-						.wireframe(true)
+						//.wireframe(true)
+						.shading(THREE.FlatShading)
 						.color(0xffffff)
 						.vertexColors(THREE.VertexColors)
+						.transparent(true)
+						.opacity(0.7)
 						)
 				);
+		
+		
 
 		scene.add(editingGeometryWireMesh);
 		editingVertexColorTools = new BoneVertexColorTools(editingGeometry);
+		
+		
+		if(editingGeometryWireMeshHelper!=null){
+			scene.remove(editingGeometryWireMeshHelper);
+		}
+		
+		editingGeometryWireMeshHelper = THREE.WireframeHelper(editingGeometryWireMesh,0x888888);
+		scene.add(editingGeometryWireMeshHelper);
 	}
 	
 	protected void createBaseSkinnedMesh() {
 		Texture texture=THREE.TextureLoader().load(textureUrl);
-		MeshPhongMaterial material=THREE.MeshPhongMaterial(GWTParamUtils.MeshBasicMaterial().skinning(true).map(texture));
+		MeshPhongMaterial material=THREE.MeshPhongMaterial(GWTParamUtils.MeshBasicMaterial()
+				.skinning(gpuSkinning)
+				.map(texture));
 		
 		if(baseSkinnedModelMesh!=null){
 			scene.remove(baseSkinnedModelMesh);
 		}
-		baseSkinnedModelMesh = THREE.SkinnedMesh(baseSkinnedModelGeometry, material);
+		Geometry geometry=baseSkinnedModelGeometry.clone();
+		baseSkinnedModelGeometry.gwtSoftCopyToWeightsAndIndicesAndBone(geometry);
+		
+		baseSkinnedModelMesh = THREE.SkinnedMesh(geometry, material);
 		scene.add(baseSkinnedModelMesh);
 		
-		baseSkinnedModelGeometry.computeBoundingBox();
-		ThreeLog.log("base",baseSkinnedModelGeometry.getBoundingBox());
-		
-		cameraY=baseSkinnedModelGeometry.getBoundingBox().getMax().getY()/2;
 		
 		
-		//this position used 
-		camera.getPosition().set(cameraX, cameraY, cameraZ);
-		
-		if(trackballControls!=null){
-			trackballControls.dispose();
-		}
-		
-		//trackball initialize here
-		
-		//i feeel orbit is much stable on y-axis
-		trackballControls=THREEExp.OrbitControls(camera,canvas.getElement());
-		
-	//	trackballControls=THREEExp.TrackballControls(camera,canvas.getElement());
-		//trackballControls.setRotateSpeed(10);
-		
-		trackballControls.setTarget(THREE.Vector3(0,cameraY,0));
-		
+		mixer=THREE.AnimationMixer(baseSkinnedModelMesh);
+	}
+	
+	public boolean hasEditingGeometry(){
+		return editingGeometry!=null;
 	}
 	
 	protected void createEditingGeometrySkinnedMesh() {
-		MeshPhongMaterial material=THREE.MeshPhongMaterial(GWTParamUtils.MeshBasicMaterial().skinning(true).color(0x880000));
+		MeshPhongMaterial material=THREE.MeshPhongMaterial(GWTParamUtils.MeshBasicMaterial()
+				.skinning(gpuSkinning)
+				.color(0x880000)
+				.shading(THREE.FlatShading));
+		
 		
 		if(editingGeometryMesh!=null){
 			//not scene ,
 			baseSkinnedModelMesh.remove(editingGeometryMesh);
 		}
 		
-		//can't use editingGeometry,maybe Indices & weights registered somewhere.need new geometry to update indicis&weight
+		
+		
+		//can't use editingGeometry,maybe Indices & weights registered somewhere with geometry.need new geometry to update indicis&weight
 		Geometry geometry=editingGeometry.clone();
 		//lightCopy
 		geometry.setSkinIndices(editingGeometry.getSkinIndices());
@@ -329,7 +459,47 @@ protected void createEditingWireMesh(){
 		editingGeometryMesh.setSkeleton(baseSkinnedModelMesh.getSkeleton());//share bone to work same mixer
 		baseSkinnedModelMesh.add(editingGeometryMesh);//share same position,rotation
 		
-		LogUtils.log("createEditingGeometrySkinnedMesh");
+		
+		
+		//create normal helper
+		if(editingGeometryMeshNormalsHelper!=null){
+			scene.remove(editingGeometryMeshNormalsHelper);
+		}
+		
+		double lineWidth=0.1;
+		double size=0.01;
+		editingGeometryMeshNormalsHelper = THREE.VertexNormalsHelper(editingGeometryMesh, size, 0xffff00, lineWidth);
+		scene.add(editingGeometryMeshNormalsHelper);
+		
+		//create wireframe helper wireframehelper not good at geometry update with shareing geometry
+		if(editingGeometryMeshWireframeHelperMesh!=null){
+			baseSkinnedModelMesh.remove(editingGeometryMeshWireframeHelperMesh);
+		}
+		editingGeometryMeshWireframeHelperMesh = THREE.Mesh(geometry,THREE.MeshBasicMaterial(GWTParamUtils.MeshBasicMaterial().color(0x888888).shading(THREE.FlatShading).wireframe(true)));
+		baseSkinnedModelMesh.add(editingGeometryMeshWireframeHelperMesh);
+		
+		
+		//for animation-mesh 
+		if(editingGeometryMeshVertexSelector!=null){
+			editingGeometryMeshVertexSelector.dispose();
+			}
+		editingGeometryMeshVertexSelector = new MeshVertexSelector(editingGeometryMesh, renderer, camera, scene);
+				
+	}
+	
+	public void skinningbyHand(SkinnedMesh mesh,Geometry origonalGeometry){
+		mesh.getGeometry().setDynamic(true);
+		for(int i=0;i<mesh.getGeometry().getVertices().length();i++){
+			Vector3 transformed=SkinningVertexCalculator.transformSkinningVertex(mesh,i,origonalGeometry.getVertices().get(i));
+			mesh.getGeometry().getVertices().get(i).copy(transformed);
+		}
+		
+		//for lighting
+		mesh.getGeometry().computeFaceNormals ();
+		mesh.getGeometry().computeVertexNormals ();
+		
+		mesh.getGeometry().setVerticesNeedUpdate(true);
+		mesh.getGeometry().setNormalsNeedUpdate(true);
 	}
 
 	@Override
@@ -340,14 +510,26 @@ protected void createEditingWireMesh(){
 
 	@Override
 	public void onMouseClick(ClickEvent event) {
-		if(selectedTabIndex==WEIGHT_TAB_INDEX){
-			if(editingGeometryVertexSelector!=null){
-				int vertex=editingGeometryVertexSelector.pickVertex(event);
+		if(selectedTabIndex!=BONE_TAB_INDEX){
+			if(editingGeometryWireVertexSelector!=null){
+				int vertex=editingGeometryWireVertexSelector.pickVertex(event);
+				
+				if(vertex==-1){
+					vertex=editingGeometryMeshVertexSelector.pickVertex(event);
+					LogUtils.log(vertex);
+					editingGeometryWireVertexSelector.setSelectionVertex(vertex);
+				}else{
+					editingGeometryMeshVertexSelector.setSelectionVertex(vertex);//just syn now
+				}
+				
+				
+				
 				//LogUtils.log("picked "+vertex);
 				if(vertex!=-1){
 					vertexBoneDataEditor.setValue(VertexBoneData.createFromdMesh(editingGeometry, vertex));
 				}else{
 					vertexBoneDataEditor.setValue(null);
+					
 				}
 			}
 			
@@ -391,6 +573,7 @@ protected void createEditingWireMesh(){
 		basePosEditor = new Vector4Editor("Position",-2, 2, 0.001, 0);
 		posPanel.add(basePosEditor);
 		basePosEditor.setX(-1.5,true);
+		
 		
 		wirePosEditor = new Vector4Editor("Position",-2, 2, 0.001, 0);
 		posPanel.add(wirePosEditor);
@@ -436,6 +619,51 @@ protected void createEditingWireMesh(){
 			}
 		});
 		
+		CheckBox gpuSkinning=new CheckBox("GPU Skinning");
+		bonePanel.add(gpuSkinning);
+		gpuSkinning.addValueChangeHandler(new ValueChangeHandler<Boolean>() {
+
+			@Override
+			public void onValueChange(ValueChangeEvent<Boolean> event) {
+				setGpuSkinning(event.getValue());
+			}
+			
+		});
+		
+Button removeInfluenceButton=new Button("Remove selected bone influence",new ClickHandler() {
+			
+			@Override
+			public void onClick(ClickEvent event) {
+				 boolean neddUpdate=false;
+				AnimationBone bone=boneListBox.getValue();
+				if(bone!=null){
+					int boneIndex=boneMouseSelector.getBoneIndex(bone);
+					
+					JsArray<Vector4> indices=editingGeometry.getSkinIndices();
+					JsArray<Vector4> weights=editingGeometry.getSkinWeights();
+					for(int i=0;i<indices.length();i++){
+						boolean modified=false;
+						for(int j=0;j<4;j++){
+							int index=indices.get(i).gwtGet(j);
+							if(index==boneIndex){
+								weights.get(i).gwtSet(j, 0);
+								modified=true;
+								neddUpdate=true;
+							}
+						}
+						if(modified){
+							autobalanceWeight(weights.get(i));
+						}
+					}
+					
+				}
+				if(neddUpdate){
+					createEditingGeometrySkinnedMesh();//weight updated
+				}
+				onBoneSelectionChanged(bone);
+			}
+		});
+bonePanel.add(removeInfluenceButton);
 		
 		//create load/export
 		
@@ -488,10 +716,27 @@ protected void createEditingWireMesh(){
 		VerticalPanel animationPanel=new VerticalPanel();
 		HorizontalPanel controls=new HorizontalPanel();
 		animationPanel.add(controls);
+		controls.add(new Button("Play",new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+				playAnimation(lastAnimationClip);
+			}
+		}));
 		controls.add(new Button("Stop",new ClickHandler() {
 			@Override
 			public void onClick(ClickEvent event) {
 				stopAnimation();
+				
+				//Quaternion q=THREE.Quaternion();
+				for(int i=0;i<baseSkinnedModelMesh.getSkeleton().getBones().length();i++){
+					Bone bone=baseSkinnedModelMesh.getSkeleton().getBones().get(i);
+					bone.getQuaternion().copy(baseSkinnedMeshBones.get(i).gwtGetRotationQuaternion());
+					bone.getPosition().copy(baseSkinnedMeshBones.get(i).gwtGetPosition());
+					bone.updateMatrixWorld(true);
+				}
+				
+				//something strange on position
+				//baseSkinnedModelMesh.pose();
 			}
 		}));
 		controls.add(new Button("Pause",new ClickHandler() {
@@ -527,7 +772,7 @@ protected void createEditingWireMesh(){
 			return;
 		}
 		mixer.stopAllAction();
-		
+		lastAnimationClip=null;
 		//characterMesh.getGeometry().getBones().get(60).setRotq(q)
 	}
 	
@@ -540,12 +785,16 @@ protected void createEditingWireMesh(){
 		playAnimation(animationClip);
 	}
 	
-	public void playAnimation(AnimationClip clip) {
+	private AnimationClip lastAnimationClip;
+	public void playAnimation(@Nullable AnimationClip clip) {
+		if(clip==null){
+			return;
+		}
 		mixer.setTimeScale(1);//if paused
 		mixer.stopAllAction();
 		mixer.uncacheClip(clip);//reset can cache
 		mixer.clipAction(clip).play();
-		
+		lastAnimationClip=clip;
 	}
 	
 	private Panel createLoadExportPanel(){
@@ -586,6 +835,7 @@ protected void createEditingWireMesh(){
 	private Panel createWeightPanel(){
 		VerticalPanel weightPanel=new VerticalPanel();
 	
+		//this is test.
 		Button testClearAll=new Button("Test clear all",new ClickHandler() {
 			
 			@Override
@@ -607,45 +857,13 @@ protected void createEditingWireMesh(){
 				
 			}
 		});
-		weightPanel.add(testClearAll);
+		//weightPanel.add(testClearAll);
 		
-		Button removeInfluenceButton=new Button("Remove selected bone influence",new ClickHandler() {
-			
-			@Override
-			public void onClick(ClickEvent event) {
-				 boolean neddUpdate=false;
-				AnimationBone bone=boneListBox.getValue();
-				if(bone!=null){
-					int boneIndex=boneMouseSelector.getBoneIndex(bone);
-					
-					JsArray<Vector4> indices=editingGeometry.getSkinIndices();
-					JsArray<Vector4> weights=editingGeometry.getSkinWeights();
-					for(int i=0;i<indices.length();i++){
-						boolean modified=false;
-						for(int j=0;j<4;j++){
-							int index=indices.get(i).gwtGet(j);
-							if(index==boneIndex){
-								weights.get(i).gwtSet(j, 0);
-								modified=true;
-								neddUpdate=true;
-							}
-						}
-						if(modified){
-							autobalanceWeight(weights.get(i));
-						}
-					}
-					
-				}
-				if(neddUpdate){
-					createEditingGeometrySkinnedMesh();//weight updated
-				}
-				onBoneSelectionChanged(bone);
-			}
-		});
-		weightPanel.add(removeInfluenceButton);
+		
 		
 		weightPanel.add(new HTML("<h4>Skinning Indices & Weight</h4>"));
 		vertexBoneDataEditor = new VertexBoneDataEditor();
+		vertexBoneDataEditor.setValue(null);
 		weightPanel.add(vertexBoneDataEditor);
 		//for test
 		
@@ -693,8 +911,11 @@ protected void createEditingWireMesh(){
 					return;
 				}
 				int index=vertexBoneDataEditor.getValue().getVertexIndex();
-				vertexBoneDataEditor.setValue(VertexBoneData.createFromdMesh(editingGeometryOrigin, index));
+				
+				
+				vertexBoneDataEditor.copyValue(VertexBoneData.createFromdMesh(editingGeometryOrigin, index));
 				vertexBoneDataEditor.flush();
+				
 				createEditingGeometrySkinnedMesh();
 			}
 		});
@@ -747,14 +968,14 @@ protected void createEditingWireMesh(){
 	private SkinnedMesh editingGeometryMesh;
 	private Mesh editingGeometryWireMesh;
 	private VertexNormalsHelper editingGeometryNormalsHelper;
-	private MeshVertexSelector editingGeometryVertexSelector;
+	private MeshVertexSelector editingGeometryWireVertexSelector;
 	private VertexBoneDataEditor vertexBoneDataEditor;
-	protected void loadEditingGeometry(String fileName, String text) {
-		editingGeometryName.setText(fileName);
-		
+	private WireframeHelper editingGeometryWireMeshHelper;
+	private VertexNormalsHelper editingGeometryMeshNormalsHelper;
+	private MeshVertexSelector editingGeometryMeshVertexSelector;
+	
+	private JSONObject parseJSONGeometry(String text){
 		JSONValue json=JSONParser.parseStrict(text);
-		
-		//TODO check version & type
 		
 		JSONObject jsonObject=json.isObject();
 		
@@ -763,6 +984,17 @@ protected void createEditingWireMesh(){
 		if(hasData){
 			jsonObject=jsonObject.get("data").isObject();
 		}
+		return jsonObject;
+	}
+	private void setInfluencePerVertexFromJSON(Geometry geometry,JSONObject jsonObject){
+		double influencesPerVertex=jsonObject.get("influencesPerVertex")!=null?jsonObject.get("influencesPerVertex").isNumber().doubleValue():2;
+		geometry.gwtSetInfluencesPerVertex((int)influencesPerVertex);//used when export
+	}
+	
+	protected void loadEditingGeometry(String fileName, String text) {
+		editingGeometryName.setText(fileName);
+		
+		JSONObject jsonObject=parseJSONGeometry(text);
 		
 		
 		
@@ -775,15 +1007,17 @@ protected void createEditingWireMesh(){
 		
 		editingGeometry=THREE.JSONLoader().parse(jsonObject.getJavaScriptObject()).getGeometry();
 	
-		double influencesPerVertex=jsonObject.get("influencesPerVertex")!=null?jsonObject.get("influencesPerVertex").isNumber().doubleValue():2;
-		editingGeometry.gwtSetInfluencesPerVertex((int)influencesPerVertex);//used when export
+		setInfluencePerVertexFromJSON(editingGeometry,jsonObject);
 		
-		LogUtils.log(editingGeometry);
 		if(editingGeometry.getSkinIndices()==null || editingGeometry.getSkinIndices().length()==0){
 			//Window.alert("has no skin indices");
 			LogUtils.log("No skin indices.it would auto weight.");
 			new CloseVertexAutoWeight().autoWeight(editingGeometry, baseSkinnedModelGeometry).insertToGeometry(editingGeometry);
 			editingGeometry.gwtSetInfluencesPerVertex(baseSkinnedModelGeometry.gwtGetInfluencesPerVertex());
+			
+			
+			editingGeometryOrigin.gwtSetInfluencesPerVertex(baseSkinnedModelGeometry.gwtGetInfluencesPerVertex());
+			editingGeometry.gwtHardCopyToWeightsAndIndices(editingGeometryOrigin);
 		}
 		
 		createEditingGeometrySkinnedMesh();
@@ -800,10 +1034,16 @@ protected void createEditingWireMesh(){
 		editingGeometryNormalsHelper = THREE.VertexNormalsHelper(editingGeometryWireMesh, size, 0xffff00, lineWidth);
 		scene.add(editingGeometryNormalsHelper);
 		
-		if(editingGeometryVertexSelector!=null){
-			editingGeometryVertexSelector.dispose();
+		//for editing-mesh
+		if(editingGeometryWireVertexSelector!=null){
+			editingGeometryWireVertexSelector.dispose();
 		}
-		editingGeometryVertexSelector = new MeshVertexSelector(editingGeometryWireMesh, renderer, camera, scene);
+		editingGeometryWireVertexSelector = new MeshVertexSelector(editingGeometryWireMesh, renderer, camera, scene);
+		
+		
+		
+		
+		
 		
 		updateSelectedTabIndex();
 	}
