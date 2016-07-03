@@ -11,6 +11,7 @@ import com.akjava.gwt.html5.client.file.FileUploadForm;
 import com.akjava.gwt.html5.client.file.FileUtils;
 import com.akjava.gwt.html5.client.file.FileUtils.DataURLListener;
 import com.akjava.gwt.html5.client.file.ui.DropVerticalPanelBase;
+import com.akjava.gwt.lib.client.GWTHTMLUtils;
 import com.akjava.gwt.lib.client.JavaScriptUtils;
 import com.akjava.gwt.lib.client.LogUtils;
 import com.akjava.gwt.lib.client.StorageControler;
@@ -41,6 +42,8 @@ import com.akjava.gwt.three.client.js.objects.Mesh;
 import com.akjava.gwt.three.client.js.objects.SkinnedMesh;
 import com.akjava.gwt.three.client.js.renderers.WebGLRenderer;
 import com.akjava.gwt.three.client.js.textures.Texture;
+import com.akjava.lib.common.functions.FileNamesFunctions;
+import com.akjava.lib.common.utils.FileNames;
 import com.google.gwt.core.client.JavaScriptObject;
 import com.google.gwt.core.client.JsArray;
 import com.google.gwt.event.dom.client.ClickEvent;
@@ -244,7 +247,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		
 		//showControl();
 	
-		loadBaseSkinnedModel(modelUrl);
+		
 		
 		mouseSelector = new Object3DMouseSelecter(renderer, camera);
 		
@@ -263,33 +266,13 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 	private Object3DMouseSelecter mouseSelector;
 	private Group boneMeshGroup;
 	private BoneMeshMouseSelector boneMouseSelector;
-	private Label editingGeometryName;
 	private Vector4Editor wirePosEditor;
 	private Mesh editingGeometryMeshWireframeHelperMesh;
-	private void loadBaseSkinnedModel(String modelUrl) {
+	private void loadBaseSkinnedModel(final String modelUrl) {
 		THREE.XHRLoader().load(modelUrl, new XHRLoadHandler() {
 			@Override
 			public void onLoad(String text) {
-				JSONObject object=parseJSONGeometry(text);
-				if(object==null){
-					Window.alert("invalid model");
-					return;
-				}
-				baseSkinnedModelJson=object;
-				baseSkinnedModelGeometry=THREE.JSONLoader().parse(baseSkinnedModelJson.getJavaScriptObject()).getGeometry();
-				
-				setInfluencePerVertexFromJSON(baseSkinnedModelGeometry,object);
-				
-				createBaseSkinnedMesh();
-				createBaseWireMesh();
-				createBoneMeshs();
-				updateBoneListBox();
-				
-				vertexBoneDataEditor.setBone(baseSkinnedModelGeometry.getBones());
-				
-				
-				createOrbitControler();//based skinned mesh height
-				
+				baseSkinnedMeshUpload.uploadText(FileNames.getFileNameAsSlashFileSeparator(modelUrl), text);
 				
 				//test
 				/*
@@ -559,23 +542,94 @@ protected void createEditingWireMesh(){
 	}
 
 	
+	public void onEditingModelJsonLoaded(String text){
+
+		JSONObject jsonObject=parseJSONGeometry(text);
+		
+		
+		
+		editingGeometryOrigin=THREE.JSONLoader().parse(jsonObject.getJavaScriptObject()).getGeometry();
+		
+		//TODO bone check
+		
+		//TODO make gwtCloneWithBones()
+		
+		
+		editingGeometry=THREE.JSONLoader().parse(jsonObject.getJavaScriptObject()).getGeometry();
+	
+		setInfluencePerVertexFromJSON(editingGeometry,jsonObject);
+		
+		if(editingGeometry.getSkinIndices()==null || editingGeometry.getSkinIndices().length()==0){
+			//Window.alert("has no skin indices");
+			LogUtils.log("No skin indices.it would auto weight.");
+			new CloseVertexAutoWeight().autoWeight(editingGeometry, baseSkinnedModelGeometry).insertToGeometry(editingGeometry);
+			editingGeometry.gwtSetInfluencesPerVertex(baseSkinnedModelGeometry.gwtGetInfluencesPerVertex());
+			
+			
+			editingGeometryOrigin.gwtSetInfluencesPerVertex(baseSkinnedModelGeometry.gwtGetInfluencesPerVertex());
+			editingGeometry.gwtHardCopyToWeightsAndIndices(editingGeometryOrigin);
+		}
+		
+		createEditingGeometrySkinnedMesh();
+		createEditingWireMesh();
+		createVertexSelections();
+	}
+	public void onBaseModelJsonLoaded(String text){
+		JSONObject object=parseJSONGeometry(text);
+		if(object==null){
+			Window.alert("invalid model");
+			return;
+		}
+		baseSkinnedModelJson=object;
+		baseSkinnedModelGeometry=THREE.JSONLoader().parse(baseSkinnedModelJson.getJavaScriptObject()).getGeometry();
+		
+		setInfluencePerVertexFromJSON(baseSkinnedModelGeometry,object);
+		
+		createBaseSkinnedMesh();
+		createBaseWireMesh();
+		createBoneMeshs();
+		updateBoneListBox();
+		
+		vertexBoneDataEditor.setBone(baseSkinnedModelGeometry.getBones());
+		
+		
+		createOrbitControler();//based skinned mesh height
+		
+		//editing has a possible based on baseSkinnedMesh,safe to reload
+		if(editingMeshUpload.isUploaded()){
+			editingMeshUpload.reload();
+		}
+	}
+	
 	@Override
 	public void createControl(DropVerticalPanelBase parent) {
 		TabPanel tab=new TabPanel();
 		parent.add(tab);
 		
 		VerticalPanel posPanel=new VerticalPanel();
-		tab.add(posPanel,"Pos&Rot");
+		tab.add(posPanel,"Basic");
 		tab.selectTab(0);
 		
 		posPanel.add(new HTML("<h4>Base Model</h4>"));
 		
-		basePosEditor = new Vector4Editor("Position",-2, 2, 0.001, 0);
+		baseSkinnedMeshUpload = new AbstractFileUploadPanel() {
+			
+			@Override
+			protected void onTextFileUpload(String text) {
+				onBaseModelJsonLoaded(text);
+			}
+		};
+		baseSkinnedMeshUpload.getUploadForm().setAccept(FileUploadForm.ACCEPT_JSON);
+		
+		posPanel.add(baseSkinnedMeshUpload);
+		
+		
+		basePosEditor = new Vector4Editor("Skin Position",-2, 2, 0.001, 0);
 		posPanel.add(basePosEditor);
 		basePosEditor.setX(-1.5,true);
 		
 		
-		wirePosEditor = new Vector4Editor("Position",-2, 2, 0.001, 0);
+		wirePosEditor = new Vector4Editor("Wire Position",-2, 2, 0.001, 0);
 		posPanel.add(wirePosEditor);
 		
 		posPanel.add(new HTML("<h4>Camera</h4>"));
@@ -704,6 +758,8 @@ bonePanel.add(removeInfluenceButton);
 			}
 		});
 		showControl();
+		
+		loadBaseSkinnedModel(modelUrl);
 	}
 	
 	private Button makeAnimationButton(String name,final String url){
@@ -766,11 +822,10 @@ bonePanel.add(removeInfluenceButton);
 		}));
 		HorizontalPanel animations=new HorizontalPanel();
 		animationPanel.add(animations);
-		animations.add(makeAnimationButton("animation1", "animation/animation0.json"));
-		animations.add(makeAnimationButton("animation2", "animation/animation2.json"));
-		animations.add(makeAnimationButton("animation3", "animation/animation4.json"));
-		
-		
+		animations.add(makeAnimationButton("animation1", GWTHTMLUtils.parameterFile("animation1")));
+		animations.add(makeAnimationButton("animation2", GWTHTMLUtils.parameterFile("animation2")));
+		animations.add(makeAnimationButton("animation3", GWTHTMLUtils.parameterFile("animation3")));
+		animations.add(makeAnimationButton("animation4", GWTHTMLUtils.parameterFile("animation4")));
 		
 		HorizontalPanel filePanel=new HorizontalPanel();
 		filePanel.setVerticalAlignment(HorizontalPanel.ALIGN_MIDDLE);
@@ -836,19 +891,18 @@ bonePanel.add(removeInfluenceButton);
 	
 	private Panel createLoadExportPanel(){
 		VerticalPanel loadExportPanel=new VerticalPanel();
-		HorizontalPanel f1=new HorizontalPanel();
-		loadExportPanel.add(f1);
-		f1.add(new Label("Name:"));
-		editingGeometryName = new Label();
-		f1.add(editingGeometryName);
-		FileUploadForm geometryUpload=FileUtils.createSingleTextFileUploadForm(new DataURLListener() {
-			@Override
-			public void uploaded(File file, String text) {
-				loadEditingGeometry(file.getFileName(),text);
-			}
-		}, true).setAccept(FileUploadForm.ACCEPT_JAVASCRIPT);
 		
-		loadExportPanel.add(geometryUpload);
+		editingMeshUpload=new AbstractFileUploadPanel() {
+			@Override
+			protected void onTextFileUpload(String text) {
+				onEditingModelJsonLoaded(text);
+			}
+		};
+		editingMeshUpload.getUploadForm().setAccept(FileUploadForm.ACCEPT_JSON);
+
+		loadExportPanel.add(editingMeshUpload);
+		
+		
 		
 		final HorizontalPanel downloadPanel=new HorizontalPanel();
 		loadExportPanel.add(downloadPanel);
@@ -1010,6 +1064,8 @@ bonePanel.add(removeInfluenceButton);
 	private WireframeHelper editingGeometryWireMeshHelper;
 	private VertexNormalsHelper editingGeometryMeshNormalsHelper;
 	private MeshVertexSelector editingGeometryMeshVertexSelector;
+	private AbstractFileUploadPanel baseSkinnedMeshUpload;
+	private AbstractFileUploadPanel editingMeshUpload;
 	
 	private JSONObject parseJSONGeometry(String text){
 		JSONValue json=JSONParser.parseStrict(text);
@@ -1028,39 +1084,7 @@ bonePanel.add(removeInfluenceButton);
 		geometry.gwtSetInfluencesPerVertex((int)influencesPerVertex);//used when export
 	}
 	
-	protected void loadEditingGeometry(String fileName, String text) {
-		editingGeometryName.setText(fileName);
-		
-		JSONObject jsonObject=parseJSONGeometry(text);
-		
-		
-		
-		editingGeometryOrigin=THREE.JSONLoader().parse(jsonObject.getJavaScriptObject()).getGeometry();
-		
-		//TODO bone check
-		
-		//TODO make gwtCloneWithBones()
-		
-		
-		editingGeometry=THREE.JSONLoader().parse(jsonObject.getJavaScriptObject()).getGeometry();
 	
-		setInfluencePerVertexFromJSON(editingGeometry,jsonObject);
-		
-		if(editingGeometry.getSkinIndices()==null || editingGeometry.getSkinIndices().length()==0){
-			//Window.alert("has no skin indices");
-			LogUtils.log("No skin indices.it would auto weight.");
-			new CloseVertexAutoWeight().autoWeight(editingGeometry, baseSkinnedModelGeometry).insertToGeometry(editingGeometry);
-			editingGeometry.gwtSetInfluencesPerVertex(baseSkinnedModelGeometry.gwtGetInfluencesPerVertex());
-			
-			
-			editingGeometryOrigin.gwtSetInfluencesPerVertex(baseSkinnedModelGeometry.gwtGetInfluencesPerVertex());
-			editingGeometry.gwtHardCopyToWeightsAndIndices(editingGeometryOrigin);
-		}
-		
-		createEditingGeometrySkinnedMesh();
-		createEditingWireMesh();
-		createVertexSelections();
-	}
 
 	private void createVertexSelections() {
 		if(editingGeometryNormalsHelper!=null){
