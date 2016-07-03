@@ -59,18 +59,20 @@ public abstract class AbstractTextFileUploadPanel extends VerticalPanel{
 		this("Name:",false);
 	}
 	public AbstractTextFileUploadPanel(String labelName,boolean hasReset){
+		this.setWidth("100%");
 		this.setSpacing(1);
 		firstRow = new HorizontalPanel();
 		firstRow.setVerticalAlignment(HorizontalPanel.ALIGN_MIDDLE);
+		firstRow.setWidth("100%");
 		
 		
 		this.add(firstRow);
 		titleLabel = new Label(labelName);
-		titleLabel.setWidth("100px");
+		titleLabel.setWidth("80px");
 		
 		firstRow.add(titleLabel);
 		fileNameLabel = new Label();
-		fileNameLabel.setWidth("140px");
+		fileNameLabel.setWidth("100%");
 		firstRow.add(fileNameLabel);
 		
 		secondRow = new HorizontalPanel();

@@ -46,17 +46,18 @@ public abstract class AbstractImageFileUploadPanel extends VerticalPanel{
 	private Label titleLabel;
 	public AbstractImageFileUploadPanel(String labelName,boolean hasReset){
 		this.setSpacing(1);
+		this.setWidth("100%");
 		HorizontalPanel filePanel=new HorizontalPanel();
 		filePanel.setVerticalAlignment(HorizontalPanel.ALIGN_MIDDLE);
-		
+		filePanel.setWidth("100%");
 		
 		this.add(filePanel);
 		titleLabel = new Label(labelName);
-		titleLabel.setWidth("100px");
+		titleLabel.setWidth("80px");
 		
 		filePanel.add(titleLabel);
 		fileNameLabel = new Label();
-		fileNameLabel.setWidth("140px");
+		fileNameLabel.setWidth("100%");
 		filePanel.add(fileNameLabel);
 		
 		HorizontalPanel h1=new HorizontalPanel();

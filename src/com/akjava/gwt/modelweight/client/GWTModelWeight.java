@@ -25,7 +25,7 @@ import com.akjava.gwt.three.client.java.ThreeLog;
 import com.akjava.gwt.three.client.java.bone.CloseVertexAutoWeight;
 import com.akjava.gwt.three.client.java.bone.WeightResult;
 import com.akjava.gwt.three.client.java.ui.SimpleTabDemoEntryPoint;
-import com.akjava.gwt.three.client.java.ui.experiments.Vector4Editor;
+import com.akjava.gwt.three.client.java.ui.experiments.Vector3Editor;
 import com.akjava.gwt.three.client.js.THREE;
 import com.akjava.gwt.three.client.js.animation.AnimationClip;
 import com.akjava.gwt.three.client.js.animation.AnimationMixer;
@@ -114,9 +114,9 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		createEditingClothSkin();
 		
 		if(gpuSkinning){
-			editingGeometryMesh.getMaterial().gwtCastMeshPhongMaterial().setShading(THREE.SmoothShading);
+			editingClothModelSkinnedMesh.getMaterial().gwtCastMeshPhongMaterial().setShading(THREE.SmoothShading);
 		}else{
-			editingGeometryMesh.getMaterial().gwtCastMeshPhongMaterial().setShading(THREE.FlatShading);
+			editingClothModelSkinnedMesh.getMaterial().gwtCastMeshPhongMaterial().setShading(THREE.FlatShading);
 			
 		}
 		editingGeometryMeshNormalsHelper.setVisible(!gpuSkinning);
@@ -163,10 +163,10 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		
 		
 		
-		if(editingGeometryMesh!=null){
+		if(editingClothModelSkinnedMesh!=null){
 			if(!gpuSkinning){
-			skinningbyHand(editingGeometryMesh,editingGeometry);
-			editingGeometryMesh.getGeometry().computeBoundingSphere();
+			skinningbyHand(editingClothModelSkinnedMesh,editingGeometry);
+			editingClothModelSkinnedMesh.getGeometry().computeBoundingSphere();
 			
 			if(editingGeometryMeshVertexSelector.getSelectecVertex()!=-1){
 				editingGeometryMeshVertexSelector.update();
@@ -266,7 +266,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 	private JSONObject baseCharacterModelJson;
 	private Geometry baseCharacterModelGeometry;
 	private SkinnedMesh baseCharacterModelSkinnedMesh;
-	private Vector4Editor baseCharacterModelPositionEditor;
+	private Vector3Editor baseCharacterModelPositionEditor;
 	private Mesh baseCharacterModelWireframeMesh;
 	private BoneVertexColorTools baseCharacterVertexColorTools;
 	private BoneVertexColorTools editingClothVertexColorTools;
@@ -275,7 +275,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 	private Object3DMouseSelecter mouseSelector;
 	private Group boneMeshGroup;
 	private BoneMeshMouseSelector boneMouseSelector;
-	private Vector4Editor baseCharacterWireframePositionEditor;
+	private Vector3Editor baseCharacterWireframePositionEditor;
 	private Mesh editingGeometryMeshWireframeHelperMesh;
 	private void initialLoadBaseCharacterModel(final String modelUrl) {
 		THREE.XHRLoader().load(modelUrl, new XHRLoadHandler() {
@@ -430,13 +430,20 @@ protected void createEditingClothWireframe(){
 	protected void createEditingClothSkin() {
 		MeshPhongMaterial material=THREE.MeshPhongMaterial(GWTParamUtils.MeshBasicMaterial()
 				.skinning(gpuSkinning)
-				.color(0x880000)//TODO modify
+				.color(editingClothModelSkinnedMeshColor)
 				.shading(THREE.FlatShading));
 		
+		if(editingClothModelTextureUpload.isUploaded()){
+			Texture texture=THREE.Texture(editingClothModelTextureUpload.getLastUploadImage());
+			texture.setNeedsUpdate(true);
+			material.setMap(texture);
+			material.getColor().setHex(0xffffff);
+		}
 		
-		if(editingGeometryMesh!=null){
+		
+		if(editingClothModelSkinnedMesh!=null){
 			//not scene ,
-			baseCharacterModelSkinnedMesh.remove(editingGeometryMesh);
+			baseCharacterModelSkinnedMesh.remove(editingClothModelSkinnedMesh);
 		}
 		
 		
@@ -448,10 +455,10 @@ protected void createEditingClothWireframe(){
 		geometry.setSkinWeights(editingGeometry.getSkinWeights());
 		geometry.setBones(editingGeometry.getBones());
 		
-		editingGeometryMesh = THREE.SkinnedMesh(geometry, material);
+		editingClothModelSkinnedMesh = THREE.SkinnedMesh(geometry, material);
 		
-		editingGeometryMesh.setSkeleton(baseCharacterModelSkinnedMesh.getSkeleton());//share bone to work same mixer
-		baseCharacterModelSkinnedMesh.add(editingGeometryMesh);//share same position,rotation
+		editingClothModelSkinnedMesh.setSkeleton(baseCharacterModelSkinnedMesh.getSkeleton());//share bone to work same mixer
+		baseCharacterModelSkinnedMesh.add(editingClothModelSkinnedMesh);//share same position,rotation
 		
 		
 		
@@ -462,7 +469,7 @@ protected void createEditingClothWireframe(){
 		
 		double lineWidth=0.1;
 		double size=0.01;
-		editingGeometryMeshNormalsHelper = THREE.VertexNormalsHelper(editingGeometryMesh, size, 0xffff00, lineWidth);
+		editingGeometryMeshNormalsHelper = THREE.VertexNormalsHelper(editingClothModelSkinnedMesh, size, 0xffff00, lineWidth);
 		scene.add(editingGeometryMeshNormalsHelper);
 		
 		//create wireframe helper wireframehelper not good at geometry update with shareing geometry
@@ -477,7 +484,7 @@ protected void createEditingClothWireframe(){
 		if(editingGeometryMeshVertexSelector!=null){
 			editingGeometryMeshVertexSelector.dispose();
 			}
-		editingGeometryMeshVertexSelector = new MeshVertexSelector(editingGeometryMesh, renderer, camera, scene);
+		editingGeometryMeshVertexSelector = new MeshVertexSelector(editingClothModelSkinnedMesh, renderer, camera, scene);
 				
 	}
 	
@@ -638,14 +645,15 @@ protected void createEditingClothWireframe(){
 			}
 			
 		};
+		baseCharacterModelTextureUpload.getUploadForm().setAccept(FileUploadForm.ACCEPT_IMAGE);
 		posPanel.add(baseCharacterModelTextureUpload);
 		
-		baseCharacterModelPositionEditor = new Vector4Editor("Skin Position",-2, 2, 0.001, 0);
+		baseCharacterModelPositionEditor = new Vector3Editor("Skin Position",-2, 2, 0.001, 0);
 		posPanel.add(baseCharacterModelPositionEditor);
 		baseCharacterModelPositionEditor.setX(-1.5,true);
 		
 		
-		baseCharacterWireframePositionEditor = new Vector4Editor("Wire Position",-2, 2, 0.001, 0);
+		baseCharacterWireframePositionEditor = new Vector3Editor("Wire Position",-2, 2, 0.001, 0);
 		posPanel.add(baseCharacterWireframePositionEditor);
 		
 		posPanel.add(new HTML("<h4>Camera</h4>"));
@@ -887,7 +895,7 @@ tabPanel.addSelectionHandler(new SelectionHandler<Integer>() {
 		initialLoadBaseCharacterModel(modelUrl);
 	}
 	
-	protected void onBaseCharacterModelTextureLoaded(ImageElement imageElement) {
+	protected void onBaseCharacterModelTextureLoaded(@Nullable ImageElement imageElement) {
 		if(imageElement==null){
 			THREE.ImageLoader().load(GWTHTMLUtils.parameterFile("texture"), new ImageLoadHandler() {
 				
@@ -979,8 +987,8 @@ tabPanel.addSelectionHandler(new SelectionHandler<Integer>() {
 		animationPanel.add(animations);
 		animations.add(makeAnimationButton("animation1", GWTHTMLUtils.parameterFile("animation1")));
 		animations.add(makeAnimationButton("animation2", GWTHTMLUtils.parameterFile("animation2")));
-		//animations.add(makeAnimationButton("animation3", GWTHTMLUtils.parameterFile("animation3")));
-		//animations.add(makeAnimationButton("animation4", GWTHTMLUtils.parameterFile("animation4")));
+		animations.add(makeAnimationButton("animation3", GWTHTMLUtils.parameterFile("animation3")));
+		animations.add(makeAnimationButton("animation4", GWTHTMLUtils.parameterFile("animation4")));
 		
 		HorizontalPanel filePanel=new HorizontalPanel();
 		filePanel.setVerticalAlignment(HorizontalPanel.ALIGN_MIDDLE);
@@ -1035,6 +1043,7 @@ tabPanel.addSelectionHandler(new SelectionHandler<Integer>() {
 	}
 	
 	private AnimationClip lastAnimationClip;
+	private AbstractImageFileUploadPanel editingClothModelTextureUpload;
 	public void playAnimation(@Nullable AnimationClip clip) {
 		if(clip==null){
 			return;
@@ -1060,6 +1069,18 @@ tabPanel.addSelectionHandler(new SelectionHandler<Integer>() {
 		loadExportPanel.add(editingMeshUpload);
 		
 		
+		editingClothModelTextureUpload=new AbstractImageFileUploadPanel("Cloth Texture",true){
+
+			@Override
+			protected void onImageFileUpload(ImageElement imageElement) {
+				onEditingClothModelTextureLoaded(imageElement);
+			}
+			
+		};
+		editingClothModelTextureUpload.getUploadForm().setAccept(FileUploadForm.ACCEPT_IMAGE);
+		loadExportPanel.add(editingClothModelTextureUpload);
+		
+		
 		
 		final HorizontalPanel downloadPanel=new HorizontalPanel();
 		loadExportPanel.add(downloadPanel);
@@ -1082,6 +1103,26 @@ tabPanel.addSelectionHandler(new SelectionHandler<Integer>() {
 		
 	}
 	
+	private int editingClothModelSkinnedMeshColor=0x880000;
+	protected void onEditingClothModelTextureLoaded(ImageElement imageElement) {
+		if(editingClothModelSkinnedMesh==null){
+			return;
+		}
+		
+		if(imageElement==null){
+			editingClothModelSkinnedMesh.getMaterial().gwtCastMeshPhongMaterial().setMap(null);
+			editingClothModelSkinnedMesh.getMaterial().gwtCastMeshPhongMaterial().getColor().setHex(editingClothModelSkinnedMeshColor);
+			editingClothModelSkinnedMesh.getMaterial().setNeedsUpdate(true);
+		}else{
+		Texture texture=THREE.Texture(imageElement);
+		texture.setNeedsUpdate(true);
+		editingClothModelSkinnedMesh.getMaterial().gwtCastMeshPhongMaterial().getColor().setHex(0xffffff);
+		
+		editingClothModelSkinnedMesh.getMaterial().gwtCastMeshPhongMaterial().setMap(texture);
+		editingClothModelSkinnedMesh.getMaterial().setNeedsUpdate(true);
+		}
+	}
+
 	private Panel createWeightPanel(){
 		VerticalPanel weightPanel=new VerticalPanel();
 	
@@ -1098,7 +1139,7 @@ tabPanel.addSelectionHandler(new SelectionHandler<Integer>() {
 					}
 				}
 				createEditingClothSkin();//weight updated
-				LogUtils.log(editingGeometryMesh);
+				LogUtils.log(editingClothModelSkinnedMesh);
 				//editingGeometryMesh.setVisible(false);
 					AnimationBone bone=boneListBox.getValue();
 					if(bone!=null){
@@ -1131,8 +1172,8 @@ tabPanel.addSelectionHandler(new SelectionHandler<Integer>() {
 				vertexBoneDataEditor.flush();
 				createEditingClothSkin();
 				ThreeLog.log("vertex-index:"+index);
-				ThreeLog.log("indices:",editingGeometryMesh.getGeometry().getSkinIndices().get(index));
-				ThreeLog.log("weight:",editingGeometryMesh.getGeometry().getSkinWeights().get(index));
+				ThreeLog.log("indices:",editingClothModelSkinnedMesh.getGeometry().getSkinIndices().get(index));
+				ThreeLog.log("weight:",editingClothModelSkinnedMesh.getGeometry().getSkinWeights().get(index));
 			}
 		});
 		buttons.add(applyBt);
@@ -1179,8 +1220,8 @@ tabPanel.addSelectionHandler(new SelectionHandler<Integer>() {
 	 * @param index
 	 */
 	public void copyIndicesAndWeightToSkinningMesh(int index){
-		editingGeometryMesh.getGeometry().getSkinIndices().get(index).copy(editingGeometry.getSkinIndices().get(index));
-		editingGeometryMesh.getGeometry().getSkinWeights().get(index).copy(editingGeometry.getSkinWeights().get(index));
+		editingClothModelSkinnedMesh.getGeometry().getSkinIndices().get(index).copy(editingGeometry.getSkinIndices().get(index));
+		editingClothModelSkinnedMesh.getGeometry().getSkinWeights().get(index).copy(editingGeometry.getSkinWeights().get(index));
 	}
 	
 	protected void autobalanceWeight(Vector4 vector4) {
@@ -1219,7 +1260,7 @@ tabPanel.addSelectionHandler(new SelectionHandler<Integer>() {
 
 	private Geometry editingGeometryOrigin;
 	private Geometry editingGeometry;
-	private SkinnedMesh editingGeometryMesh;
+	private SkinnedMesh editingClothModelSkinnedMesh;
 	private Mesh editingGeometryWireMesh;
 	private VertexNormalsHelper editingGeometryNormalsHelper;
 	private MeshVertexSelector editingGeometryWireVertexSelector;
