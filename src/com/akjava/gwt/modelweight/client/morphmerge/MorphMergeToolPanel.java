@@ -42,8 +42,7 @@ import com.google.gwt.user.client.ui.TextBox;
 import com.google.gwt.user.client.ui.VerticalPanel;
 
 /**
- * @deprecated
- * i find a way to direct
+ * i find a way to direct?
  * @author aki
  *
  */

@@ -6,6 +6,7 @@ import com.akjava.gwt.html5.client.file.FileHandler;
 import com.akjava.gwt.html5.client.file.FileReader;
 import com.akjava.gwt.html5.client.file.FileUploadForm;
 import com.akjava.gwt.html5.client.file.FileUtils;
+import com.akjava.gwt.lib.client.LogUtils;
 import com.akjava.gwt.three.client.java.utils.GWTGeometryUtils;
 import com.akjava.gwt.three.client.js.core.Geometry;
 import com.akjava.gwt.three.client.js.loaders.JSONLoader.JSONLoadHandler;
@@ -37,7 +38,7 @@ public class CopyToolPanel extends VerticalPanel{
 	public CopyToolPanel(){
 		
 		add(new Label("Copy src file's indices & weight data to dest one"));
-		add(new Label("Src File"));
+		add(new Label("Src File(version 3 or 4 format)"));
 		final Label file1Label=new Label("not selected");
 		add(file1Label);
 		
@@ -62,19 +63,16 @@ public class CopyToolPanel extends VerticalPanel{
 						srcFile.reset();
 						
 						String text=reader.getResultAsString();
-						JSONValue lastJsonValue = JSONParser.parseStrict(text);
 						
-						//TODO more validate
-						JSONObject object=lastJsonValue.isObject();
-						
-						GWTGeometryUtils.loadJsonModel(text, new JSONLoadHandler() {
+						JSONObject object=GWTGeometryUtils.loadJsonModel(text, new JSONLoadHandler() {
 							
 							@Override
 							public void loaded(Geometry geometry,JsArray<Material> materials) {
 								file1Vertex=geometry.vertices().length();
+								LogUtils.log(geometry);
 								file1InfoLabel.setText("Vertex:"+geometry.vertices().length()+" Indices:"+geometry.getSkinIndices().length()+",Weigths:"+geometry.getSkinWeight().length());	
 							
-								hasWeights=geometry.getSkinWeight().length()>0;
+								hasWeights=geometry.getSkinWeights().length()>0;
 								hasIndices=geometry.getSkinIndices().length()>0;
 							}
 						});
@@ -91,7 +89,7 @@ public class CopyToolPanel extends VerticalPanel{
 		
 		
 
-		add(new Label("Dest File"));
+		add(new Label("Dest File(version 3 or 4 format)"));
 		file2Label = new Label("not selected");
 		add(file2Label);
 		
@@ -118,14 +116,12 @@ public class CopyToolPanel extends VerticalPanel{
 						destFile.reset();
 						
 						String text=reader.getResultAsString();
-						JSONValue lastJsonValue = JSONParser.parseStrict(text);
 						//TODO more validate
-						JSONObject object=lastJsonValue.isObject();
-						
-						GWTGeometryUtils.loadJsonModel(text, new JSONLoadHandler() {
+						JSONObject object=GWTGeometryUtils.loadJsonModel(text, new JSONLoadHandler() {
 							
 							@Override
 							public void loaded(Geometry geometry,JsArray<Material> materials) {
+								LogUtils.log(geometry);
 								file2Vertex=geometry.vertices().length();
 								file2InfoLabel.setText("Vertex:"+geometry.vertices().length()+" Indices:"+geometry.getSkinIndices().length()+",Weigths:"+geometry.getSkinWeight().length());	
 							
@@ -150,10 +146,14 @@ public class CopyToolPanel extends VerticalPanel{
 			
 			@Override
 			public void onClick(ClickEvent event) {
+				LogUtils.log(file1Object.getJavaScriptObject());
+				file2Object.put("influencesPerVertex", file1Object.get("influencesPerVertex"));
 				file2Object.put("skinIndices", file1Object.get("skinIndices"));
 				file2Object.put("skinWeights", file1Object.get("skinWeights"));
 				
-				final Anchor anchror=new HTML5Download().generateTextDownloadLink(file2Object.toString(), file2Label.getText(), "Download");
+				LogUtils.log(file2Object.getJavaScriptObject());
+				
+				final Anchor anchror=new HTML5Download().generateTextDownloadLink(file2Object.toString(), file2Label.getText(), "Download version 3 format");
 				anchror.addClickHandler(new ClickHandler() {
 					
 					@Override

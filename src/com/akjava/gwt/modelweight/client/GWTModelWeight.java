@@ -15,6 +15,7 @@ import com.akjava.gwt.lib.client.GWTHTMLUtils;
 import com.akjava.gwt.lib.client.JavaScriptUtils;
 import com.akjava.gwt.lib.client.LogUtils;
 import com.akjava.gwt.lib.client.StorageControler;
+import com.akjava.gwt.modelweight.client.morphmerge.MorphMergeToolPanel;
 import com.akjava.gwt.three.client.examples.js.THREEExp;
 import com.akjava.gwt.three.client.examples.js.controls.OrbitControls;
 import com.akjava.gwt.three.client.gwt.GWTParamUtils;
@@ -22,6 +23,7 @@ import com.akjava.gwt.three.client.gwt.boneanimation.AnimationBone;
 import com.akjava.gwt.three.client.java.SkinningVertexCalculator;
 import com.akjava.gwt.three.client.java.ThreeLog;
 import com.akjava.gwt.three.client.java.bone.CloseVertexAutoWeight;
+import com.akjava.gwt.three.client.java.bone.WeightResult;
 import com.akjava.gwt.three.client.java.ui.SimpleTabDemoEntryPoint;
 import com.akjava.gwt.three.client.java.ui.experiments.Vector4Editor;
 import com.akjava.gwt.three.client.js.THREE;
@@ -31,9 +33,9 @@ import com.akjava.gwt.three.client.js.core.Geometry;
 import com.akjava.gwt.three.client.js.extras.helpers.VertexNormalsHelper;
 import com.akjava.gwt.three.client.js.extras.helpers.WireframeHelper;
 import com.akjava.gwt.three.client.js.lights.Light;
+import com.akjava.gwt.three.client.js.loaders.ImageLoader.ImageLoadHandler;
 import com.akjava.gwt.three.client.js.loaders.XHRLoader.XHRLoadHandler;
 import com.akjava.gwt.three.client.js.materials.MeshPhongMaterial;
-import com.akjava.gwt.three.client.js.math.Quaternion;
 import com.akjava.gwt.three.client.js.math.Vector3;
 import com.akjava.gwt.three.client.js.math.Vector4;
 import com.akjava.gwt.three.client.js.objects.Bone;
@@ -42,11 +44,11 @@ import com.akjava.gwt.three.client.js.objects.Mesh;
 import com.akjava.gwt.three.client.js.objects.SkinnedMesh;
 import com.akjava.gwt.three.client.js.renderers.WebGLRenderer;
 import com.akjava.gwt.three.client.js.textures.Texture;
-import com.akjava.lib.common.functions.FileNamesFunctions;
 import com.akjava.lib.common.utils.FileNames;
 import com.google.gwt.core.client.JavaScriptObject;
 import com.google.gwt.core.client.JsArray;
 import com.google.gwt.dom.client.ImageElement;
+import com.google.gwt.dom.client.NativeEvent;
 import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
 import com.google.gwt.event.dom.client.DoubleClickEvent;
@@ -90,6 +92,13 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 	public boolean isGpuSkinning() {
 		return gpuSkinning;
 	}
+	
+	@Override
+	public String getHtml(){
+	String html="";
+
+	return html;	
+	}
 
 	public void setGpuSkinning(boolean gpuSkinning) {
 		//i have no idea somehow problem
@@ -116,7 +125,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		}
 		
 		playAnimation(lastAnimationClip);
-		ThreeLog.log("scale:",editingGeometryMesh.getScale());
+		
 	}
 
 	@Override
@@ -208,7 +217,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 	
 	@Override
 	protected void initializeOthers(WebGLRenderer renderer) {
-		
+		LogUtils.log("Model Weight:"+version);
 		
 		//Window.open("text/plain:test.txt:"+url, "test", null);
 		
@@ -305,6 +314,9 @@ baseCharacterModelGeometry.computeBoundingBox();
 	
 
 	protected void createBaseCharacterBones() {
+		if(boneMeshGroup!=null){
+			scene.remove(boneMeshGroup);
+		}
 		BoneMeshTools bmt=new BoneMeshTools();
 		boneMeshGroup = bmt.createBoneMeshs(baseCharacterModelGeometry.getBones());
 		scene.add(boneMeshGroup);
@@ -386,7 +398,9 @@ protected void createEditingClothWireframe(){
 	protected void createBaseCharacterModelSkin() {
 		Texture texture=null;
 		if(baseCharacterModelTextureUpload.isUploaded()){
-			texture=THREE.Texture(baseCharacterModelTextureUpload.getLastUploadImage());	
+			texture=THREE.Texture(baseCharacterModelTextureUpload.getLastUploadImage());
+			texture.setNeedsUpdate(true);
+			
 		}else{
 			texture=THREE.TextureLoader().load(GWTHTMLUtils.parameterFile("texture"));
 		}
@@ -416,7 +430,7 @@ protected void createEditingClothWireframe(){
 	protected void createEditingClothSkin() {
 		MeshPhongMaterial material=THREE.MeshPhongMaterial(GWTParamUtils.MeshBasicMaterial()
 				.skinning(gpuSkinning)
-				.color(0x880000)
+				.color(0x880000)//TODO modify
 				.shading(THREE.FlatShading));
 		
 		
@@ -496,7 +510,7 @@ protected void createEditingClothWireframe(){
 				
 				if(vertex==-1){
 					vertex=editingGeometryMeshVertexSelector.pickVertex(event);
-					LogUtils.log(vertex);
+					
 					editingGeometryWireVertexSelector.setSelectionVertex(vertex);
 				}else{
 					editingGeometryMeshVertexSelector.setSelectionVertex(vertex);//just syn now
@@ -578,6 +592,7 @@ protected void createEditingClothWireframe(){
 			return;
 		}
 		baseCharacterModelJson=object;
+		
 		baseCharacterModelGeometry=THREE.JSONLoader().parse(baseCharacterModelJson.getJavaScriptObject()).getGeometry();
 		
 		setInfluencePerVertexFromJSON(baseCharacterModelGeometry,object);
@@ -598,19 +613,13 @@ protected void createEditingClothWireframe(){
 		}
 	}
 	
-	@Override
-	public void createControl(DropVerticalPanelBase parent) {
-		TabPanel tab=new TabPanel();
-		parent.add(tab);
-		
+	private Panel createBasicControl(){
 		VerticalPanel posPanel=new VerticalPanel();
 		posPanel.setSpacing(2);
-		tab.add(posPanel,"Basic");
-		tab.selectTab(0);
+
+		posPanel.add(new HTML("<h4>Base Skinnd Character Model</h4>"));
 		
-		posPanel.add(new HTML("<h4>Base Model</h4>"));
-		posPanel.add(new Label("Model"));
-		baseCharacterModelUpload = new AbstractTextFileUploadPanel() {
+		baseCharacterModelUpload = new AbstractTextFileUploadPanel("Base Json",false) {
 			
 			@Override
 			protected void onTextFileUpload(String text) {
@@ -621,9 +630,7 @@ protected void createEditingClothWireframe(){
 		
 		posPanel.add(baseCharacterModelUpload);
 		
-		posPanel.add(new Label("Texture"));
-		
-		baseCharacterModelTextureUpload=new AbstractImageFileUploadPanel(){
+		baseCharacterModelTextureUpload=new AbstractImageFileUploadPanel("Base Texture",true){
 
 			@Override
 			protected void onImageFileUpload(ImageElement imageElement) {
@@ -653,11 +660,12 @@ protected void createEditingClothWireframe(){
 			}
 		});
 		posPanel.add(resetCamera);
-		
-		
+		return posPanel;
+	}
+	
+	private Panel createBonePanel(){
 		VerticalPanel bonePanel=new VerticalPanel();
-		tab.add(bonePanel,"Bone");
-		
+
 		boneListBox = new ValueListBox<AnimationBone>(new Renderer<AnimationBone>() {
 
 			@Override
@@ -738,22 +746,128 @@ Button removeInfluenceButton=new Button("Remove selected bone influence",new Cli
 			}
 		});
 bonePanel.add(removeInfluenceButton);
+
+Button weightAllButton=new Button("Set  all selected bone influence ",new ClickHandler() {
+	
+	@Override
+	public void onClick(ClickEvent event) {
 		
-		//create load/export
+		AnimationBone bone=boneListBox.getValue();
+		if(bone!=null){
+			int boneIndex=boneMouseSelector.getBoneIndex(bone);
+			
+			JsArray<Vector4> indices=editingGeometry.getSkinIndices();
+			JsArray<Vector4> weights=editingGeometry.getSkinWeights();
+			for(int i=0;i<indices.length();i++){
+				
+				for(int j=0;j<4;j++){
+					if(j==0){
+						indices.get(i).gwtSet(j, boneIndex);
+						weights.get(i).gwtSet(j, 1);
+					}else{
+						indices.get(i).gwtSet(j, 0);
+						weights.get(i).gwtSet(j, 0);
+					}
+				}
+			}
+			
+		}
 		
+		createEditingClothSkin();//weight updated
+		onBoneSelectionChanged(bone);
+	}
+});
+bonePanel.add(weightAllButton);
+Button autoWeightButton=new Button("Exec auto weight",new ClickHandler() {
+	
+	@Override
+	public void onClick(ClickEvent event) {
+		
+
+	WeightResult result= new CloseVertexAutoWeight().autoWeight(editingGeometry, baseCharacterModelGeometry);
+
+	JsArray<Vector4> indices=editingGeometry.getSkinIndices();
+	JsArray<Vector4> weights=editingGeometry.getSkinWeights();
+	for(int i=0;i<indices.length();i++){
+		indices.get(i).copy(result.getSkinIndices().get(i));
+		weights.get(i).copy(result.getSkinWeights().get(i));
+	}
+		
+		createEditingClothSkin();//weight updated
+		
+		//redraw wireframe
+		AnimationBone bone=boneListBox.getValue();
+		onBoneSelectionChanged(bone);
+	}
+});
+bonePanel.add(autoWeightButton);
+
+Button resetWeightButton=new Button("Reset to default indices & weights",new ClickHandler() {
+	
+	@Override
+	public void onClick(ClickEvent event) {
+		
+
+	JsArray<Vector4> indices=editingGeometry.getSkinIndices();
+	JsArray<Vector4> weights=editingGeometry.getSkinWeights();
+	for(int i=0;i<indices.length();i++){
+		indices.get(i).copy(editingGeometryOrigin.getSkinIndices().get(i));
+		weights.get(i).copy(editingGeometryOrigin.getSkinWeights().get(i));
+	}
+		
+		createEditingClothSkin();//weight updated
+		
+		//redraw wireframe
+		AnimationBone bone=boneListBox.getValue();
+		onBoneSelectionChanged(bone);
+	}
+});
+bonePanel.add(resetWeightButton);
+
+
+return bonePanel;
+	}
+	
+	@Override
+	public void createControl(DropVerticalPanelBase parent) {
+tabPanel.addSelectionHandler(new SelectionHandler<Integer>() {
+			
+			@Override
+			public void onSelection(SelectionEvent<Integer> event) {
+				int selection=event.getSelectedItem();
+				if(selection==0){
+					stats.setVisible(true);
+					showControl();
+					//bottomPanel.setVisible(true);
+					popupPanel.setVisible(true);
+					resized(screenWidth,screenHeight);//for some blackout;
+				}else{
+				stats.setVisible(false);
+				//bottomPanel.setVisible(false);
+				hideControl();
+				if(popupPanel!=null){//debug mode call this
+					popupPanel.setVisible(false);
+					}
+				}
+				
+			}
+		});
+		
+		tabPanel.add(new CopyToolPanel(),"Copy Indices/Weights");
+		tabPanel.add(new MorphMergeToolPanel(),"Fix morphtargets");
+		
+		
+		TabPanel tab=new TabPanel();
+		parent.add(tab);
+		
+		
+		tab.add(createBasicControl(),"Basic");
+		
+		tab.add(createBonePanel(),"Bone");
 		
 		tab.add(createLoadExportPanel(),"Load/Export");
 		
-		
-		//create weight
-		
-		
 		tab.add(createWeightPanel(),"Weight");
-		
-		
-		
-		
-		
 		
 		tab.add(createAnimationPanel(),"Animation");
 		
@@ -769,12 +883,38 @@ bonePanel.add(removeInfluenceButton);
 		});
 		showControl();
 		
+		
 		initialLoadBaseCharacterModel(modelUrl);
 	}
 	
 	protected void onBaseCharacterModelTextureLoaded(ImageElement imageElement) {
+		if(imageElement==null){
+			THREE.ImageLoader().load(GWTHTMLUtils.parameterFile("texture"), new ImageLoadHandler() {
+				
+				@Override
+				public void onProgress(NativeEvent progress) {
+					// TODO Auto-generated method stub
+					
+				}
+				
+				@Override
+				public void onLoad(ImageElement imageElement) {
+					baseCharacterModelSkinnedMesh.getMaterial().gwtCastMeshPhongMaterial().getMap().setImage(imageElement);	
+					baseCharacterModelSkinnedMesh.getMaterial().gwtCastMeshPhongMaterial().getMap().setNeedsUpdate(true);
+				}
+				
+				@Override
+				public void onError(NativeEvent error) {
+					// TODO Auto-generated method stub
+					
+				}
+			});
+		
+		}else{
 		baseCharacterModelSkinnedMesh.getMaterial().gwtCastMeshPhongMaterial().getMap().setImage(imageElement);
 		baseCharacterModelSkinnedMesh.getMaterial().gwtCastMeshPhongMaterial().getMap().setNeedsUpdate(true);
+		}
+		
 	}
 
 	private Button makeAnimationButton(String name,final String url){
@@ -839,11 +979,13 @@ bonePanel.add(removeInfluenceButton);
 		animationPanel.add(animations);
 		animations.add(makeAnimationButton("animation1", GWTHTMLUtils.parameterFile("animation1")));
 		animations.add(makeAnimationButton("animation2", GWTHTMLUtils.parameterFile("animation2")));
-		animations.add(makeAnimationButton("animation3", GWTHTMLUtils.parameterFile("animation3")));
-		animations.add(makeAnimationButton("animation4", GWTHTMLUtils.parameterFile("animation4")));
+		//animations.add(makeAnimationButton("animation3", GWTHTMLUtils.parameterFile("animation3")));
+		//animations.add(makeAnimationButton("animation4", GWTHTMLUtils.parameterFile("animation4")));
 		
 		HorizontalPanel filePanel=new HorizontalPanel();
 		filePanel.setVerticalAlignment(HorizontalPanel.ALIGN_MIDDLE);
+		animationPanel.add(filePanel);
+		
 		filePanel.add(new Button("Play",new ClickHandler() {
 			@Override
 			public void onClick(ClickEvent event) {
@@ -854,7 +996,7 @@ bonePanel.add(removeInfluenceButton);
 			}
 		}));
 		
-		animationPanel.add(filePanel);
+		
 		final Label fileNameLabel=new Label();
 		fileNameLabel.setWidth("140px");
 		filePanel.add(fileNameLabel);
@@ -867,7 +1009,7 @@ bonePanel.add(removeInfluenceButton);
 				loadAnimation(text);
 			}
 		}, true);
-		filePanel.add(upload);
+		animationPanel.add(upload);
 		
 		
 		return animationPanel;
@@ -906,7 +1048,7 @@ bonePanel.add(removeInfluenceButton);
 	
 	private Panel createLoadExportPanel(){
 		VerticalPanel loadExportPanel=new VerticalPanel();
-		
+		loadExportPanel.add(new HTML("<h4>EditingCloth</h4>"));
 		editingMeshUpload=new AbstractTextFileUploadPanel() {
 			@Override
 			protected void onTextFileUpload(String text) {
@@ -922,7 +1064,9 @@ bonePanel.add(removeInfluenceButton);
 		final HorizontalPanel downloadPanel=new HorizontalPanel();
 		loadExportPanel.add(downloadPanel);
 		
-		Button exportButton=new Button("Export",new ClickHandler() {
+		loadExportPanel.add(new HTML("Export geometry as Version 4 Format"));
+		loadExportPanel.add(new Label("contain bones,indices,weights"));
+		Button exportButton=new Button("Exec Export",new ClickHandler() {
 			@Override
 			public void onClick(ClickEvent event) {
 				JSONObject object=editingGeometry.gwtJSONWithBone();
