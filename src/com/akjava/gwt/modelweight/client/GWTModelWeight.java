@@ -46,6 +46,7 @@ import com.akjava.lib.common.functions.FileNamesFunctions;
 import com.akjava.lib.common.utils.FileNames;
 import com.google.gwt.core.client.JavaScriptObject;
 import com.google.gwt.core.client.JsArray;
+import com.google.gwt.dom.client.ImageElement;
 import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
 import com.google.gwt.event.dom.client.DoubleClickEvent;
@@ -98,10 +99,10 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		
 		
 		this.gpuSkinning = gpuSkinning;
-		createBaseSkinnedMesh();
+		createBaseCharacterModelSkin();
 		
 		if(hasEditingGeometry()){
-		createEditingGeometrySkinnedMesh();
+		createEditingClothSkin();
 		
 		if(gpuSkinning){
 			editingGeometryMesh.getMaterial().gwtCastMeshPhongMaterial().setShading(THREE.SmoothShading);
@@ -132,17 +133,17 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 			//LogUtils.log(camera.getUuid());
 		}
 		
-		if(baseSkinnedModelMesh!=null){
-		baseSkinnedModelMesh.getPosition().set(basePosEditor.getX(), basePosEditor.getY(), basePosEditor.getZ());
+		if(baseCharacterModelSkinnedMesh!=null){
+		baseCharacterModelSkinnedMesh.getPosition().set(baseCharacterModelPositionEditor.getX(), baseCharacterModelPositionEditor.getY(), baseCharacterModelPositionEditor.getZ());
 		
 		if(!gpuSkinning){
-			skinningbyHand(baseSkinnedModelMesh,baseSkinnedModelGeometry);
-			baseSkinnedModelMesh.getGeometry().computeBoundingSphere();
+			skinningbyHand(baseCharacterModelSkinnedMesh,baseCharacterModelGeometry);
+			baseCharacterModelSkinnedMesh.getGeometry().computeBoundingSphere();
 			}
 		}
 		
-		if(baseSkinnedModelWireMesh!=null){
-			baseSkinnedModelWireMesh.getPosition().set(wirePosEditor.getX(), wirePosEditor.getY(), wirePosEditor.getZ());
+		if(baseCharacterModelWireframeMesh!=null){
+			baseCharacterModelWireframeMesh.getPosition().set(baseCharacterWireframePositionEditor.getX(), baseCharacterWireframePositionEditor.getY(), baseCharacterWireframePositionEditor.getZ());
 			
 		}
 		
@@ -170,7 +171,6 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		}
 	}
 
-	private String textureUrl="underware-nonipple.png";
 	private String modelUrl="merged3.json";//testing 4-point
 	
 	
@@ -254,45 +254,34 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 	}
 
 
-	private JSONObject baseSkinnedModelJson;
-	private Geometry baseSkinnedModelGeometry;
-	private SkinnedMesh baseSkinnedModelMesh;
-	private Vector4Editor basePosEditor;
-	private Mesh baseSkinnedModelWireMesh;
-	private BoneVertexColorTools baseVertexColorTools;
-	private BoneVertexColorTools editingVertexColorTools;
+	private JSONObject baseCharacterModelJson;
+	private Geometry baseCharacterModelGeometry;
+	private SkinnedMesh baseCharacterModelSkinnedMesh;
+	private Vector4Editor baseCharacterModelPositionEditor;
+	private Mesh baseCharacterModelWireframeMesh;
+	private BoneVertexColorTools baseCharacterVertexColorTools;
+	private BoneVertexColorTools editingClothVertexColorTools;
 	private ValueListBox<AnimationBone> boneListBox;
-	private List<AnimationBone> baseSkinnedMeshBones;
+	private List<AnimationBone> baseCharacterModelBones;
 	private Object3DMouseSelecter mouseSelector;
 	private Group boneMeshGroup;
 	private BoneMeshMouseSelector boneMouseSelector;
-	private Vector4Editor wirePosEditor;
+	private Vector4Editor baseCharacterWireframePositionEditor;
 	private Mesh editingGeometryMeshWireframeHelperMesh;
-	private void loadBaseSkinnedModel(final String modelUrl) {
+	private void initialLoadBaseCharacterModel(final String modelUrl) {
 		THREE.XHRLoader().load(modelUrl, new XHRLoadHandler() {
 			@Override
 			public void onLoad(String text) {
-				baseSkinnedMeshUpload.uploadText(FileNames.getFileNameAsSlashFileSeparator(modelUrl), text);
-				
-				//test
-				/*
-				final String url="tshirt2.json";
-				THREE.XHRLoader().load(url, new XHRLoadHandler() {
-					@Override
-					public void onLoad(String text) {
-						loadEditingGeometry(url, text);
-					}
-				});
-				*/
+				baseCharacterModelUpload.uploadText(FileNames.getFileNameAsSlashFileSeparator(modelUrl), text);
 			}
 		});
 	}
 	
 	private void createOrbitControler(){
-baseSkinnedModelGeometry.computeBoundingBox();
+baseCharacterModelGeometry.computeBoundingBox();
 		
 		
-		cameraY=baseSkinnedModelGeometry.getBoundingBox().getMax().getY()/2;
+		cameraY=baseCharacterModelGeometry.getBoundingBox().getMax().getY()/2;
 		
 		
 		//this position used 
@@ -315,32 +304,32 @@ baseSkinnedModelGeometry.computeBoundingBox();
 	}
 	
 
-	protected void createBoneMeshs() {
+	protected void createBaseCharacterBones() {
 		BoneMeshTools bmt=new BoneMeshTools();
-		boneMeshGroup = bmt.createBoneMeshs(baseSkinnedModelGeometry.getBones());
+		boneMeshGroup = bmt.createBoneMeshs(baseCharacterModelGeometry.getBones());
 		scene.add(boneMeshGroup);
 		
-		boneMouseSelector = new BoneMeshMouseSelector(boneMeshGroup, baseSkinnedModelGeometry.getBones(), renderer, camera);
+		boneMouseSelector = new BoneMeshMouseSelector(boneMeshGroup, baseCharacterModelGeometry.getBones(), renderer, camera);
 	}
 
 	protected void updateBoneListBox() {
-		baseSkinnedMeshBones = JavaScriptUtils.toList(baseSkinnedModelGeometry.getBones());
-		boneListBox.setValue(baseSkinnedMeshBones.get(0));
-		boneListBox.setAcceptableValues(baseSkinnedMeshBones);
+		baseCharacterModelBones = JavaScriptUtils.toList(baseCharacterModelGeometry.getBones());
+		boneListBox.setValue(baseCharacterModelBones.get(0));
+		boneListBox.setAcceptableValues(baseCharacterModelBones);
 	}
 
-	protected void createBaseWireMesh(){
+	protected void createBaseCharacterWireframe(){
 		
-		if(baseSkinnedModelWireMesh!=null){
-			scene.remove(baseSkinnedModelWireMesh);
+		if(baseCharacterModelWireframeMesh!=null){
+			scene.remove(baseCharacterModelWireframeMesh);
 		}
 		
-		Geometry bodyGeometry=baseSkinnedModelGeometry.clone();
-		bodyGeometry.setSkinIndices(baseSkinnedModelGeometry.getSkinIndices());
-		bodyGeometry.setSkinWeights(baseSkinnedModelGeometry.getSkinWeights());
-		bodyGeometry.setBones(baseSkinnedModelGeometry.getBones());
+		Geometry bodyGeometry=baseCharacterModelGeometry.clone();
+		bodyGeometry.setSkinIndices(baseCharacterModelGeometry.getSkinIndices());
+		bodyGeometry.setSkinWeights(baseCharacterModelGeometry.getSkinWeights());
+		bodyGeometry.setBones(baseCharacterModelGeometry.getBones());
 		
-baseSkinnedModelWireMesh = THREE.Mesh(bodyGeometry, 
+baseCharacterModelWireframeMesh = THREE.Mesh(bodyGeometry, 
 				
 				THREE.MeshPhongMaterial(GWTParamUtils.MeshBasicMaterial()
 						.wireframe(true)
@@ -353,13 +342,13 @@ baseSkinnedModelWireMesh = THREE.Mesh(bodyGeometry,
 
 		
 		
-		scene.add(baseSkinnedModelWireMesh);
+		scene.add(baseCharacterModelWireframeMesh);
 		
-		baseVertexColorTools = new BoneVertexColorTools(bodyGeometry);
+		baseCharacterVertexColorTools = new BoneVertexColorTools(bodyGeometry);
 	
 		//make a class handle vertex color
 	}
-protected void createEditingWireMesh(){
+protected void createEditingClothWireframe(){
 		
 		if(editingGeometryWireMesh!=null){
 			scene.remove(editingGeometryWireMesh);
@@ -381,7 +370,7 @@ protected void createEditingWireMesh(){
 		
 
 		scene.add(editingGeometryWireMesh);
-		editingVertexColorTools = new BoneVertexColorTools(editingGeometry);
+		editingClothVertexColorTools = new BoneVertexColorTools(editingGeometry);
 		
 		
 		if(editingGeometryWireMeshHelper!=null){
@@ -391,32 +380,40 @@ protected void createEditingWireMesh(){
 		editingGeometryWireMeshHelper = THREE.WireframeHelper(editingGeometryWireMesh,0x888888);
 		scene.add(editingGeometryWireMeshHelper);
 	}
+
 	
-	protected void createBaseSkinnedMesh() {
-		Texture texture=THREE.TextureLoader().load(textureUrl);
+
+	protected void createBaseCharacterModelSkin() {
+		Texture texture=null;
+		if(baseCharacterModelTextureUpload.isUploaded()){
+			texture=THREE.Texture(baseCharacterModelTextureUpload.getLastUploadImage());	
+		}else{
+			texture=THREE.TextureLoader().load(GWTHTMLUtils.parameterFile("texture"));
+		}
+		
 		MeshPhongMaterial material=THREE.MeshPhongMaterial(GWTParamUtils.MeshBasicMaterial()
 				.skinning(gpuSkinning)
 				.map(texture));
 		
-		if(baseSkinnedModelMesh!=null){
-			scene.remove(baseSkinnedModelMesh);
+		if(baseCharacterModelSkinnedMesh!=null){
+			scene.remove(baseCharacterModelSkinnedMesh);
 		}
-		Geometry geometry=baseSkinnedModelGeometry.clone();
-		baseSkinnedModelGeometry.gwtSoftCopyToWeightsAndIndicesAndBone(geometry);
+		Geometry geometry=baseCharacterModelGeometry.clone();
+		baseCharacterModelGeometry.gwtSoftCopyToWeightsAndIndicesAndBone(geometry);
 		
-		baseSkinnedModelMesh = THREE.SkinnedMesh(geometry, material);
-		scene.add(baseSkinnedModelMesh);
+		baseCharacterModelSkinnedMesh = THREE.SkinnedMesh(geometry, material);
+		scene.add(baseCharacterModelSkinnedMesh);
 		
 		
 		
-		mixer=THREE.AnimationMixer(baseSkinnedModelMesh);
+		mixer=THREE.AnimationMixer(baseCharacterModelSkinnedMesh);
 	}
 	
 	public boolean hasEditingGeometry(){
 		return editingGeometry!=null;
 	}
 	
-	protected void createEditingGeometrySkinnedMesh() {
+	protected void createEditingClothSkin() {
 		MeshPhongMaterial material=THREE.MeshPhongMaterial(GWTParamUtils.MeshBasicMaterial()
 				.skinning(gpuSkinning)
 				.color(0x880000)
@@ -425,7 +422,7 @@ protected void createEditingWireMesh(){
 		
 		if(editingGeometryMesh!=null){
 			//not scene ,
-			baseSkinnedModelMesh.remove(editingGeometryMesh);
+			baseCharacterModelSkinnedMesh.remove(editingGeometryMesh);
 		}
 		
 		
@@ -439,8 +436,8 @@ protected void createEditingWireMesh(){
 		
 		editingGeometryMesh = THREE.SkinnedMesh(geometry, material);
 		
-		editingGeometryMesh.setSkeleton(baseSkinnedModelMesh.getSkeleton());//share bone to work same mixer
-		baseSkinnedModelMesh.add(editingGeometryMesh);//share same position,rotation
+		editingGeometryMesh.setSkeleton(baseCharacterModelSkinnedMesh.getSkeleton());//share bone to work same mixer
+		baseCharacterModelSkinnedMesh.add(editingGeometryMesh);//share same position,rotation
 		
 		
 		
@@ -456,10 +453,10 @@ protected void createEditingWireMesh(){
 		
 		//create wireframe helper wireframehelper not good at geometry update with shareing geometry
 		if(editingGeometryMeshWireframeHelperMesh!=null){
-			baseSkinnedModelMesh.remove(editingGeometryMeshWireframeHelperMesh);
+			baseCharacterModelSkinnedMesh.remove(editingGeometryMeshWireframeHelperMesh);
 		}
 		editingGeometryMeshWireframeHelperMesh = THREE.Mesh(geometry,THREE.MeshBasicMaterial(GWTParamUtils.MeshBasicMaterial().color(0x888888).shading(THREE.FlatShading).wireframe(true)));
-		baseSkinnedModelMesh.add(editingGeometryMeshWireframeHelperMesh);
+		baseCharacterModelSkinnedMesh.add(editingGeometryMeshWireframeHelperMesh);
 		
 		
 		//for animation-mesh 
@@ -528,7 +525,7 @@ protected void createEditingWireMesh(){
 				//no need unselect,
 				//boneListBox.setValue(null,true);
 			}else{
-				boneListBox.setValue(baseSkinnedMeshBones.get(index),true);
+				boneListBox.setValue(baseCharacterModelBones.get(index),true);
 			}
 			
 		}
@@ -542,7 +539,7 @@ protected void createEditingWireMesh(){
 	}
 
 	
-	public void onEditingModelJsonLoaded(String text){
+	public void onEditingClothJsonLoaded(String text){
 
 		JSONObject jsonObject=parseJSONGeometry(text);
 		
@@ -562,35 +559,35 @@ protected void createEditingWireMesh(){
 		if(editingGeometry.getSkinIndices()==null || editingGeometry.getSkinIndices().length()==0){
 			//Window.alert("has no skin indices");
 			LogUtils.log("No skin indices.it would auto weight.");
-			new CloseVertexAutoWeight().autoWeight(editingGeometry, baseSkinnedModelGeometry).insertToGeometry(editingGeometry);
-			editingGeometry.gwtSetInfluencesPerVertex(baseSkinnedModelGeometry.gwtGetInfluencesPerVertex());
+			new CloseVertexAutoWeight().autoWeight(editingGeometry, baseCharacterModelGeometry).insertToGeometry(editingGeometry);
+			editingGeometry.gwtSetInfluencesPerVertex(baseCharacterModelGeometry.gwtGetInfluencesPerVertex());
 			
 			
-			editingGeometryOrigin.gwtSetInfluencesPerVertex(baseSkinnedModelGeometry.gwtGetInfluencesPerVertex());
+			editingGeometryOrigin.gwtSetInfluencesPerVertex(baseCharacterModelGeometry.gwtGetInfluencesPerVertex());
 			editingGeometry.gwtHardCopyToWeightsAndIndices(editingGeometryOrigin);
 		}
 		
-		createEditingGeometrySkinnedMesh();
-		createEditingWireMesh();
+		createEditingClothSkin();
+		createEditingClothWireframe();
 		createVertexSelections();
 	}
-	public void onBaseModelJsonLoaded(String text){
+	public void onBaseCharacterModelJsonLoaded(String text){
 		JSONObject object=parseJSONGeometry(text);
 		if(object==null){
 			Window.alert("invalid model");
 			return;
 		}
-		baseSkinnedModelJson=object;
-		baseSkinnedModelGeometry=THREE.JSONLoader().parse(baseSkinnedModelJson.getJavaScriptObject()).getGeometry();
+		baseCharacterModelJson=object;
+		baseCharacterModelGeometry=THREE.JSONLoader().parse(baseCharacterModelJson.getJavaScriptObject()).getGeometry();
 		
-		setInfluencePerVertexFromJSON(baseSkinnedModelGeometry,object);
+		setInfluencePerVertexFromJSON(baseCharacterModelGeometry,object);
 		
-		createBaseSkinnedMesh();
-		createBaseWireMesh();
-		createBoneMeshs();
+		createBaseCharacterModelSkin();
+		createBaseCharacterWireframe();
+		createBaseCharacterBones();
 		updateBoneListBox();
 		
-		vertexBoneDataEditor.setBone(baseSkinnedModelGeometry.getBones());
+		vertexBoneDataEditor.setBone(baseCharacterModelGeometry.getBones());
 		
 		
 		createOrbitControler();//based skinned mesh height
@@ -607,30 +604,42 @@ protected void createEditingWireMesh(){
 		parent.add(tab);
 		
 		VerticalPanel posPanel=new VerticalPanel();
+		posPanel.setSpacing(2);
 		tab.add(posPanel,"Basic");
 		tab.selectTab(0);
 		
 		posPanel.add(new HTML("<h4>Base Model</h4>"));
-		
-		baseSkinnedMeshUpload = new AbstractFileUploadPanel() {
+		posPanel.add(new Label("Model"));
+		baseCharacterModelUpload = new AbstractTextFileUploadPanel() {
 			
 			@Override
 			protected void onTextFileUpload(String text) {
-				onBaseModelJsonLoaded(text);
+				onBaseCharacterModelJsonLoaded(text);
 			}
 		};
-		baseSkinnedMeshUpload.getUploadForm().setAccept(FileUploadForm.ACCEPT_JSON);
+		baseCharacterModelUpload.getUploadForm().setAccept(FileUploadForm.ACCEPT_JSON);
 		
-		posPanel.add(baseSkinnedMeshUpload);
+		posPanel.add(baseCharacterModelUpload);
+		
+		posPanel.add(new Label("Texture"));
+		
+		baseCharacterModelTextureUpload=new AbstractImageFileUploadPanel(){
+
+			@Override
+			protected void onImageFileUpload(ImageElement imageElement) {
+				onBaseCharacterModelTextureLoaded(imageElement);
+			}
+			
+		};
+		posPanel.add(baseCharacterModelTextureUpload);
+		
+		baseCharacterModelPositionEditor = new Vector4Editor("Skin Position",-2, 2, 0.001, 0);
+		posPanel.add(baseCharacterModelPositionEditor);
+		baseCharacterModelPositionEditor.setX(-1.5,true);
 		
 		
-		basePosEditor = new Vector4Editor("Skin Position",-2, 2, 0.001, 0);
-		posPanel.add(basePosEditor);
-		basePosEditor.setX(-1.5,true);
-		
-		
-		wirePosEditor = new Vector4Editor("Wire Position",-2, 2, 0.001, 0);
-		posPanel.add(wirePosEditor);
+		baseCharacterWireframePositionEditor = new Vector4Editor("Wire Position",-2, 2, 0.001, 0);
+		posPanel.add(baseCharacterWireframePositionEditor);
 		
 		posPanel.add(new HTML("<h4>Camera</h4>"));
 		Button resetCamera=new Button("Reset",new ClickHandler() {
@@ -677,7 +686,8 @@ protected void createEditingWireMesh(){
 
 			@Override
 			public void onClick(ClickEvent event) {
-				boneListBox.setValue(null);
+				boneListBox.setValue(null,true);
+				
 			}
 		});
 		bonePanel.add(unselectBone);
@@ -722,7 +732,7 @@ Button removeInfluenceButton=new Button("Remove selected bone influence",new Cli
 					
 				}
 				if(neddUpdate){
-					createEditingGeometrySkinnedMesh();//weight updated
+					createEditingClothSkin();//weight updated
 				}
 				onBoneSelectionChanged(bone);
 			}
@@ -759,9 +769,14 @@ bonePanel.add(removeInfluenceButton);
 		});
 		showControl();
 		
-		loadBaseSkinnedModel(modelUrl);
+		initialLoadBaseCharacterModel(modelUrl);
 	}
 	
+	protected void onBaseCharacterModelTextureLoaded(ImageElement imageElement) {
+		baseCharacterModelSkinnedMesh.getMaterial().gwtCastMeshPhongMaterial().getMap().setImage(imageElement);
+		baseCharacterModelSkinnedMesh.getMaterial().gwtCastMeshPhongMaterial().getMap().setNeedsUpdate(true);
+	}
+
 	private Button makeAnimationButton(String name,final String url){
 		return new Button(name,new ClickHandler() {
 			@Override
@@ -789,10 +804,10 @@ bonePanel.add(removeInfluenceButton);
 				stopAnimation();
 				
 				//Quaternion q=THREE.Quaternion();
-				for(int i=0;i<baseSkinnedModelMesh.getSkeleton().getBones().length();i++){
-					Bone bone=baseSkinnedModelMesh.getSkeleton().getBones().get(i);
-					bone.getQuaternion().copy(baseSkinnedMeshBones.get(i).gwtGetRotationQuaternion());
-					bone.getPosition().copy(baseSkinnedMeshBones.get(i).gwtGetPosition());
+				for(int i=0;i<baseCharacterModelSkinnedMesh.getSkeleton().getBones().length();i++){
+					Bone bone=baseCharacterModelSkinnedMesh.getSkeleton().getBones().get(i);
+					bone.getQuaternion().copy(baseCharacterModelBones.get(i).gwtGetRotationQuaternion());
+					bone.getPosition().copy(baseCharacterModelBones.get(i).gwtGetPosition());
 					bone.updateMatrixWorld(true);
 				}
 				
@@ -892,10 +907,10 @@ bonePanel.add(removeInfluenceButton);
 	private Panel createLoadExportPanel(){
 		VerticalPanel loadExportPanel=new VerticalPanel();
 		
-		editingMeshUpload=new AbstractFileUploadPanel() {
+		editingMeshUpload=new AbstractTextFileUploadPanel() {
 			@Override
 			protected void onTextFileUpload(String text) {
-				onEditingModelJsonLoaded(text);
+				onEditingClothJsonLoaded(text);
 			}
 		};
 		editingMeshUpload.getUploadForm().setAccept(FileUploadForm.ACCEPT_JSON);
@@ -938,7 +953,7 @@ bonePanel.add(removeInfluenceButton);
 						editingGeometry.getSkinWeights().get(i).gwtSet(j, 0);
 					}
 				}
-				createEditingGeometrySkinnedMesh();//weight updated
+				createEditingClothSkin();//weight updated
 				LogUtils.log(editingGeometryMesh);
 				//editingGeometryMesh.setVisible(false);
 					AnimationBone bone=boneListBox.getValue();
@@ -970,7 +985,7 @@ bonePanel.add(removeInfluenceButton);
 				}
 				int index=vertexBoneDataEditor.getValue().getVertexIndex();
 				vertexBoneDataEditor.flush();
-				createEditingGeometrySkinnedMesh();
+				createEditingClothSkin();
 				ThreeLog.log("vertex-index:"+index);
 				ThreeLog.log("indices:",editingGeometryMesh.getGeometry().getSkinIndices().get(index));
 				ThreeLog.log("weight:",editingGeometryMesh.getGeometry().getSkinWeights().get(index));
@@ -1007,7 +1022,7 @@ bonePanel.add(removeInfluenceButton);
 				vertexBoneDataEditor.copyValue(VertexBoneData.createFromdMesh(editingGeometryOrigin, index));
 				vertexBoneDataEditor.flush();
 				
-				createEditingGeometrySkinnedMesh();
+				createEditingClothSkin();
 			}
 		});
 		buttons.add(resetBt);
@@ -1040,16 +1055,20 @@ bonePanel.add(removeInfluenceButton);
 
 	protected void onBoneSelectionChanged(@Nullable AnimationBone value) {
 		if(value==null){
-		baseVertexColorTools.clearVertexsColor();	
+		baseCharacterVertexColorTools.clearVertexsColor();	
+		
+		boneMouseSelector.setBoneSelection(null);
 		}else{
-		 baseVertexColorTools.updateVertexsColorByBone(baseSkinnedMeshBones.indexOf(value));
+		 baseCharacterVertexColorTools.updateVertexsColorByBone(baseCharacterModelBones.indexOf(value));
+		
+		 boneMouseSelector.setBoneSelection(value.getName());
 		}
 		
-		if(editingVertexColorTools!=null){
+		if(editingClothVertexColorTools!=null){
 			if(value==null){
-				editingVertexColorTools.clearVertexsColor();	
+				editingClothVertexColorTools.clearVertexsColor();	
 				}else{
-					editingVertexColorTools.updateVertexsColorByBone(baseSkinnedMeshBones.indexOf(value));
+					editingClothVertexColorTools.updateVertexsColorByBone(baseCharacterModelBones.indexOf(value));
 				}
 		}
 	}
@@ -1064,8 +1083,10 @@ bonePanel.add(removeInfluenceButton);
 	private WireframeHelper editingGeometryWireMeshHelper;
 	private VertexNormalsHelper editingGeometryMeshNormalsHelper;
 	private MeshVertexSelector editingGeometryMeshVertexSelector;
-	private AbstractFileUploadPanel baseSkinnedMeshUpload;
-	private AbstractFileUploadPanel editingMeshUpload;
+	private AbstractTextFileUploadPanel baseCharacterModelUpload;
+	private AbstractTextFileUploadPanel editingMeshUpload;
+	
+	private AbstractImageFileUploadPanel baseCharacterModelTextureUpload;
 	
 	private JSONObject parseJSONGeometry(String text){
 		JSONValue json=JSONParser.parseStrict(text);

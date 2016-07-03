@@ -8,7 +8,7 @@ import com.google.gwt.user.client.ui.HorizontalPanel;
 import com.google.gwt.user.client.ui.Label;
 import com.google.gwt.user.client.ui.VerticalPanel;
 
-public abstract class AbstractFileUploadPanel extends VerticalPanel{
+public abstract class AbstractTextFileUploadPanel extends VerticalPanel{
 
 	private Label fileNameLabel;
 	public Label getFileNameLabel() {
@@ -35,7 +35,7 @@ public abstract class AbstractFileUploadPanel extends VerticalPanel{
 		return lastUploadText;
 	}
 
-	public AbstractFileUploadPanel(){
+	public AbstractTextFileUploadPanel(){
 		HorizontalPanel filePanel=new HorizontalPanel();
 		filePanel.setVerticalAlignment(HorizontalPanel.ALIGN_MIDDLE);
 		

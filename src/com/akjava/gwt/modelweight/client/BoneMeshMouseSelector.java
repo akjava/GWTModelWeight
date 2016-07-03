@@ -27,7 +27,15 @@ public class BoneMeshMouseSelector extends Object3DMouseSelecter{
 		}
 	}
 
+	private boolean enableUnselectFromPick;
 	
+	
+	public boolean isEnableUnselectFromPick() {
+		return enableUnselectFromPick;
+	}
+	public void setEnableUnselectFromPick(boolean enableUnselectFromPick) {
+		this.enableUnselectFromPick = enableUnselectFromPick;
+	}
 	public int getBoneIndex(AnimationBone bone){
 		Integer result=boneMap.get(bone.getName());
 		if(result==null){
@@ -56,7 +64,7 @@ public class BoneMeshMouseSelector extends Object3DMouseSelecter{
 					LogUtils.log("invalid bone not exist:"+boneName);
 				}else{
 					
-					updateSelectionColor(boneName);
+					setBoneSelection(boneName);
 					
 					return boneIndex;
 				}
@@ -66,7 +74,9 @@ public class BoneMeshMouseSelector extends Object3DMouseSelecter{
 		}
 		
 		//TODO update selected bone-mesh color
-		updateSelectionColor(null);
+		if(enableUnselectFromPick){
+			setBoneSelection(null);
+		}
 		
 		return result;
 	}
@@ -76,7 +86,18 @@ public class BoneMeshMouseSelector extends Object3DMouseSelecter{
 	private int jointSelectedColor=0xeeddee;
 	private int jointUnSelectedColor=0x888888;
 	
-	private void updateSelectionColor(@Nullable String boneName) {
+	public void setBoneSelection(int selectedIndex) {
+		if(selectedIndex==-1){
+			setBoneSelection(null);
+		}else{
+			for(String key:boneMap.keySet()){
+				if(boneMap.get(key)==selectedIndex){
+					setBoneSelection(key);
+				}
+			}
+		}
+	}
+	public void setBoneSelection(@Nullable String selectedBoneName) {
 		for(int i=0;i<group.getChildren().length();i++){
 			Object3D object=group.getChildren().get(i);
 			if(!object.getType().equals("Mesh")){
@@ -92,13 +113,13 @@ public class BoneMeshMouseSelector extends Object3DMouseSelecter{
 					continue;
 				}
 				if(type_name[0].equals("core")){
-					if(Objects.equal(boneName, type_name[1])){
+					if(Objects.equal(selectedBoneName, type_name[1])){
 						mesh.getMaterial().gwtCastMeshPhongMaterial().getColor().setHex(coreSelectedColor);
 					}else{
 						mesh.getMaterial().gwtCastMeshPhongMaterial().getColor().setHex(coreUnSelectedColor);
 					}
 				}else{//joint
-					if(Objects.equal(boneName, type_name[1])){
+					if(Objects.equal(selectedBoneName, type_name[1])){
 						mesh.getMaterial().gwtCastMeshPhongMaterial().getColor().setHex(jointSelectedColor);
 					}else{
 						mesh.getMaterial().gwtCastMeshPhongMaterial().getColor().setHex(jointUnSelectedColor);
