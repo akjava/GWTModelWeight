@@ -1121,10 +1121,10 @@ tabPanel.addSelectionHandler(new SelectionHandler<Integer>() {
 		
 		
 		final HorizontalPanel downloadPanel=new HorizontalPanel();
-		loadExportPanel.add(downloadPanel);
 		
-		loadExportPanel.add(new HTML("Export geometry as Version 4 Format"));
-		loadExportPanel.add(new Label("contain bones,indices,weights"));
+		
+		loadExportPanel.add(new HTML("Export geometry as Version4 json Format"));
+		loadExportPanel.add(new Label("contain bones,indices and weights"));
 		Button exportButton=new Button("Exec Export",new ClickHandler() {
 			@Override
 			public void onClick(ClickEvent event) {
@@ -1136,6 +1136,8 @@ tabPanel.addSelectionHandler(new SelectionHandler<Integer>() {
 			}
 		});
 		loadExportPanel.add(exportButton);
+		
+		loadExportPanel.add(downloadPanel);
 		
 		return loadExportPanel;
 		
