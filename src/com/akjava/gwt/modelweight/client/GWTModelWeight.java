@@ -113,15 +113,8 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		if(hasEditingGeometry()){
 		createEditingClothSkin();
 		
-		if(gpuSkinning){
-			editingClothModelSkinnedMesh.getMaterial().gwtCastMeshPhongMaterial().setShading(THREE.SmoothShading);
-		}else{
-			editingClothModelSkinnedMesh.getMaterial().gwtCastMeshPhongMaterial().setShading(THREE.FlatShading);
-			
-		}
-		editingGeometryMeshNormalsHelper.setVisible(!gpuSkinning);
-		editingClothSkinVertexSelector.setVisible(!gpuSkinning);
-		editingGeometryMeshWireframeHelperMesh.setVisible(!gpuSkinning);
+		
+		
 		}
 		
 		playAnimation(lastAnimationClip);
@@ -178,8 +171,8 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 			}
 		}
 		
-		if(editingGeometryMeshNormalsHelper!=null){
-			editingGeometryMeshNormalsHelper.update();
+		if(editingClothSkinNormalsHelper!=null){
+			editingClothSkinNormalsHelper.update();
 		}
 	}
 
@@ -198,9 +191,9 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 			editingGeometryNormalsHelper.setVisible(true);
 			}
 			
-			if(editingGeometryMeshNormalsHelper!=null){
+			if(editingClothSkinNormalsHelper!=null){
 				if(!gpuSkinning){
-					editingGeometryMeshNormalsHelper.setVisible(true);
+					editingClothSkinNormalsHelper.setVisible(true);
 				}
 			}
 			
@@ -212,8 +205,8 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 			editingGeometryNormalsHelper.setVisible(false);
 			}
 			
-			if(editingGeometryMeshNormalsHelper!=null){
-				editingGeometryMeshNormalsHelper.setVisible(false);
+			if(editingClothSkinNormalsHelper!=null){
+				editingClothSkinNormalsHelper.setVisible(false);
 			}
 		}
 	}
@@ -279,7 +272,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 	private Group boneMeshGroup;
 	private BoneMeshMouseSelector boneMouseSelector;
 	private Vector3Editor baseCharacterWireframePositionEditor;
-	private Mesh editingGeometryMeshWireframeHelperMesh;
+	private Mesh editingClothSkinWireframeHelperMesh;
 	private void initialLoadBaseCharacterModel(final String modelUrl) {
 		THREE.XHRLoader().load(modelUrl, new XHRLoadHandler() {
 			@Override
@@ -466,21 +459,21 @@ protected void createEditingClothWireframe(){
 		
 		
 		//create normal helper
-		if(editingGeometryMeshNormalsHelper!=null){
-			scene.remove(editingGeometryMeshNormalsHelper);
+		if(editingClothSkinNormalsHelper!=null){
+			scene.remove(editingClothSkinNormalsHelper);
 		}
 		
 		double lineWidth=0.1;
 		double size=0.01;
-		editingGeometryMeshNormalsHelper = THREE.VertexNormalsHelper(editingClothModelSkinnedMesh, size, 0xffff00, lineWidth);
-		scene.add(editingGeometryMeshNormalsHelper);
+		editingClothSkinNormalsHelper = THREE.VertexNormalsHelper(editingClothModelSkinnedMesh, size, 0xffff00, lineWidth);
+		scene.add(editingClothSkinNormalsHelper);
 		
 		//create wireframe helper wireframehelper not good at geometry update with shareing geometry
-		if(editingGeometryMeshWireframeHelperMesh!=null){
-			baseCharacterModelSkinnedMesh.remove(editingGeometryMeshWireframeHelperMesh);
+		if(editingClothSkinWireframeHelperMesh!=null){
+			baseCharacterModelSkinnedMesh.remove(editingClothSkinWireframeHelperMesh);
 		}
-		editingGeometryMeshWireframeHelperMesh = THREE.Mesh(geometry,THREE.MeshBasicMaterial(GWTParamUtils.MeshBasicMaterial().color(0x888888).shading(THREE.FlatShading).wireframe(true)));
-		baseCharacterModelSkinnedMesh.add(editingGeometryMeshWireframeHelperMesh);
+		editingClothSkinWireframeHelperMesh = THREE.Mesh(geometry,THREE.MeshBasicMaterial(GWTParamUtils.MeshBasicMaterial().color(0x888888).shading(THREE.FlatShading).wireframe(true)));
+		baseCharacterModelSkinnedMesh.add(editingClothSkinWireframeHelperMesh);
 		
 		
 		//for animation-mesh 
@@ -493,6 +486,17 @@ protected void createEditingClothWireframe(){
 			//on initialize no need to sync,but when skinning-data update,need to sync selection
 			editingClothSkinVertexSelector.setSelectionVertex(editingClothWireframeVertexSelector.getSelectecVertex());//sync again
 		}
+		
+		//gpu based
+		if(gpuSkinning){
+			editingClothModelSkinnedMesh.getMaterial().gwtCastMeshPhongMaterial().setShading(THREE.SmoothShading);
+		}else{
+			editingClothModelSkinnedMesh.getMaterial().gwtCastMeshPhongMaterial().setShading(THREE.FlatShading);
+			
+		}
+		editingClothSkinNormalsHelper.setVisible(!gpuSkinning);
+		editingClothSkinVertexSelector.setVisible(!gpuSkinning);
+		editingClothSkinWireframeHelperMesh.setVisible(!gpuSkinning);
 	}
 	
 	public void skinningbyHand(SkinnedMesh mesh,Geometry origonalGeometry){
@@ -1273,7 +1277,7 @@ tabPanel.addSelectionHandler(new SelectionHandler<Integer>() {
 	private MeshVertexSelector editingClothWireframeVertexSelector;
 	private VertexBoneDataEditor vertexBoneDataEditor;
 	private WireframeHelper editingGeometryWireMeshHelper;
-	private VertexNormalsHelper editingGeometryMeshNormalsHelper;
+	private VertexNormalsHelper editingClothSkinNormalsHelper;
 	private MeshVertexSelector editingClothSkinVertexSelector;
 	private AbstractTextFileUploadPanel baseCharacterModelUpload;
 	private AbstractTextFileUploadPanel editingMeshUpload;
