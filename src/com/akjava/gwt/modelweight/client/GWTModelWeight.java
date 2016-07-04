@@ -120,7 +120,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 			
 		}
 		editingGeometryMeshNormalsHelper.setVisible(!gpuSkinning);
-		editingGeometryMeshVertexSelector.setVisible(!gpuSkinning);
+		editingClothSkinVertexSelector.setVisible(!gpuSkinning);
 		editingGeometryMeshWireframeHelperMesh.setVisible(!gpuSkinning);
 		}
 		
@@ -158,6 +158,9 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		
 		if(editingGeometryNormalsHelper!=null){
 			editingGeometryNormalsHelper.update();//need?
+			if(!gpuSkinning){
+				editingGeometryNormalsHelper.getGeometry().computeBoundingSphere();
+			}
 		}
 		
 		
@@ -168,8 +171,8 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 			skinningbyHand(editingClothModelSkinnedMesh,editingGeometry);
 			editingClothModelSkinnedMesh.getGeometry().computeBoundingSphere();
 			
-			if(editingGeometryMeshVertexSelector.getSelectecVertex()!=-1){
-				editingGeometryMeshVertexSelector.update();
+			if(editingClothSkinVertexSelector.getSelectecVertex()!=-1){
+				editingClothSkinVertexSelector.update();
 			}
 			
 			}
@@ -188,8 +191,8 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 	final int BONE_TAB_INDEX=1;
 	public void updateSelectedTabIndex(){
 		if(selectedTabIndex!=BONE_TAB_INDEX){
-			if(editingGeometryWireVertexSelector!=null){
-			editingGeometryWireVertexSelector.setVisible(true);
+			if(editingClothWireframeVertexSelector!=null){
+			editingClothWireframeVertexSelector.setVisible(true);
 			}
 			if(editingGeometryNormalsHelper!=null){
 			editingGeometryNormalsHelper.setVisible(true);
@@ -202,8 +205,8 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 			}
 			
 		}else{
-			if(editingGeometryWireVertexSelector!=null){
-			editingGeometryWireVertexSelector.setVisible(false);
+			if(editingClothWireframeVertexSelector!=null){
+			editingClothWireframeVertexSelector.setVisible(false);
 			}
 			if(editingGeometryNormalsHelper!=null){
 			editingGeometryNormalsHelper.setVisible(false);
@@ -481,11 +484,15 @@ protected void createEditingClothWireframe(){
 		
 		
 		//for animation-mesh 
-		if(editingGeometryMeshVertexSelector!=null){
-			editingGeometryMeshVertexSelector.dispose();
+		if(editingClothSkinVertexSelector!=null){
+			editingClothSkinVertexSelector.dispose();
 			}
-		editingGeometryMeshVertexSelector = new MeshVertexSelector(editingClothModelSkinnedMesh, renderer, camera, scene);
-				
+		editingClothSkinVertexSelector = new MeshVertexSelector(editingClothModelSkinnedMesh, renderer, camera, scene);
+		
+		if(editingClothWireframeVertexSelector!=null){
+			//on initialize no need to sync,but when skinning-data update,need to sync selection
+			editingClothSkinVertexSelector.setSelectionVertex(editingClothWireframeVertexSelector.getSelectecVertex());//sync again
+		}
 	}
 	
 	public void skinningbyHand(SkinnedMesh mesh,Geometry origonalGeometry){
@@ -511,16 +518,17 @@ protected void createEditingClothWireframe(){
 
 	@Override
 	public void onMouseClick(ClickEvent event) {
+		LogUtils.log("mouse-click");
 		if(selectedTabIndex!=BONE_TAB_INDEX){
-			if(editingGeometryWireVertexSelector!=null){
-				int vertex=editingGeometryWireVertexSelector.pickVertex(event);
+			if(editingClothWireframeVertexSelector!=null){
+				int vertex=editingClothWireframeVertexSelector.pickVertex(event);
 				
 				if(vertex==-1){
-					vertex=editingGeometryMeshVertexSelector.pickVertex(event);
+					vertex=editingClothSkinVertexSelector.pickVertex(event);
 					
-					editingGeometryWireVertexSelector.setSelectionVertex(vertex);
+					editingClothWireframeVertexSelector.setSelectionVertex(vertex);
 				}else{
-					editingGeometryMeshVertexSelector.setSelectionVertex(vertex);//just syn now
+					editingClothSkinVertexSelector.setSelectionVertex(vertex);//just syn now
 				}
 				
 				
@@ -709,7 +717,8 @@ protected void createEditingClothWireframe(){
 		bonePanel.add(unselectBone);
 		
 		
-		CheckBox gpuSkinning=new CheckBox("GPU Skinning");
+		CheckBox gpuSkinning=new CheckBox("GPU Skin Animation");
+		gpuSkinning.setTitle("Using GPU is first.but can't pick vertex");
 		bonePanel.add(gpuSkinning);
 		gpuSkinning.addValueChangeHandler(new ValueChangeHandler<Boolean>() {
 
@@ -1168,12 +1177,10 @@ tabPanel.addSelectionHandler(new SelectionHandler<Integer>() {
 				if(vertexBoneDataEditor.getValue()==null){
 					return;
 				}
-				int index=vertexBoneDataEditor.getValue().getVertexIndex();
+				//int index=vertexBoneDataEditor.getValue().getVertexIndex();
 				vertexBoneDataEditor.flush();
 				createEditingClothSkin();
-				ThreeLog.log("vertex-index:"+index);
-				ThreeLog.log("indices:",editingClothModelSkinnedMesh.getGeometry().getSkinIndices().get(index));
-				ThreeLog.log("weight:",editingClothModelSkinnedMesh.getGeometry().getSkinWeights().get(index));
+				
 			}
 		});
 		buttons.add(applyBt);
@@ -1263,11 +1270,11 @@ tabPanel.addSelectionHandler(new SelectionHandler<Integer>() {
 	private SkinnedMesh editingClothModelSkinnedMesh;
 	private Mesh editingGeometryWireMesh;
 	private VertexNormalsHelper editingGeometryNormalsHelper;
-	private MeshVertexSelector editingGeometryWireVertexSelector;
+	private MeshVertexSelector editingClothWireframeVertexSelector;
 	private VertexBoneDataEditor vertexBoneDataEditor;
 	private WireframeHelper editingGeometryWireMeshHelper;
 	private VertexNormalsHelper editingGeometryMeshNormalsHelper;
-	private MeshVertexSelector editingGeometryMeshVertexSelector;
+	private MeshVertexSelector editingClothSkinVertexSelector;
 	private AbstractTextFileUploadPanel baseCharacterModelUpload;
 	private AbstractTextFileUploadPanel editingMeshUpload;
 	
@@ -1302,10 +1309,10 @@ tabPanel.addSelectionHandler(new SelectionHandler<Integer>() {
 		scene.add(editingGeometryNormalsHelper);
 		
 		//for editing-mesh
-		if(editingGeometryWireVertexSelector!=null){
-			editingGeometryWireVertexSelector.dispose();
+		if(editingClothWireframeVertexSelector!=null){
+			editingClothWireframeVertexSelector.dispose();
 		}
-		editingGeometryWireVertexSelector = new MeshVertexSelector(editingGeometryWireMesh, renderer, camera, scene);
+		editingClothWireframeVertexSelector = new MeshVertexSelector(editingGeometryWireMesh, renderer, camera, scene);
 		
 		
 		
