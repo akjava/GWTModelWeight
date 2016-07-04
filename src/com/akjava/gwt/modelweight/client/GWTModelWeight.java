@@ -21,7 +21,6 @@ import com.akjava.gwt.three.client.examples.js.controls.OrbitControls;
 import com.akjava.gwt.three.client.gwt.GWTParamUtils;
 import com.akjava.gwt.three.client.gwt.boneanimation.AnimationBone;
 import com.akjava.gwt.three.client.java.SkinningVertexCalculator;
-import com.akjava.gwt.three.client.java.ThreeLog;
 import com.akjava.gwt.three.client.java.bone.CloseVertexAutoWeight;
 import com.akjava.gwt.three.client.java.bone.WeightResult;
 import com.akjava.gwt.three.client.java.ui.SimpleTabDemoEntryPoint;
@@ -406,6 +405,7 @@ protected void createEditingClothWireframe(){
 				.map(texture)
 				.transparent(true)
 				.alphaTest(0.1)
+				.side(textureSide)
 				);
 		
 		if(baseCharacterModelSkinnedMesh!=null){
@@ -433,6 +433,7 @@ protected void createEditingClothWireframe(){
 				.shading(THREE.FlatShading)
 				.transparent(true)
 				.alphaTest(0.1)
+				.side(textureSide)
 				);
 		
 		if(editingClothModelTextureUpload.isUploaded()){
@@ -642,10 +643,10 @@ protected void createEditingClothWireframe(){
 	}
 	
 	private Panel createBasicControl(){
-		VerticalPanel posPanel=new VerticalPanel();
-		posPanel.setSpacing(2);
+		VerticalPanel basicPanel=new VerticalPanel();
+		basicPanel.setSpacing(2);
 
-		posPanel.add(new HTML("<h4>Base Skinnd Character Model</h4>"));
+		basicPanel.add(new HTML("<h4>Base Skinnd Character Model</h4>"));
 		
 		baseCharacterModelUpload = new AbstractTextFileUploadPanel("Base Json",false) {
 			
@@ -656,7 +657,7 @@ protected void createEditingClothWireframe(){
 		};
 		baseCharacterModelUpload.getUploadForm().setAccept(FileUploadForm.ACCEPT_JSON);
 		
-		posPanel.add(baseCharacterModelUpload);
+		basicPanel.add(baseCharacterModelUpload);
 		
 		baseCharacterModelTextureUpload=new AbstractImageFileUploadPanel("Base Texture",true){
 
@@ -667,17 +668,17 @@ protected void createEditingClothWireframe(){
 			
 		};
 		baseCharacterModelTextureUpload.getUploadForm().setAccept(FileUploadForm.ACCEPT_IMAGE);
-		posPanel.add(baseCharacterModelTextureUpload);
+		basicPanel.add(baseCharacterModelTextureUpload);
 		
 		baseCharacterModelPositionEditor = new Vector3Editor("Skin Position",-2, 2, 0.001, 0);
-		posPanel.add(baseCharacterModelPositionEditor);
+		basicPanel.add(baseCharacterModelPositionEditor);
 		baseCharacterModelPositionEditor.setX(-1.5,true);
 		
 		
 		baseCharacterWireframePositionEditor = new Vector3Editor("Wire Position",-2, 2, 0.001, 0);
-		posPanel.add(baseCharacterWireframePositionEditor);
+		basicPanel.add(baseCharacterWireframePositionEditor);
 		
-		posPanel.add(new HTML("<h4>Camera</h4>"));
+		basicPanel.add(new HTML("<h4>Camera</h4>"));
 		Button resetCamera=new Button("Reset",new ClickHandler() {
 			
 			@Override
@@ -688,9 +689,24 @@ protected void createEditingClothWireframe(){
 				
 			}
 		});
-		posPanel.add(resetCamera);
-		return posPanel;
+		basicPanel.add(resetCamera);
+		
+		basicPanel.add(new HTML("<h4>Texture</h4>"));
+		CheckBox doubleSideCheck=new CheckBox("Double Side");
+		basicPanel.add(doubleSideCheck);
+		doubleSideCheck.addValueChangeHandler(new ValueChangeHandler<Boolean>() {
+
+			@Override
+			public void onValueChange(ValueChangeEvent<Boolean> event) {
+				textureSide=event.getValue()?THREE.DoubleSide:THREE.FrontSide;
+				
+				editingClothModelSkinnedMesh.getMaterial().gwtCastMeshPhongMaterial().setSide(textureSide);
+				baseCharacterModelSkinnedMesh.getMaterial().gwtCastMeshPhongMaterial().setSide(textureSide);
+			}
+		});
+		return basicPanel;
 	}
+	private int textureSide=THREE.FrontSide;
 	
 	private Panel createBonePanel(){
 		VerticalPanel bonePanel=new VerticalPanel();
