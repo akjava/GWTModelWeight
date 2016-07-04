@@ -120,7 +120,7 @@ public class CopyToolPanel extends VerticalPanel{
 				
 				LogUtils.log(file2Object.getJavaScriptObject());
 				
-				final Anchor anchror=new HTML5Download().generateTextDownloadLink(file2Object.toString(),"merged-"+ file2Label.getText(), "Download version 3 format");
+				final Anchor anchror=new HTML5Download().generateTextDownloadLink(file2Object.toString(),"copied-"+ file2Label.getText(), "Download version 3 format");
 				anchror.addClickHandler(new ClickHandler() {
 					
 					@Override
