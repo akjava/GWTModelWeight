@@ -403,7 +403,10 @@ protected void createEditingClothWireframe(){
 		
 		MeshPhongMaterial material=THREE.MeshPhongMaterial(GWTParamUtils.MeshBasicMaterial()
 				.skinning(gpuSkinning)
-				.map(texture));
+				.map(texture)
+				.transparent(true)
+				.alphaTest(0.1)
+				);
 		
 		if(baseCharacterModelSkinnedMesh!=null){
 			scene.remove(baseCharacterModelSkinnedMesh);
@@ -427,7 +430,10 @@ protected void createEditingClothWireframe(){
 		MeshPhongMaterial material=THREE.MeshPhongMaterial(GWTParamUtils.MeshBasicMaterial()
 				.skinning(gpuSkinning)
 				.color(editingClothModelSkinnedMeshColor)
-				.shading(THREE.FlatShading));
+				.shading(THREE.FlatShading)
+				.transparent(true)
+				.alphaTest(0.1)
+				);
 		
 		if(editingClothModelTextureUpload.isUploaded()){
 			Texture texture=THREE.Texture(editingClothModelTextureUpload.getLastUploadImage());

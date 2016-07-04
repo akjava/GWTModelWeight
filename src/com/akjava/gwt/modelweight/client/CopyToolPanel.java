@@ -6,6 +6,7 @@ import com.akjava.gwt.html5.client.file.FileHandler;
 import com.akjava.gwt.html5.client.file.FileReader;
 import com.akjava.gwt.html5.client.file.FileUploadForm;
 import com.akjava.gwt.html5.client.file.FileUtils;
+import com.akjava.gwt.html5.client.file.FileUtils.DataURLListener;
 import com.akjava.gwt.lib.client.LogUtils;
 import com.akjava.gwt.three.client.java.utils.GWTGeometryUtils;
 import com.akjava.gwt.three.client.js.core.Geometry;
@@ -17,8 +18,6 @@ import com.google.gwt.event.dom.client.ChangeHandler;
 import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
 import com.google.gwt.json.client.JSONObject;
-import com.google.gwt.json.client.JSONParser;
-import com.google.gwt.json.client.JSONValue;
 import com.google.gwt.user.client.ui.Anchor;
 import com.google.gwt.user.client.ui.Button;
 import com.google.gwt.user.client.ui.HorizontalPanel;
@@ -45,47 +44,32 @@ public class CopyToolPanel extends VerticalPanel{
 		final Label file1InfoLabel=new Label(".");
 		add(file1InfoLabel);
 		
-		final FileUploadForm srcFile=new FileUploadForm();
+		final FileUploadForm srcFile=FileUtils.createSingleTextFileUploadForm(new DataURLListener() {
+			
+			@Override
+			public void uploaded(File file, String text) {
+				JSONObject object=GWTGeometryUtils.loadJsonModel(text, new JSONLoadHandler() {
+					
+					@Override
+					public void loaded(Geometry geometry,JsArray<Material> materials) {
+						file1Vertex=geometry.vertices().length();
+						LogUtils.log(geometry);
+						file1InfoLabel.setText("Vertex:"+geometry.vertices().length()+" Indices:"+geometry.getSkinIndices().length()+",Weigths:"+geometry.getSkinWeights().length());	
+					
+						hasWeights=geometry.getSkinWeights().length()>0;
+						hasIndices=geometry.getSkinIndices().length()>0;
+					}
+				});
+				
+				
+				file1Object=object;
+				file1Label.setText(file.getFileName());
+				updateButton();
+			}
+		}, true);
 		add(srcFile);
 		
 		
-		srcFile.getFileUpload().addChangeHandler(new ChangeHandler() {
-			
-			@Override
-			public void onChange(ChangeEvent event) {
-				JsArray<File> files = FileUtils.toFile(event.getNativeEvent());
-				
-				final FileReader reader=FileReader.createFileReader();
-				final File file=files.get(0);
-				reader.setOnLoad(new FileHandler() {
-					@Override
-					public void onLoad() {
-						srcFile.reset();
-						
-						String text=reader.getResultAsString();
-						
-						JSONObject object=GWTGeometryUtils.loadJsonModel(text, new JSONLoadHandler() {
-							
-							@Override
-							public void loaded(Geometry geometry,JsArray<Material> materials) {
-								file1Vertex=geometry.vertices().length();
-								LogUtils.log(geometry);
-								file1InfoLabel.setText("Vertex:"+geometry.vertices().length()+" Indices:"+geometry.getSkinIndices().length()+",Weigths:"+geometry.getSkinWeight().length());	
-							
-								hasWeights=geometry.getSkinWeights().length()>0;
-								hasIndices=geometry.getSkinIndices().length()>0;
-							}
-						});
-						
-						
-						file1Object=object;
-						file1Label.setText(file.getFileName());
-						updateButton();
-					}
-				});
-				reader.readAsText(file,"utf-8");
-			}
-		});
 		
 		
 
@@ -96,47 +80,30 @@ public class CopyToolPanel extends VerticalPanel{
 		final Label file2InfoLabel=new Label(".");
 		add(file2InfoLabel);
 		
-		final FileUploadForm destFile=new FileUploadForm();
+		final FileUploadForm destFile=FileUtils.createSingleTextFileUploadForm(new DataURLListener() {
+			
+			@Override
+			public void uploaded(File file, String text) {
+				JSONObject object=GWTGeometryUtils.loadJsonModel(text, new JSONLoadHandler() {
+					
+					@Override
+					public void loaded(Geometry geometry,JsArray<Material> materials) {
+						LogUtils.log(geometry);
+						file2Vertex=geometry.vertices().length();
+						file2InfoLabel.setText("Vertex:"+geometry.vertices().length()+" Indices:"+geometry.getSkinIndices().length()+",Weigths:"+geometry.getSkinWeights().length());	
+					
+						
+					}
+				});
+				
+				file2Object=object;
+				file2Label.setText(file.getFileName());
+				updateButton();
+			}
+		},true);
 		add(destFile);
 		
 		
-		destFile.getFileUpload().addChangeHandler(new ChangeHandler() {
-			
-			@Override
-			public void onChange(ChangeEvent event) {
-				JsArray<File> files = FileUtils.toFile(event.getNativeEvent());
-				
-				final FileReader reader=FileReader.createFileReader();
-				final File file=files.get(0);
-				reader.setOnLoad(new FileHandler() {
-					
-
-					@Override
-					public void onLoad() {
-						destFile.reset();
-						
-						String text=reader.getResultAsString();
-						//TODO more validate
-						JSONObject object=GWTGeometryUtils.loadJsonModel(text, new JSONLoadHandler() {
-							
-							@Override
-							public void loaded(Geometry geometry,JsArray<Material> materials) {
-								LogUtils.log(geometry);
-								file2Vertex=geometry.vertices().length();
-								file2InfoLabel.setText("Vertex:"+geometry.vertices().length()+" Indices:"+geometry.getSkinIndices().length()+",Weigths:"+geometry.getSkinWeight().length());	
-							
-								
-							}
-						});
-						
-						file2Object=object;
-						file2Label.setText(file.getFileName());
-						updateButton();
-					}
-				});
-				reader.readAsText(file,"utf-8");
-			}
-		});
 		copyButton = new Button("copy skinIndices & skinWeights");
 		copyButton.setEnabled(false);
 		add(copyButton);
