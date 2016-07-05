@@ -1021,24 +1021,31 @@ tabPanel.addSelectionHandler(new SelectionHandler<Integer>() {
 				//baseSkinnedModelMesh.pose();
 			}
 		}));
-		controls.add(new Button("Pause",new ClickHandler() {
+		 pauseButton = new Button("Pause",new ClickHandler() {
 			@Override
 			public void onClick(ClickEvent event) {
-				mixer.setTimeScale(0);
+				if(mixer.getTimeScale()==1){
+					
+					mixer.setTimeScale(0);
+					
+				}else{
+					pauseButton.setText("Pause");
+					mixer.setTimeScale(1);
+				}
+				updatePauseButtonLabel();
 			}
-		}));
-		controls.add(new Button("UnPause",new ClickHandler() {
-			@Override
-			public void onClick(ClickEvent event) {
-				mixer.setTimeScale(1);
-			}
-		}));
+		});
+		 pauseButton.setEnabled(false);
+		 pauseButton.setWidth("100px");
+		 controls.add(pauseButton);
+		 
 		controls.add(new Button("Step",new ClickHandler() {
 			@Override
 			public void onClick(ClickEvent event) {
 				mixer.setTimeScale(1);
 				mixer.update(1.0/60);
 				mixer.setTimeScale(0);
+				updatePauseButtonLabel();
 			}
 		}));
 		HorizontalPanel animations=new HorizontalPanel();
@@ -1049,6 +1056,7 @@ tabPanel.addSelectionHandler(new SelectionHandler<Integer>() {
 		animations.add(makeAnimationButton("animation4", GWTHTMLUtils.parameterFile("animation4")));
 		
 		HorizontalPanel filePanel=new HorizontalPanel();
+		filePanel.setWidth("100%");
 		filePanel.setVerticalAlignment(HorizontalPanel.ALIGN_MIDDLE);
 		animationPanel.add(filePanel);
 		
@@ -1064,7 +1072,7 @@ tabPanel.addSelectionHandler(new SelectionHandler<Integer>() {
 		
 		
 		final Label fileNameLabel=new Label();
-		fileNameLabel.setWidth("140px");
+		fileNameLabel.setWidth("100%");
 		filePanel.add(fileNameLabel);
 		FileUploadForm upload=FileUtils.createSingleTextFileUploadForm(new DataURLListener() {
 			
@@ -1080,6 +1088,14 @@ tabPanel.addSelectionHandler(new SelectionHandler<Integer>() {
 		
 		return animationPanel;
 	}
+	protected void updatePauseButtonLabel() {
+		if(mixer.getTimeScale()==0){
+			pauseButton.setText("UnPause");
+		}else{
+			pauseButton.setText("Pause");
+		}
+	}
+
 	private String uploadAnimationText;
 
 	public void stopAnimation() {
@@ -1089,6 +1105,7 @@ tabPanel.addSelectionHandler(new SelectionHandler<Integer>() {
 		mixer.stopAllAction();
 		lastAnimationClip=null;
 		//characterMesh.getGeometry().getBones().get(60).setRotq(q)
+		pauseButton.setEnabled(false);
 	}
 	
 	private AnimationMixer mixer;
@@ -1112,12 +1129,14 @@ tabPanel.addSelectionHandler(new SelectionHandler<Integer>() {
 		mixer.uncacheClip(clip);//reset can cache
 		mixer.clipAction(clip).play();
 		lastAnimationClip=clip;
+		pauseButton.setEnabled(true);
+		updatePauseButtonLabel();
 	}
 	
 	private Panel createLoadExportPanel(){
 		VerticalPanel loadExportPanel=new VerticalPanel();
 		loadExportPanel.add(new HTML("<h4>EditingCloth</h4>"));
-		editingMeshUpload=new AbstractTextFileUploadPanel() {
+		editingMeshUpload=new AbstractTextFileUploadPanel("Cloth Model",false) {
 			@Override
 			protected void onTextFileUpload(String text) {
 				onEditingClothJsonLoaded(text);
@@ -1349,6 +1368,7 @@ tabPanel.addSelectionHandler(new SelectionHandler<Integer>() {
 	private AbstractTextFileUploadPanel editingMeshUpload;
 	
 	private AbstractImageFileUploadPanel baseCharacterModelTextureUpload;
+	private Button pauseButton;
 	
 	private JSONObject parseJSONGeometry(String text){
 		JSONValue json=JSONParser.parseStrict(text);
