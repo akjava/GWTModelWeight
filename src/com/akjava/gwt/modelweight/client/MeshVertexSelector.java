@@ -184,6 +184,7 @@ public class MeshVertexSelector extends Object3DMouseSelecter{
 		selectedLine.getGeometry().getVertices().get(0).copy(v1);
 		selectedLine.getGeometry().getVertices().get(1).copy(v2);
 		selectedLine.getGeometry().setVerticesNeedUpdate(true);
+		selectedLine.getGeometry().computeBoundingSphere();
 	}
 	public void update() {
 		setSelectionVertex(selectecVertexIndex);

@@ -148,11 +148,9 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 			
 		}
 		
-		if(editingGeometryNormalsHelper!=null){
-			editingGeometryNormalsHelper.update();//need?
-			if(!gpuSkinning){
-				editingGeometryNormalsHelper.getGeometry().computeBoundingSphere();//still gone easily
-			}
+		if(editingClothWireframeNormalsHelper!=null){
+			//editingClothWireframeNormalsHelper.update();
+			
 		}
 		
 		
@@ -172,6 +170,9 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		
 		if(editingClothSkinNormalsHelper!=null){
 			editingClothSkinNormalsHelper.update();
+			if(!gpuSkinning){
+				editingClothSkinNormalsHelper.getGeometry().computeBoundingSphere();//still gone easily
+			}
 		}
 	}
 
@@ -186,8 +187,8 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 			if(editingClothWireframeVertexSelector!=null){
 			editingClothWireframeVertexSelector.setVisible(true);
 			}
-			if(editingGeometryNormalsHelper!=null){
-			editingGeometryNormalsHelper.setVisible(true);
+			if(editingClothWireframeNormalsHelper!=null){
+			editingClothWireframeNormalsHelper.setVisible(true);
 			}
 			
 			if(editingClothSkinNormalsHelper!=null){
@@ -200,8 +201,8 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 			if(editingClothWireframeVertexSelector!=null){
 			editingClothWireframeVertexSelector.setVisible(false);
 			}
-			if(editingGeometryNormalsHelper!=null){
-			editingGeometryNormalsHelper.setVisible(false);
+			if(editingClothWireframeNormalsHelper!=null){
+			editingClothWireframeNormalsHelper.setVisible(false);
 			}
 			
 			if(editingClothSkinNormalsHelper!=null){
@@ -947,7 +948,7 @@ tabPanel.addSelectionHandler(new SelectionHandler<Integer>() {
 		
 		tab.add(createAnimationPanel(),"Animation");
 		
-		tab.selectTab(4);
+		tab.selectTab(2);
 		
 		
 		tab.addSelectionHandler(new SelectionHandler<Integer>() {
@@ -1338,7 +1339,7 @@ tabPanel.addSelectionHandler(new SelectionHandler<Integer>() {
 	private Geometry editingGeometry;
 	private SkinnedMesh editingClothModelSkinnedMesh;
 	private Mesh editingGeometryWireMesh;
-	private VertexNormalsHelper editingGeometryNormalsHelper;
+	private VertexNormalsHelper editingClothWireframeNormalsHelper;
 	private MeshVertexSelector editingClothWireframeVertexSelector;
 	private VertexBoneDataEditor vertexBoneDataEditor;
 	private WireframeHelper editingGeometryWireMeshHelper;
@@ -1369,24 +1370,19 @@ tabPanel.addSelectionHandler(new SelectionHandler<Integer>() {
 	
 
 	private void createVertexSelections() {
-		if(editingGeometryNormalsHelper!=null){
-			scene.remove(editingGeometryNormalsHelper);
+		if(editingClothWireframeNormalsHelper!=null){
+			scene.remove(editingClothWireframeNormalsHelper);
 		}
 		double lineWidth=0.1;
 		double size=0.01;
-		editingGeometryNormalsHelper = THREE.VertexNormalsHelper(editingGeometryWireMesh, size, 0xffff00, lineWidth);
-		scene.add(editingGeometryNormalsHelper);
+		editingClothWireframeNormalsHelper = THREE.VertexNormalsHelper(editingGeometryWireMesh, size, 0xffff00, lineWidth);
+		scene.add(editingClothWireframeNormalsHelper);
 		
 		//for editing-mesh
 		if(editingClothWireframeVertexSelector!=null){
 			editingClothWireframeVertexSelector.dispose();
 		}
 		editingClothWireframeVertexSelector = new MeshVertexSelector(editingGeometryWireMesh, renderer, camera, scene);
-		
-		
-		
-		
-		
 		
 		updateSelectedTabIndex();
 	}
