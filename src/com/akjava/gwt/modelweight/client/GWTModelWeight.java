@@ -33,8 +33,8 @@ import com.akjava.gwt.three.client.js.extras.helpers.VertexNormalsHelper;
 import com.akjava.gwt.three.client.js.extras.helpers.WireframeHelper;
 import com.akjava.gwt.three.client.js.lights.Light;
 import com.akjava.gwt.three.client.js.loaders.XHRLoader.XHRLoadHandler;
+import com.akjava.gwt.three.client.js.materials.Material;
 import com.akjava.gwt.three.client.js.materials.MeshPhongMaterial;
-import com.akjava.gwt.three.client.js.math.Matrix4;
 import com.akjava.gwt.three.client.js.math.Vector3;
 import com.akjava.gwt.three.client.js.math.Vector4;
 import com.akjava.gwt.three.client.js.objects.Bone;
@@ -430,7 +430,7 @@ protected void createEditingClothWireframe(){
 		return editingGeometry!=null;
 	}
 	
-	protected void createEditingClothSkin() {
+	protected MeshPhongMaterial createEditingClothSkinMaterial(){
 		MeshPhongMaterial material=THREE.MeshPhongMaterial(GWTParamUtils.MeshPhongMaterial()
 				.skinning(gpuSkinning)
 				.color(editingClothModelSkinnedMeshColor)
@@ -447,7 +447,13 @@ protected void createEditingClothWireframe(){
 			material.setMap(texture);
 			material.getColor().setHex(0xffffff);
 		}
+		material.setDisplacementMap(editingClothModelDisplacementUpload.createTextureFromUpload(null));
+		return material;
+	}
+	
+	protected void createEditingClothSkin() {
 		
+		Material material=createEditingClothSkinMaterial();
 		
 		if(editingClothModelSkinnedMesh!=null){
 			//not scene ,
