@@ -5,8 +5,9 @@ import javax.annotation.Nullable;
 import com.akjava.gwt.html5.client.file.File;
 import com.akjava.gwt.html5.client.file.FileUploadForm;
 import com.akjava.gwt.html5.client.file.FileUtils;
-import com.akjava.gwt.html5.client.file.FileUtils.DataURLListener;
 import com.akjava.gwt.html5.client.file.FileUtils.ImageFileListener;
+import com.akjava.gwt.three.client.js.THREE;
+import com.akjava.gwt.three.client.js.textures.Texture;
 import com.google.gwt.dom.client.ImageElement;
 import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
@@ -104,6 +105,23 @@ public abstract class AbstractImageFileUploadPanel extends VerticalPanel{
 	public boolean isUploaded() {
 		return lastUploadImage!=null;
 	}
+	
+	public Texture  createTextureFromUpload(@Nullable ImageElement ifNotUploadedImage){
+		Texture texture=null;
+		if(isUploaded()){
+			texture=THREE.Texture(getLastUploadImage());
+			texture.setNeedsUpdate(true);
+		}else{
+			if(ifNotUploadedImage==null){
+				return null;
+			}else{
+				texture=THREE.Texture(ifNotUploadedImage);
+				texture.setNeedsUpdate(true);
+			}
+		}
+		return texture;
+	}
+	
 	}
 	
 	

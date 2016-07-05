@@ -32,9 +32,9 @@ import com.akjava.gwt.three.client.js.core.Geometry;
 import com.akjava.gwt.three.client.js.extras.helpers.VertexNormalsHelper;
 import com.akjava.gwt.three.client.js.extras.helpers.WireframeHelper;
 import com.akjava.gwt.three.client.js.lights.Light;
-import com.akjava.gwt.three.client.js.loaders.ImageLoader.ImageLoadHandler;
 import com.akjava.gwt.three.client.js.loaders.XHRLoader.XHRLoadHandler;
 import com.akjava.gwt.three.client.js.materials.MeshPhongMaterial;
+import com.akjava.gwt.three.client.js.math.Matrix4;
 import com.akjava.gwt.three.client.js.math.Vector3;
 import com.akjava.gwt.three.client.js.math.Vector4;
 import com.akjava.gwt.three.client.js.objects.Bone;
@@ -151,7 +151,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		if(editingGeometryNormalsHelper!=null){
 			editingGeometryNormalsHelper.update();//need?
 			if(!gpuSkinning){
-				editingGeometryNormalsHelper.getGeometry().computeBoundingSphere();
+				editingGeometryNormalsHelper.getGeometry().computeBoundingSphere();//still gone easily
 			}
 		}
 		
@@ -238,7 +238,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		
 		scene.add(mouseClickCatcher);
 		
-		nearCamera=0.01;
+		nearCamera=0.001;
 		updateCamera(scene,screenWidth , screenHeight);
 		
 		cameraZ=4;
@@ -255,8 +255,14 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		
 		mouseSelector = new Object3DMouseSelecter(renderer, camera);
 		
+		
+		//warning not loaded
+		basicCharacterModelDisplacementTexture=GWTHTMLUtils.parameterImage("displacement");
+		basicCharacterModelMapTexture=GWTHTMLUtils.parameterImage("texture");
 	}
-
+	
+	ImageElement basicCharacterModelDisplacementTexture;
+	ImageElement basicCharacterModelMapTexture;
 
 	private JSONObject baseCharacterModelJson;
 	private Geometry baseCharacterModelGeometry;
@@ -272,6 +278,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 	private BoneMeshMouseSelector boneMouseSelector;
 	private Vector3Editor baseCharacterWireframePositionEditor;
 	private Mesh editingClothSkinWireframeHelperMesh;
+	private AbstractImageFileUploadPanel baseCharacterModelDisplacementUpload;
 	private void initialLoadBaseCharacterModel(final String modelUrl) {
 		THREE.XHRLoader().load(modelUrl, new XHRLoadHandler() {
 			@Override
@@ -391,21 +398,18 @@ protected void createEditingClothWireframe(){
 	
 
 	protected void createBaseCharacterModelSkin() {
-		Texture texture=null;
-		if(baseCharacterModelTextureUpload.isUploaded()){
-			texture=THREE.Texture(baseCharacterModelTextureUpload.getLastUploadImage());
-			texture.setNeedsUpdate(true);
-			
-		}else{
-			texture=THREE.TextureLoader().load(GWTHTMLUtils.parameterFile("texture"));
-		}
+		Texture texture=baseCharacterModelTextureUpload.createTextureFromUpload(basicCharacterModelMapTexture);
+		Texture displacement=baseCharacterModelDisplacementUpload.createTextureFromUpload(basicCharacterModelDisplacementTexture);
 		
-		MeshPhongMaterial material=THREE.MeshPhongMaterial(GWTParamUtils.MeshBasicMaterial()
+		
+		MeshPhongMaterial material=THREE.MeshPhongMaterial(GWTParamUtils.MeshPhongMaterial()
 				.skinning(gpuSkinning)
 				.map(texture)
 				.transparent(true)
 				.alphaTest(0.1)
 				.side(textureSide)
+				.displacementMap(displacement)
+				.displacementScale(GWTHTMLUtils.parameterDouble("displacementScale", 0.1))
 				);
 		
 		if(baseCharacterModelSkinnedMesh!=null){
@@ -427,13 +431,14 @@ protected void createEditingClothWireframe(){
 	}
 	
 	protected void createEditingClothSkin() {
-		MeshPhongMaterial material=THREE.MeshPhongMaterial(GWTParamUtils.MeshBasicMaterial()
+		MeshPhongMaterial material=THREE.MeshPhongMaterial(GWTParamUtils.MeshPhongMaterial()
 				.skinning(gpuSkinning)
 				.color(editingClothModelSkinnedMeshColor)
 				.shading(THREE.FlatShading)
 				.transparent(true)
 				.alphaTest(0.1)
 				.side(textureSide)
+				.displacementScale(GWTHTMLUtils.parameterDouble("displacementScale", 0.1))
 				);
 		
 		if(editingClothModelTextureUpload.isUploaded()){
@@ -532,7 +537,7 @@ protected void createEditingClothWireframe(){
 		if(event.getNativeButton()==NativeEvent.BUTTON_MIDDLE){
 			return;//not support
 		}
-		LogUtils.log("mouse-click");
+		//LogUtils.log("mouse-click");
 		if(selectedTabIndex!=BONE_TAB_INDEX){
 			if(editingClothWireframeVertexSelector!=null){
 				int vertex=editingClothWireframeVertexSelector.pickVertex(event);
@@ -620,9 +625,19 @@ protected void createEditingClothWireframe(){
 			Window.alert("invalid model");
 			return;
 		}
+		Geometry geometry=THREE.JSONLoader().parse(object.getJavaScriptObject()).getGeometry();
+		if(!geometry.gwtHasBone() || !geometry.gwtHasSkinIndicesAndWeights()){
+			Window.alert("Model has no bone,base model need bone.\nexport with Bones and Skinning checked");
+			return;
+		}
+		
+		//TODO check weights
+		
+		//now safe
 		baseCharacterModelJson=object;
 		
-		baseCharacterModelGeometry=THREE.JSONLoader().parse(baseCharacterModelJson.getJavaScriptObject()).getGeometry();
+		baseCharacterModelGeometry=geometry;
+		
 		
 		setInfluencePerVertexFromJSON(baseCharacterModelGeometry,object);
 		
@@ -664,6 +679,15 @@ protected void createEditingClothWireframe(){
 			@Override
 			protected void onImageFileUpload(ImageElement imageElement) {
 				onBaseCharacterModelTextureLoaded(imageElement);
+			}
+			
+		};
+		
+		baseCharacterModelDisplacementUpload=new AbstractImageFileUploadPanel("Base Displacement",true){
+
+			@Override
+			protected void onImageFileUpload(ImageElement imageElement) {
+				onBaseCharacterModelDisplacementLoaded(imageElement);
 			}
 			
 		};
@@ -933,35 +957,24 @@ tabPanel.addSelectionHandler(new SelectionHandler<Integer>() {
 		initialLoadBaseCharacterModel(modelUrl);
 	}
 	
-	protected void onBaseCharacterModelTextureLoaded(@Nullable ImageElement imageElement) {
-		if(imageElement==null){
-			THREE.ImageLoader().load(GWTHTMLUtils.parameterFile("texture"), new ImageLoadHandler() {
-				
-				@Override
-				public void onProgress(NativeEvent progress) {
-					// TODO Auto-generated method stub
-					
-				}
-				
-				@Override
-				public void onLoad(ImageElement imageElement) {
-					baseCharacterModelSkinnedMesh.getMaterial().gwtCastMeshPhongMaterial().getMap().setImage(imageElement);	
-					baseCharacterModelSkinnedMesh.getMaterial().gwtCastMeshPhongMaterial().getMap().setNeedsUpdate(true);
-				}
-				
-				@Override
-				public void onError(NativeEvent error) {
-					// TODO Auto-generated method stub
-					
-				}
-			});
+	protected void onBaseCharacterModelDisplacementLoaded(@Nullable ImageElement imageElement) {
 		
-		}else{
-		baseCharacterModelSkinnedMesh.getMaterial().gwtCastMeshPhongMaterial().getMap().setImage(imageElement);
-		baseCharacterModelSkinnedMesh.getMaterial().gwtCastMeshPhongMaterial().getMap().setNeedsUpdate(true);
-		}
+		baseCharacterModelSkinnedMesh.getMaterial().gwtCastMeshPhongMaterial().setDisplacementMap(baseCharacterModelDisplacementUpload.createTextureFromUpload(basicCharacterModelDisplacementTexture));
+		baseCharacterModelSkinnedMesh.getMaterial().setNeedsUpdate(true);
+		
 		
 	}
+	
+	protected void onBaseCharacterModelTextureLoaded(@Nullable ImageElement imageElement) {
+		ImageElement newImage=imageElement;
+		if(imageElement==null){//reset
+			newImage=basicCharacterModelMapTexture;
+		}
+		baseCharacterModelSkinnedMesh.getMaterial().gwtCastMeshPhongMaterial().getMap().setImage(newImage);
+		baseCharacterModelSkinnedMesh.getMaterial().gwtCastMeshPhongMaterial().getMap().setNeedsUpdate(true);
+	}
+	
+
 
 	private Button makeAnimationButton(String name,final String url){
 		return new Button(name,new ClickHandler() {
@@ -1082,6 +1095,7 @@ tabPanel.addSelectionHandler(new SelectionHandler<Integer>() {
 	
 	private AnimationClip lastAnimationClip;
 	private AbstractImageFileUploadPanel editingClothModelTextureUpload;
+	private AbstractImageFileUploadPanel editingClothModelDisplacementUpload;
 	public void playAnimation(@Nullable AnimationClip clip) {
 		if(clip==null){
 			return;
@@ -1118,6 +1132,16 @@ tabPanel.addSelectionHandler(new SelectionHandler<Integer>() {
 		editingClothModelTextureUpload.getUploadForm().setAccept(FileUploadForm.ACCEPT_IMAGE);
 		loadExportPanel.add(editingClothModelTextureUpload);
 		
+		editingClothModelDisplacementUpload=new AbstractImageFileUploadPanel("Cloth Displacement",true){
+
+			@Override
+			protected void onImageFileUpload(ImageElement imageElement) {
+				onEditingClothModelDisplacementLoaded(imageElement);
+			}
+			
+		};
+		editingClothModelDisplacementUpload.getUploadForm().setAccept(FileUploadForm.ACCEPT_IMAGE);
+		loadExportPanel.add(editingClothModelDisplacementUpload);
 		
 		
 		final HorizontalPanel downloadPanel=new HorizontalPanel();
@@ -1149,18 +1173,26 @@ tabPanel.addSelectionHandler(new SelectionHandler<Integer>() {
 			return;
 		}
 		
-		if(imageElement==null){
-			editingClothModelSkinnedMesh.getMaterial().gwtCastMeshPhongMaterial().setMap(null);
-			editingClothModelSkinnedMesh.getMaterial().gwtCastMeshPhongMaterial().getColor().setHex(editingClothModelSkinnedMeshColor);
-			editingClothModelSkinnedMesh.getMaterial().setNeedsUpdate(true);
-		}else{
-		Texture texture=THREE.Texture(imageElement);
-		texture.setNeedsUpdate(true);
-		editingClothModelSkinnedMesh.getMaterial().gwtCastMeshPhongMaterial().getColor().setHex(0xffffff);
-		
+		Texture texture=editingClothModelTextureUpload.createTextureFromUpload(null);
 		editingClothModelSkinnedMesh.getMaterial().gwtCastMeshPhongMaterial().setMap(texture);
 		editingClothModelSkinnedMesh.getMaterial().setNeedsUpdate(true);
+		
+		if(editingClothModelTextureUpload.isUploaded()){
+			editingClothModelSkinnedMesh.getMaterial().gwtCastMeshPhongMaterial().getColor().setHex(0xffffff);
+		}else{
+			editingClothModelSkinnedMesh.getMaterial().gwtCastMeshPhongMaterial().getColor().setHex(editingClothModelSkinnedMeshColor);
 		}
+	}
+	
+	protected void onEditingClothModelDisplacementLoaded(ImageElement imageElement) {
+		if(editingClothModelSkinnedMesh==null){
+			return;
+		}
+		
+		Texture texture=editingClothModelDisplacementUpload.createTextureFromUpload(null);
+		editingClothModelSkinnedMesh.getMaterial().gwtCastMeshPhongMaterial().setDisplacementMap(texture);
+		editingClothModelSkinnedMesh.getMaterial().setNeedsUpdate(true);
+		
 	}
 
 	private Panel createWeightPanel(){
