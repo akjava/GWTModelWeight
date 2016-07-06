@@ -28,6 +28,7 @@ import com.akjava.gwt.three.client.java.ui.experiments.Vector3Editor;
 import com.akjava.gwt.three.client.js.THREE;
 import com.akjava.gwt.three.client.js.animation.AnimationClip;
 import com.akjava.gwt.three.client.js.animation.AnimationMixer;
+import com.akjava.gwt.three.client.js.animation.AnimationMixerAction;
 import com.akjava.gwt.three.client.js.core.Geometry;
 import com.akjava.gwt.three.client.js.extras.helpers.VertexNormalsHelper;
 import com.akjava.gwt.three.client.js.extras.helpers.WireframeHelper;
@@ -99,32 +100,59 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 	return html;	
 	}
 
+	//re-creating character
+	private boolean disableMixer;
 	public void setGpuSkinning(boolean gpuSkinning) {
+		disableMixer=true;
 		//i have no idea somehow problem
 		//trackballControls.reset();
 		//trackballControls.setTarget(THREE.Vector3(0,cameraY,0));
-		
+		double time=currentAnimationAction!=null?currentAnimationAction.getTime():0;
+		double timeScale=mixer!=null?mixer.getTimeScale():1;
 		
 		
 		this.gpuSkinning = gpuSkinning;
-		createBaseCharacterModelSkin();
+		createBaseCharacterModelSkin();//re-create mixer here
 		
 		if(hasEditingGeometry()){
 		createEditingClothSkin();
-		
-		
-		
 		}
 		
-		playAnimation(lastAnimationClip);
 		
+		
+		playAnimation(lastAnimationClip);//pauseButton label update here
+		//sync old value to recreated-mixer and action 
+		currentAnimationAction.setTime(time);
+		mixer.setTimeScale(timeScale);
+		updatePauseButtonLabel();
+		disableMixer=false;
 	}
 
+	private void updateTimeLabel(){
+		if(currentAnimationAction==null){
+			return;
+		}
+		double t=currentAnimationAction.getTime();
+		if(t==0){
+			timeLabel.setText("time:0");
+			return;
+		}
+		int m=(int) (t/60);
+		String head="time:";
+		if(m>0){
+			head=m+"m ";
+		}
+		double r=JavaScriptUtils.fixNumber(4,t/60);
+		
+		timeLabel.setText(head+r);
+	}
+	
 	@Override
 	protected void beforeUpdate(WebGLRenderer renderer) {
 		
-		if(mixer!=null){
+		if(mixer!=null && !disableMixer){
 			mixer.update(1.0/60);
+			updateTimeLabel();
 		}
 		
 		
@@ -1005,6 +1033,7 @@ tabPanel.addSelectionHandler(new SelectionHandler<Integer>() {
 	private Panel createAnimationPanel(){
 		VerticalPanel animationPanel=new VerticalPanel();
 		HorizontalPanel controls=new HorizontalPanel();
+		controls.setVerticalAlignment(HorizontalPanel.ALIGN_MIDDLE);
 		animationPanel.add(controls);
 		
 		controls.add(new Button("Stop",new ClickHandler() {
@@ -1051,6 +1080,12 @@ tabPanel.addSelectionHandler(new SelectionHandler<Integer>() {
 				updatePauseButtonLabel();
 			}
 		}));
+		
+		
+		timeLabel = new Label("time:0");
+		controls.add(timeLabel);
+		
+		
 		HorizontalPanel animations=new HorizontalPanel();
 		animationPanel.add(animations);
 		animations.add(makeAnimationButton("animation1", GWTHTMLUtils.parameterFile("animation1")));
@@ -1062,6 +1097,7 @@ tabPanel.addSelectionHandler(new SelectionHandler<Integer>() {
 		filePanel.setWidth("100%");
 		filePanel.setVerticalAlignment(HorizontalPanel.ALIGN_MIDDLE);
 		animationPanel.add(filePanel);
+		
 		
 		filePanel.add(new Button("Play",new ClickHandler() {
 			@Override
@@ -1123,6 +1159,8 @@ tabPanel.addSelectionHandler(new SelectionHandler<Integer>() {
 	private AnimationClip lastAnimationClip;
 	private AbstractImageFileUploadPanel editingClothModelTextureUpload;
 	private AbstractImageFileUploadPanel editingClothModelDisplacementUpload;
+	
+	private AnimationMixerAction currentAnimationAction;
 	public void playAnimation(@Nullable AnimationClip clip) {
 		if(clip==null){
 			return;
@@ -1130,7 +1168,7 @@ tabPanel.addSelectionHandler(new SelectionHandler<Integer>() {
 		mixer.setTimeScale(1);//if paused
 		mixer.stopAllAction();
 		mixer.uncacheClip(clip);//reset can cache
-		mixer.clipAction(clip).play();
+		currentAnimationAction=mixer.clipAction(clip).play();
 		lastAnimationClip=clip;
 		pauseButton.setEnabled(true);
 		updatePauseButtonLabel();
@@ -1372,6 +1410,7 @@ tabPanel.addSelectionHandler(new SelectionHandler<Integer>() {
 	
 	private AbstractImageFileUploadPanel baseCharacterModelTextureUpload;
 	private Button pauseButton;
+	private Label timeLabel;
 	
 	private JSONObject parseJSONGeometry(String text){
 		JSONValue json=JSONParser.parseStrict(text);
