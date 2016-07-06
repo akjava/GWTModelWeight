@@ -310,7 +310,7 @@ baseCharacterModelGeometry.computeBoundingBox();
 		trackballControls=THREEExp.OrbitControls(camera,canvas.getElement());
 		//trackballControls.setNoZoom(true);
 		trackballControls.getMouseButtons().set("ORBIT", THREE.MOUSE.MIDDLE);
-		trackballControls.getMouseButtons().set("ZOOM", 3);//3 is not exist,for ignore
+		trackballControls.getMouseButtons().set("ZOOM", 3);//3 is not exist,for ignore left button
 		
 	//	trackballControls=THREEExp.TrackballControls(camera,canvas.getElement());
 		//trackballControls.setRotateSpeed(10);
