@@ -122,7 +122,9 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		
 		playAnimation(lastAnimationClip);//pauseButton label update here
 		//sync old value to recreated-mixer and action 
-		currentAnimationAction.setTime(time);
+		if(currentAnimationAction!=null){
+			currentAnimationAction.setTime(time);
+		}
 		mixer.setTimeScale(timeScale);
 		updatePauseButtonLabel();
 		disableMixer=false;
