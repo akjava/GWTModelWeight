@@ -35,9 +35,9 @@ Main Functions
 --------------
 For the geometry(cloth/hair/item) you loaded.
 
-**Do auto weight** -  pick closed vertex on character and copy indices/weights data.
+**Do auto skinning** -  pick closed vertex from the base-character and copy indices/weights data.(bone based auto-skinning not support yet)
 
-**Weight all targeted bon**e - all the skinning for the target single bone.good at hair/hand item.
+**Skinning all targeted bone** - all the skinning for the target single bone.good at hair/hand item.
 
 **replace indices/weights jsondata** - if two geometry are same size,you can copy from `Copy Indices/Weights Tab`.This is the case once you finish skinning with this app,but you modify little positioning , rotating or scalling with blender.
 
