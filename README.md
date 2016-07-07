@@ -1,33 +1,23 @@
 GWT Model Weight
 ========
+ver-6.0
 
-![](http://www.akjava.com/img4/modelweight.jpg)
+![](https://akjava.github.io/website/images/modelweigh6.png)
 
-What is this
+This App is written with not javascript but GWT/Java.Based on three.js.only works on Chrome Browser
+
+Basic
 --------
-This is modify skinIndice and skinWeight for three.js model.
+If you are familiar with Blender Posing/Skinning,don't need this app.
+Blender can do Most of things this app can.
 
-This is written with not javascript but GWT/Java.
+This apps main purpose is skinning  Manuel Bastioni Lab Character's(http://www.manuelbastioni.com/) cloth/hair/item.
 
-part of BVH Motion Creator Project
-https://github.com/akjava/BVH-Motion-Creator
+Actually Manuel Bastioni Lab blender plugin has a such function.but I can't understand how to use.
 
-only works on Chrome Browser
+Right now modifying skinning character itself not support yet.[Issue #11](https://github.com/akjava/GWTModelWeight/issues/11)
 
-Usage case
---------
-###fix three.js model exported from makehuman
-somehow weight/indices broken
 
-###pack uvs
-pack many uv & model to single image and json-model for easy handle skinmesh.
-###merge bvh-animation exported from BVH-PoseEditor
 
-Document
--------
-http://www.akjava.com/en/webapps/modelweight/ (English)
 
-http://www.akjava.com/en/webapps/modelweight/ (Japanese)
-Demo
--------
-http://game.akjava.com/weight/weight.html
+
