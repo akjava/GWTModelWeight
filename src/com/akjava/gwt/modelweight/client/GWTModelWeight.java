@@ -644,7 +644,7 @@ protected void createEditingClothWireframe(){
 		
 		if(editingGeometry.getSkinIndices()==null || editingGeometry.getSkinIndices().length()==0){
 			//Window.alert("has no skin indices");
-			LogUtils.log("No skin indices.it would auto weight.");
+			LogUtils.log("No skin indices.it would auto skinning.");
 			new CloseVertexAutoWeight().autoWeight(editingGeometry, baseCharacterModelGeometry).insertToGeometry(editingGeometry);
 			editingGeometry.gwtSetInfluencesPerVertex(baseCharacterModelGeometry.gwtGetInfluencesPerVertex());
 			
@@ -1451,7 +1451,7 @@ tabPanel.addSelectionHandler(new SelectionHandler<Integer>() {
 
 	@Override
 	public String getTabTitle() {
-		return "Weight Tool";
+		return "Skinning Tool";
 	}
 	/**
 	 * for json meta
