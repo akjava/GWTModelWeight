@@ -8,6 +8,13 @@ This App is written with not javascript but GWT/Java.Based on three.js.only work
 
 This app contains Characters created by Manuel Bastioni Lab Blender Plugin(http://www.manuelbastioni.com/)
 
+[Demo](https://akjava.github.io/website/apps/weight.html)
+----
+example cloth geometry
+
+https://akjava.github.io/website/apps/cloth/tshirt-a.json
+
+
 Basic
 --------
 If you are familiar with Blender Posing/Skinning,don't need this app.
