@@ -1,6 +1,6 @@
 GWT Model Weight
 ========
-ver-6.0 *licensed Apache License Version 2.0*
+ver-6.0(for three.js r74) *licensed Apache License Version 2.0*
 
 ![](https://akjava.github.io/website/images/modelweigh6.png)
 
@@ -91,4 +91,11 @@ the animation data should not contain transform data without root.if you contain
 
 ###Avoid error
 be careful management json file don't select wrong place.No error check so far. [Issue #13](https://github.com/akjava/GWTModelWeight/issues/13)
+
+Goal 
+-----
+- solve issues.
+- improve auto-skinning.
+- full documents
+- support positioning,rotating,scalling
 
