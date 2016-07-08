@@ -36,6 +36,7 @@ import com.akjava.gwt.three.client.js.lights.Light;
 import com.akjava.gwt.three.client.js.loaders.XHRLoader.XHRLoadHandler;
 import com.akjava.gwt.three.client.js.materials.Material;
 import com.akjava.gwt.three.client.js.materials.MeshPhongMaterial;
+import com.akjava.gwt.three.client.js.math.Vector2;
 import com.akjava.gwt.three.client.js.math.Vector3;
 import com.akjava.gwt.three.client.js.math.Vector4;
 import com.akjava.gwt.three.client.js.objects.Bone;
@@ -78,7 +79,7 @@ import com.google.gwt.user.client.ui.VerticalPanel;
  * Entry point classes define <code>onModuleLoad()</code>.
  */
 public class GWTModelWeight extends SimpleTabDemoEntryPoint{
-	public static final String version="6.00(for r74)";//for three.js r74
+	public static final String version="6.01(for r74)";//for three.js r74
 	private StorageControler storageControler;
 	private Mesh mouseClickCatcher;
 	
@@ -572,11 +573,18 @@ protected void createEditingClothWireframe(){
 		
 	}
 
+	private boolean buttonMiddlePressed;
 	@Override
 	public void onMouseClick(ClickEvent event) {
 		if(event.getNativeButton()==NativeEvent.BUTTON_MIDDLE){
+			if(event.isShiftKeyDown()){
+				buttonMiddlePressed=true;
+				panStart.set(event.getX(), event.getY());
+			}
+			
 			return;//not support
 		}
+		buttonMiddlePressed=false;
 		//LogUtils.log("mouse-click");
 		if(selectedTabIndex!=BONE_TAB_INDEX){
 			if(editingClothWireframeVertexSelector!=null){
@@ -619,11 +627,16 @@ protected void createEditingClothWireframe(){
 		}
 		
 	}
-
+	Vector2 panStart=THREE.Vector2();
+	Vector2 panEnd=THREE.Vector2();
+	Vector2 panDelta=THREE.Vector2();;
 	@Override
 	public void onMouseMove(MouseMoveEvent event) {
-		// TODO Auto-generated method stub
-		
+		if(buttonMiddlePressed){
+			panEnd.set(event.getX(), event.getY());
+			panDelta.subVectors(panEnd, panStart);
+			trackballControls.pan(panDelta.getX(), panDelta.getY());
+		}
 	}
 
 	
