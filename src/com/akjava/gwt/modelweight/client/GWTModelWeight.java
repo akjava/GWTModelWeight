@@ -575,10 +575,10 @@ protected void createEditingClothWireframe(){
 
 	@Override
 	public void onMouseClick(ClickEvent event) {
-		if(event.getNativeButton()==NativeEvent.BUTTON_MIDDLE){
-			
-			return;//not support
+		if(event.getNativeButton()!=NativeEvent.BUTTON_LEFT){
+			return;
 		}
+		
 		//LogUtils.log("mouse-click");
 		if(selectedTabIndex!=BONE_TAB_INDEX){
 			if(editingClothWireframeVertexSelector!=null){
