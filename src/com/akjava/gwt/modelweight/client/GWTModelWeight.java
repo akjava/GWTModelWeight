@@ -573,18 +573,12 @@ protected void createEditingClothWireframe(){
 		
 	}
 
-	private boolean buttonMiddlePressed;
 	@Override
 	public void onMouseClick(ClickEvent event) {
 		if(event.getNativeButton()==NativeEvent.BUTTON_MIDDLE){
-			if(event.isShiftKeyDown()){
-				buttonMiddlePressed=true;
-				panStart.set(event.getX(), event.getY());
-			}
 			
 			return;//not support
 		}
-		buttonMiddlePressed=false;
 		//LogUtils.log("mouse-click");
 		if(selectedTabIndex!=BONE_TAB_INDEX){
 			if(editingClothWireframeVertexSelector!=null){
@@ -627,16 +621,10 @@ protected void createEditingClothWireframe(){
 		}
 		
 	}
-	Vector2 panStart=THREE.Vector2();
-	Vector2 panEnd=THREE.Vector2();
-	Vector2 panDelta=THREE.Vector2();;
+	
 	@Override
 	public void onMouseMove(MouseMoveEvent event) {
-		if(buttonMiddlePressed){
-			panEnd.set(event.getX(), event.getY());
-			panDelta.subVectors(panEnd, panStart);
-			trackballControls.pan(panDelta.getX(), panDelta.getY());
-		}
+		
 	}
 
 	
