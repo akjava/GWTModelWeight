@@ -15,6 +15,7 @@ import com.akjava.gwt.lib.client.GWTHTMLUtils;
 import com.akjava.gwt.lib.client.JavaScriptUtils;
 import com.akjava.gwt.lib.client.LogUtils;
 import com.akjava.gwt.lib.client.StorageControler;
+import com.akjava.gwt.modelweight.client.animation.QuickBoneAnimationWidget;
 import com.akjava.gwt.modelweight.client.morphmerge.MorphMergeToolPanel;
 import com.akjava.gwt.three.client.examples.js.THREEExp;
 import com.akjava.gwt.three.client.examples.js.controls.OrbitControls;
@@ -36,7 +37,6 @@ import com.akjava.gwt.three.client.js.lights.Light;
 import com.akjava.gwt.three.client.js.loaders.XHRLoader.XHRLoadHandler;
 import com.akjava.gwt.three.client.js.materials.Material;
 import com.akjava.gwt.three.client.js.materials.MeshPhongMaterial;
-import com.akjava.gwt.three.client.js.math.Vector2;
 import com.akjava.gwt.three.client.js.math.Vector3;
 import com.akjava.gwt.three.client.js.math.Vector4;
 import com.akjava.gwt.three.client.js.objects.Bone;
@@ -696,6 +696,7 @@ protected void createEditingClothWireframe(){
 		if(editingMeshUpload.isUploaded()){
 			editingMeshUpload.reload();
 		}
+		quickBoneAnimationWidget.setSkelton(baseCharacterModelSkinnedMesh.getSkeleton());
 	}
 	
 	private Panel createBasicControl(){
@@ -1127,7 +1128,21 @@ tabPanel.addSelectionHandler(new SelectionHandler<Integer>() {
 		}, true);
 		animationPanel.add(upload);
 		
-		
+		quickBoneAnimationWidget = new QuickBoneAnimationWidget("bone-animation");
+		quickBoneAnimationWidget.addValueChangeHandler(new ValueChangeHandler<AnimationClip>() {
+
+			@Override
+			public void onValueChange(ValueChangeEvent<AnimationClip> event) {
+				stopAnimation();
+				baseCharacterModelSkinnedMesh.getPosition().set(0, 0, 0);
+				baseCharacterModelSkinnedMesh.updateMatrixWorld(true);
+				baseCharacterModelSkinnedMesh.getSkeleton().pose();//before reset,better to fix position
+				if(event.getValue()!=null){
+					playAnimation(event.getValue());
+				}
+			}
+		});
+		animationPanel.add(quickBoneAnimationWidget);
 		return animationPanel;
 	}
 	protected void updatePauseButtonLabel() {
@@ -1414,6 +1429,7 @@ tabPanel.addSelectionHandler(new SelectionHandler<Integer>() {
 	private AbstractImageFileUploadPanel baseCharacterModelTextureUpload;
 	private Button pauseButton;
 	private Label timeLabel;
+	private QuickBoneAnimationWidget quickBoneAnimationWidget;
 	
 	private JSONObject parseJSONGeometry(String text){
 		JSONValue json=JSONParser.parseStrict(text);
