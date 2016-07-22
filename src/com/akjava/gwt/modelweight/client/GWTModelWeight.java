@@ -2,6 +2,7 @@ package com.akjava.gwt.modelweight.client;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 import javax.annotation.Nullable;
 
@@ -22,6 +23,7 @@ import com.akjava.gwt.three.client.examples.js.controls.OrbitControls;
 import com.akjava.gwt.three.client.gwt.GWTParamUtils;
 import com.akjava.gwt.three.client.gwt.boneanimation.AnimationBone;
 import com.akjava.gwt.three.client.java.SkinningVertexCalculator;
+import com.akjava.gwt.three.client.java.bone.BoneNameUtils;
 import com.akjava.gwt.three.client.java.bone.CloseVertexAutoWeight;
 import com.akjava.gwt.three.client.java.bone.WeightResult;
 import com.akjava.gwt.three.client.java.ui.SimpleTabDemoEntryPoint;
@@ -30,6 +32,7 @@ import com.akjava.gwt.three.client.js.THREE;
 import com.akjava.gwt.three.client.js.animation.AnimationClip;
 import com.akjava.gwt.three.client.js.animation.AnimationMixer;
 import com.akjava.gwt.three.client.js.animation.AnimationMixerAction;
+import com.akjava.gwt.three.client.js.core.Face3;
 import com.akjava.gwt.three.client.js.core.Geometry;
 import com.akjava.gwt.three.client.js.extras.helpers.VertexNormalsHelper;
 import com.akjava.gwt.three.client.js.extras.helpers.WireframeHelper;
@@ -37,6 +40,7 @@ import com.akjava.gwt.three.client.js.lights.Light;
 import com.akjava.gwt.three.client.js.loaders.XHRLoader.XHRLoadHandler;
 import com.akjava.gwt.three.client.js.materials.Material;
 import com.akjava.gwt.three.client.js.materials.MeshPhongMaterial;
+import com.akjava.gwt.three.client.js.math.Vector2;
 import com.akjava.gwt.three.client.js.math.Vector3;
 import com.akjava.gwt.three.client.js.math.Vector4;
 import com.akjava.gwt.three.client.js.objects.Bone;
@@ -46,6 +50,9 @@ import com.akjava.gwt.three.client.js.objects.SkinnedMesh;
 import com.akjava.gwt.three.client.js.renderers.WebGLRenderer;
 import com.akjava.gwt.three.client.js.textures.Texture;
 import com.akjava.lib.common.utils.FileNames;
+import com.google.common.base.Stopwatch;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.gwt.core.client.JavaScriptObject;
 import com.google.gwt.core.client.JsArray;
 import com.google.gwt.dom.client.ImageElement;
@@ -207,8 +214,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 		}
 	}
 
-	private String modelUrl="merged3.json";//testing 4-point
-	
+
 	
 	private int selectedTabIndex;
 	final int WEIGHT_TAB_INDEX=3;
@@ -502,6 +508,7 @@ protected void createEditingClothWireframe(){
 		//lightCopy
 		geometry.setSkinIndices(editingGeometry.getSkinIndices());
 		geometry.setSkinWeights(editingGeometry.getSkinWeights());
+		//warning possible no bones,maybe no need here?
 		geometry.setBones(editingGeometry.getBones());
 		
 		editingClothModelSkinnedMesh = THREE.SkinnedMesh(geometry, material);
@@ -648,12 +655,19 @@ protected void createEditingClothWireframe(){
 		if(editingGeometry.getSkinIndices()==null || editingGeometry.getSkinIndices().length()==0){
 			//Window.alert("has no skin indices");
 			LogUtils.log("No skin indices.it would auto skinning.");
-			new CloseVertexAutoWeight().autoWeight(editingGeometry, baseCharacterModelGeometry).insertToGeometry(editingGeometry);
+			Stopwatch watch=LogUtils.stopwatch();
+			editingGeometry.computeBoundingBox();
+			double maxDistance=editingGeometry.getBoundingBox().getMax().distanceTo(editingGeometry.getBoundingBox().getMin());
+			new CloseVertexAutoWeight().autoWeight(editingGeometry, baseCharacterModelGeometry,maxDistance).insertToGeometry(editingGeometry);
+			//LogUtils.millisecond("auto-weight vertex="+editingGeometry.getVertices().length(), watch);
 			editingGeometry.gwtSetInfluencesPerVertex(baseCharacterModelGeometry.gwtGetInfluencesPerVertex());
 			
 			
 			editingGeometryOrigin.gwtSetInfluencesPerVertex(baseCharacterModelGeometry.gwtGetInfluencesPerVertex());
 			editingGeometry.gwtHardCopyToWeightsAndIndices(editingGeometryOrigin);
+		}
+		if(editingGeometry.getBones()==null){
+			LogUtils.log("editingGeometry has no bone");
 		}
 		
 		createEditingClothSkin();
@@ -979,7 +993,7 @@ tabPanel.addSelectionHandler(new SelectionHandler<Integer>() {
 		
 		tab.add(createLoadExportPanel(),"Load/Export");
 		
-		tab.add(createWeightPanel(),"Weight");
+		tab.add(createSkinningPanel(),"Skinning");
 		
 		tab.add(createAnimationPanel(),"Animation");
 		
@@ -996,7 +1010,7 @@ tabPanel.addSelectionHandler(new SelectionHandler<Integer>() {
 		showControl();
 		
 		
-		initialLoadBaseCharacterModel(modelUrl);
+		initialLoadBaseCharacterModel(GWTHTMLUtils.parameterFile("baseModel"));
 	}
 	
 	protected void onBaseCharacterModelDisplacementLoaded(@Nullable ImageElement imageElement) {
@@ -1280,7 +1294,7 @@ tabPanel.addSelectionHandler(new SelectionHandler<Integer>() {
 		
 	}
 
-	private Panel createWeightPanel(){
+	private Panel createSkinningPanel(){
 		VerticalPanel weightPanel=new VerticalPanel();
 	
 		//this is test.
@@ -1367,7 +1381,131 @@ tabPanel.addSelectionHandler(new SelectionHandler<Integer>() {
 		});
 		buttons.add(resetBt);
 		
+		
+		Button testVertexGroup=new Button("Test vertex group",new ClickHandler() {
+			
+			@Override
+			public void onClick(ClickEvent event) {
+				if(vertexBoneDataEditor.getValue()==null){
+					return;
+				}
+				//warning possible editingGeometry has no bone.
+				int index=vertexBoneDataEditor.getValue().getVertexIndex();
+				List<Integer> result=Lists.newArrayList();
+				Stopwatch watch=LogUtils.stopwatch();
+				findVertexGroup(editingGeometry,index,result);
+				//LogUtils.log("size:"+result.size());
+				//LogUtils.millisecond("find", watch);
+				List<List<String>> beforeBoneNames=Lists.newArrayList();
+				for(int i=0;i<result.size();i++){
+					Vector4 indices=editingGeometry.getSkinIndices().get(result.get(i));
+					List<String> boneNames=Lists.newArrayList();
+					for(int j=0;j<4;j++){
+						int boneIndex=indices.gwtGet(j);
+						
+						if(boneIndex!=0){//ignore root;
+							boneNames.add(baseCharacterModelGeometry.getBones().get(boneIndex).getName());
+							}
+					}
+					beforeBoneNames.add(boneNames);
+				}
+				
+				
+				Map<Integer,Integer> countMap=Maps.newHashMap();
+				for(List<String> vs:beforeBoneNames){
+					for(String v:vs){
+						if(!v.contains(",")){
+							continue;// no plain style
+						}
+						LogUtils.log(v);
+						Vector2 pos=BoneNameUtils.parsePlainBoneName(v);
+						
+						Integer count=countMap.get((int)pos.getX());
+						if(count==null){
+							countMap.put((int)pos.getX(), 1);
+						}else{
+							countMap.put((int)pos.getX(), count+1);
+							//LogUtils.log("?"+((int)pos.getX())+( count+1));
+						}
+					}
+				}
+				
+				if(countMap.size()==0){
+					LogUtils.log("maybe no plain-bone style");
+					return;
+				}
+				
+				
+				int maxX=0;
+				int maxValue=0;
+				for(int key:countMap.keySet()){
+					int count=countMap.get(key);
+					LogUtils.log(key+"="+count);
+					if(count>maxValue){
+						maxX=key;
+						maxValue=count;
+					}
+				}
+				LogUtils.log("max-x:"+maxX+",count="+maxValue);
+				//apply changes
+				for(int i=0;i<result.size();i++){
+					Vector4 indices=editingGeometry.getSkinIndices().get(result.get(i));
+					
+					for(int j=0;j<4;j++){
+						int boneIndex=indices.gwtGet(j);
+						if(boneIndex!=0){//ignore root;
+							String boneName=baseCharacterModelGeometry.getBones().get(boneIndex).getName();
+							Vector2 boneVec=BoneNameUtils.parsePlainBoneName(boneName);
+								if(boneVec.getX()!=maxX){
+								String newName=BoneNameUtils.makePlainBoneName(maxX,(int)boneVec.getY());
+								
+								int newIndex=BoneNameUtils.findBoneByName(baseCharacterModelGeometry.getBones(),newName);
+								if(newIndex!=-1){
+									indices.gwtSet(j, newIndex);
+									LogUtils.log("update indices at "+j+" of "+result.get(i)+" name="+newName);
+								}else{
+									LogUtils.log("can't find newBoneName:"+newName);
+								}
+								}
+							}
+					}
+					
+				}
+				LogUtils.log("apply finished");
+				
+				createEditingClothSkin();
+			}
+		});
+		weightPanel.add(testVertexGroup);
+		
 		return weightPanel;
+	}
+	
+	private void findVertexGroup(Geometry geometry,int vertexIndex,List<Integer> vertexs){
+		vertexs.add(vertexIndex);
+		List<Integer> result= findContainFace(geometry,vertexIndex);
+		for(int faceIndex:result){
+			Face3 face=geometry.getFaces().get(faceIndex);
+			for(int i=0;i<3;i++){
+				int v=face.gwtGet(i);
+				if(!vertexs.contains(v)){
+					findVertexGroup(geometry,v,vertexs);
+				}
+			}
+		}
+	}
+	
+	private List<Integer> findContainFace(Geometry geometry,int vertexIndex){
+		List<Integer> faces=Lists.newArrayList();
+		for(int i=0;i<geometry.getFaces().length();i++){
+			Face3 face=geometry.getFaces().get(i);
+			for(int j=0;j<3;j++){
+				if(face.gwtGet(j)==vertexIndex){
+					faces.add(i);
+				}
+			}
+		}
+		return faces;
 	}
 	
 	/** @deprecated
