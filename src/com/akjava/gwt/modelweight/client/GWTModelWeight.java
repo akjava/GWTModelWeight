@@ -16,6 +16,7 @@ import com.akjava.gwt.lib.client.GWTHTMLUtils;
 import com.akjava.gwt.lib.client.JavaScriptUtils;
 import com.akjava.gwt.lib.client.LogUtils;
 import com.akjava.gwt.lib.client.StorageControler;
+import com.akjava.gwt.lib.client.experimental.ExecuteButton;
 import com.akjava.gwt.modelweight.client.animation.QuickBoneAnimationWidget;
 import com.akjava.gwt.modelweight.client.morphmerge.MorphMergeToolPanel;
 import com.akjava.gwt.three.client.examples.js.THREEExp;
@@ -1301,16 +1302,18 @@ tabPanel.addSelectionHandler(new SelectionHandler<Integer>() {
 		
 		loadExportPanel.add(new HTML("Export geometry as Version4 json Format"));
 		loadExportPanel.add(new Label("contain bones,indices and weights"));
-		Button exportButton=new Button("Exec Export",new ClickHandler() {
+		ExecuteButton exportButton=new ExecuteButton("Exec Export"){
+
 			@Override
-			public void onClick(ClickEvent event) {
+			public void executeOnClick() {
 				JSONObject object=editingGeometry.gwtJSONWithBone();
 				downloadPanel.clear();
 				
 				Anchor a=HTML5Download.get().generateTextDownloadLink(object.toString(), "geometry-weight-modified.json", "geometry to download",true);
 				downloadPanel.add(a);
 			}
-		});
+			
+		};
 		loadExportPanel.add(exportButton);
 		
 		loadExportPanel.add(downloadPanel);
@@ -1435,7 +1438,7 @@ tabPanel.addSelectionHandler(new SelectionHandler<Integer>() {
 		buttons.add(resetBt);
 		
 		
-		Button testVertexGroup=new Button("Test vertical vertex group",new ClickHandler() {
+		Button testVertexGroup=new Button("Vertical vertex group selection",new ClickHandler() {
 			
 			@Override
 			public void onClick(ClickEvent event) {
@@ -1445,42 +1448,59 @@ tabPanel.addSelectionHandler(new SelectionHandler<Integer>() {
 				//warning possible editingGeometry has no bone.
 				int index=vertexBoneDataEditor.getValue().getVertexIndex();
 				
-				execVerticalVertexGroup(index);
+				execVerticalVertexGroup(index,false);//TODO balancing
 				
 				createEditingClothSkin();
 			}
 		});
 		weightPanel.add(testVertexGroup);
 		
-		Button testVertexGroupAll=new Button("Test vertical vertex group all",new ClickHandler() {
-			
+		ExecuteButton testVertexGroupAll=new ExecuteButton("Vertical vertex group all"){
+
 			@Override
-			public void onClick(ClickEvent event) {
+			public void executeOnClick() {
+				boolean balancing=true;
 				Stopwatch watch=LogUtils.stopwatch();
 				JSParameter param=JSParameter.createParameter();
 				for(int i=0;i<editingGeometry.getVertices().length();i++){
 					if(param.exists(String.valueOf(i))){
 						continue;
 					}
-					List<Integer> result=execVerticalVertexGroup(i);
+					List<Integer> result=execVerticalVertexGroup(i,balancing);
+					if(result==null){
+						return;//cancel
+					}
 					for(int v:result){
 						param.set(String.valueOf(v), true);
 					}
 				}
+				
+				if(balancing){
+					editingGeometry.gwtSetInfluencesPerVertex(editingGeometry.gwtGetInfluencesPerVertex()+1);
+				}
+				
 				LogUtils.millisecond("convert-all", watch);
 				
 				
 				createEditingClothSkin();
 			}
-		});
+			
+		};
 		weightPanel.add(testVertexGroupAll);
 		
 		return weightPanel;
 	}
 	
-	private List<Integer> execVerticalVertexGroup(int index){
+	private List<Integer> execVerticalVertexGroup(int index,boolean balancing){
+		
+		int influence=editingGeometry.gwtGetInfluencesPerVertex();
+		if(balancing && influence==4){
+			LogUtils.log("not supported influence4 and balancing");
+			return null;
+		}
+		
 		List<Integer> result=Lists.newArrayList();
-		Stopwatch watch=LogUtils.stopwatch();
+		
 		findVertexGroup(editingGeometry,index,result);
 		//LogUtils.log("size:"+result.size());
 		//LogUtils.millisecond("find", watch);
@@ -1526,9 +1546,10 @@ tabPanel.addSelectionHandler(new SelectionHandler<Integer>() {
 		
 		int maxX=0;
 		int maxValue=0;
+		int total=0;
 		for(int key:countMap.keySet()){
 			int count=countMap.get(key);
-			
+			total+=count;
 			if(count>maxValue){
 				maxX=key;
 				maxValue=count;
@@ -1559,6 +1580,23 @@ tabPanel.addSelectionHandler(new SelectionHandler<Integer>() {
 			}
 			
 		}
+		
+		double mainPercent=(double)maxValue/total;
+		double rootValue=1.0-mainPercent;
+		for(int i=0;i<result.size();i++){
+			Vector4 indices=editingGeometry.getSkinIndices().get(result.get(i));
+			Vector4 weights=editingGeometry.getSkinWeights().get(result.get(i));
+			for(int j=0;j<influence;j++){
+				double changed=weights.gwtGet(j)*mainPercent;
+				weights.gwtSet(j, changed);
+			}
+			indices.gwtSet(influence+1, 0);//must be root
+			weights.gwtSet(influence+1, rootValue);
+			
+		}
+		
+		//DO increment influence finished all
+		
 		return result;
 	}
 	
