@@ -955,7 +955,7 @@ influenceBox.addItem("1");
 influenceBox.addItem("2");
 influenceBox.addItem("3");
 influenceBox.addItem("4");
-influenceBox.setSelectedIndex(0);
+influenceBox.setSelectedIndex(2);//for auto grouping
 boneSkinningPanel.add(influenceBox);
 Button autoBoneWeightButton=new Button("Exec auto close bone skinning",new ClickHandler() {
 	
@@ -1582,6 +1582,7 @@ tabPanel.addSelectionHandler(new SelectionHandler<Integer>() {
 		}
 		
 		double mainPercent=(double)maxValue/total;
+		//LogUtils.log("main-percent:"+mainPercent);
 		double rootValue=1.0-mainPercent;
 		for(int i=0;i<result.size();i++){
 			Vector4 indices=editingGeometry.getSkinIndices().get(result.get(i));
