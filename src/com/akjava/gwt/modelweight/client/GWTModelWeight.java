@@ -655,7 +655,19 @@ protected void createEditingClothWireframe(){
 	
 		setInfluencePerVertexFromJSON(editingGeometry,jsonObject);
 		
-		if(editingGeometry.getSkinIndices()==null || editingGeometry.getSkinIndices().length()==0){
+		boolean needAutoSkinning=editingGeometry.getSkinIndices()==null || editingGeometry.getSkinIndices().length()==0;
+		//todo more check
+		
+		if(editingGeometry.getBones()==null || editingGeometry.getBones().length()==0){
+			needAutoSkinning=true;
+		}else{
+			if(editingGeometry.getBones().length()!=baseCharacterModelGeometry.getBones().length()){
+				LogUtils.log("editingGeometry has bone,but size different:base-bone-size="+baseCharacterModelGeometry.getBones().length()+",editing-size="+editingGeometry.getBones().length());
+				needAutoSkinning=true;
+			}	
+		}
+		
+		if(needAutoSkinning){
 			//Window.alert("has no skin indices");
 			LogUtils.log("No skin indices.it would auto skinning.");
 			Stopwatch watch=LogUtils.stopwatch();
@@ -669,9 +681,7 @@ protected void createEditingClothWireframe(){
 			editingGeometryOrigin.gwtSetInfluencesPerVertex(baseCharacterModelGeometry.gwtGetInfluencesPerVertex());
 			editingGeometry.gwtHardCopyToWeightsAndIndices(editingGeometryOrigin);
 		}
-		if(editingGeometry.getBones()==null){
-			LogUtils.log("editingGeometry has no bone");
-		}
+		
 		
 		createEditingClothSkin();
 		createEditingClothWireframe();
