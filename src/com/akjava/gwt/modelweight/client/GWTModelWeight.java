@@ -21,10 +21,12 @@ import com.akjava.gwt.modelweight.client.morphmerge.MorphMergeToolPanel;
 import com.akjava.gwt.three.client.examples.js.THREEExp;
 import com.akjava.gwt.three.client.examples.js.controls.OrbitControls;
 import com.akjava.gwt.three.client.gwt.GWTParamUtils;
+import com.akjava.gwt.three.client.gwt.JSParameter;
 import com.akjava.gwt.three.client.gwt.boneanimation.AnimationBone;
 import com.akjava.gwt.three.client.java.SkinningVertexCalculator;
 import com.akjava.gwt.three.client.java.bone.BoneNameUtils;
 import com.akjava.gwt.three.client.java.bone.CloseVertexAutoWeight;
+import com.akjava.gwt.three.client.java.bone.SimpleAutoWeight;
 import com.akjava.gwt.three.client.java.bone.WeightResult;
 import com.akjava.gwt.three.client.java.ui.SimpleTabDemoEntryPoint;
 import com.akjava.gwt.three.client.java.ui.experiments.Vector3Editor;
@@ -76,6 +78,7 @@ import com.google.gwt.user.client.ui.CheckBox;
 import com.google.gwt.user.client.ui.HTML;
 import com.google.gwt.user.client.ui.HorizontalPanel;
 import com.google.gwt.user.client.ui.Label;
+import com.google.gwt.user.client.ui.ListBox;
 import com.google.gwt.user.client.ui.Panel;
 import com.google.gwt.user.client.ui.TabPanel;
 import com.google.gwt.user.client.ui.ValueListBox;
@@ -904,12 +907,13 @@ Button weightAllButton=new Button("Set  all selected bone influence ",new ClickH
 	}
 });
 bonePanel.add(weightAllButton);
-Button autoWeightButton=new Button("Exec auto weight",new ClickHandler() {
+Button autoWeightButton=new Button("Exec auto close vertex skinning",new ClickHandler() {
 	
 	@Override
 	public void onClick(ClickEvent event) {
 		
-
+	int influence=baseCharacterModelGeometry.gwtGetInfluencesPerVertex();
+		
 	WeightResult result= new CloseVertexAutoWeight().autoWeight(editingGeometry, baseCharacterModelGeometry);
 
 	JsArray<Vector4> indices=editingGeometry.getSkinIndices();
@@ -918,8 +922,9 @@ Button autoWeightButton=new Button("Exec auto weight",new ClickHandler() {
 		indices.get(i).copy(result.getSkinIndices().get(i));
 		weights.get(i).copy(result.getSkinWeights().get(i));
 	}
-		
-		createEditingClothSkin();//weight updated
+	editingGeometry.gwtSetInfluencesPerVertex(influence);
+	
+	createEditingClothSkin();//weight updated
 		
 		//redraw wireframe
 		AnimationBone bone=boneListBox.getValue();
@@ -927,6 +932,44 @@ Button autoWeightButton=new Button("Exec auto weight",new ClickHandler() {
 	}
 });
 bonePanel.add(autoWeightButton);
+
+HorizontalPanel boneSkinningPanel=new HorizontalPanel();
+boneSkinningPanel.setVerticalAlignment(HorizontalPanel.ALIGN_MIDDLE);
+bonePanel.add(boneSkinningPanel);
+
+boneSkinningPanel.add(new Label("Influence"));
+
+final ListBox influenceBox=new ListBox();
+influenceBox.addItem("1");
+influenceBox.addItem("2");
+influenceBox.addItem("3");
+influenceBox.addItem("4");
+influenceBox.setSelectedIndex(0);
+boneSkinningPanel.add(influenceBox);
+Button autoBoneWeightButton=new Button("Exec auto close bone skinning",new ClickHandler() {
+	
+	@Override
+	public void onClick(ClickEvent event) {
+	int influence=influenceBox.getSelectedIndex()+1;
+
+	WeightResult result= new SimpleAutoWeight(influence).autoWeight(editingGeometry, baseCharacterModelGeometry.getBones());
+
+	JsArray<Vector4> indices=editingGeometry.getSkinIndices();
+	JsArray<Vector4> weights=editingGeometry.getSkinWeights();
+	for(int i=0;i<indices.length();i++){
+		indices.get(i).copy(result.getSkinIndices().get(i));
+		weights.get(i).copy(result.getSkinWeights().get(i));
+	}
+	editingGeometry.gwtSetInfluencesPerVertex(influence);
+		createEditingClothSkin();//weight updated
+		
+		//redraw wireframe
+		AnimationBone bone=boneListBox.getValue();
+		onBoneSelectionChanged(bone);
+	}
+});
+boneSkinningPanel.add(autoBoneWeightButton);
+
 
 Button resetWeightButton=new Button("Reset to default indices & weights",new ClickHandler() {
 	
@@ -1382,7 +1425,7 @@ tabPanel.addSelectionHandler(new SelectionHandler<Integer>() {
 		buttons.add(resetBt);
 		
 		
-		Button testVertexGroup=new Button("Test vertex group",new ClickHandler() {
+		Button testVertexGroup=new Button("Test vertical vertex group",new ClickHandler() {
 			
 			@Override
 			public void onClick(ClickEvent event) {
@@ -1391,95 +1434,124 @@ tabPanel.addSelectionHandler(new SelectionHandler<Integer>() {
 				}
 				//warning possible editingGeometry has no bone.
 				int index=vertexBoneDataEditor.getValue().getVertexIndex();
-				List<Integer> result=Lists.newArrayList();
-				Stopwatch watch=LogUtils.stopwatch();
-				findVertexGroup(editingGeometry,index,result);
-				//LogUtils.log("size:"+result.size());
-				//LogUtils.millisecond("find", watch);
-				List<List<String>> beforeBoneNames=Lists.newArrayList();
-				for(int i=0;i<result.size();i++){
-					Vector4 indices=editingGeometry.getSkinIndices().get(result.get(i));
-					List<String> boneNames=Lists.newArrayList();
-					for(int j=0;j<4;j++){
-						int boneIndex=indices.gwtGet(j);
-						
-						if(boneIndex!=0){//ignore root;
-							boneNames.add(baseCharacterModelGeometry.getBones().get(boneIndex).getName());
-							}
-					}
-					beforeBoneNames.add(boneNames);
-				}
 				
-				
-				Map<Integer,Integer> countMap=Maps.newHashMap();
-				for(List<String> vs:beforeBoneNames){
-					for(String v:vs){
-						if(!v.contains(",")){
-							continue;// no plain style
-						}
-						LogUtils.log(v);
-						Vector2 pos=BoneNameUtils.parsePlainBoneName(v);
-						
-						Integer count=countMap.get((int)pos.getX());
-						if(count==null){
-							countMap.put((int)pos.getX(), 1);
-						}else{
-							countMap.put((int)pos.getX(), count+1);
-							//LogUtils.log("?"+((int)pos.getX())+( count+1));
-						}
-					}
-				}
-				
-				if(countMap.size()==0){
-					LogUtils.log("maybe no plain-bone style");
-					return;
-				}
-				
-				
-				int maxX=0;
-				int maxValue=0;
-				for(int key:countMap.keySet()){
-					int count=countMap.get(key);
-					LogUtils.log(key+"="+count);
-					if(count>maxValue){
-						maxX=key;
-						maxValue=count;
-					}
-				}
-				LogUtils.log("max-x:"+maxX+",count="+maxValue);
-				//apply changes
-				for(int i=0;i<result.size();i++){
-					Vector4 indices=editingGeometry.getSkinIndices().get(result.get(i));
-					
-					for(int j=0;j<4;j++){
-						int boneIndex=indices.gwtGet(j);
-						if(boneIndex!=0){//ignore root;
-							String boneName=baseCharacterModelGeometry.getBones().get(boneIndex).getName();
-							Vector2 boneVec=BoneNameUtils.parsePlainBoneName(boneName);
-								if(boneVec.getX()!=maxX){
-								String newName=BoneNameUtils.makePlainBoneName(maxX,(int)boneVec.getY());
-								
-								int newIndex=BoneNameUtils.findBoneByName(baseCharacterModelGeometry.getBones(),newName);
-								if(newIndex!=-1){
-									indices.gwtSet(j, newIndex);
-									LogUtils.log("update indices at "+j+" of "+result.get(i)+" name="+newName);
-								}else{
-									LogUtils.log("can't find newBoneName:"+newName);
-								}
-								}
-							}
-					}
-					
-				}
-				LogUtils.log("apply finished");
+				execVerticalVertexGroup(index);
 				
 				createEditingClothSkin();
 			}
 		});
 		weightPanel.add(testVertexGroup);
 		
+		Button testVertexGroupAll=new Button("Test vertical vertex group all",new ClickHandler() {
+			
+			@Override
+			public void onClick(ClickEvent event) {
+				Stopwatch watch=LogUtils.stopwatch();
+				JSParameter param=JSParameter.createParameter();
+				for(int i=0;i<editingGeometry.getVertices().length();i++){
+					if(param.exists(String.valueOf(i))){
+						continue;
+					}
+					List<Integer> result=execVerticalVertexGroup(i);
+					for(int v:result){
+						param.set(String.valueOf(v), true);
+					}
+				}
+				LogUtils.millisecond("convert-all", watch);
+				
+				
+				createEditingClothSkin();
+			}
+		});
+		weightPanel.add(testVertexGroupAll);
+		
 		return weightPanel;
 	}
+	
+	private List<Integer> execVerticalVertexGroup(int index){
+		List<Integer> result=Lists.newArrayList();
+		Stopwatch watch=LogUtils.stopwatch();
+		findVertexGroup(editingGeometry,index,result);
+		//LogUtils.log("size:"+result.size());
+		//LogUtils.millisecond("find", watch);
+		List<List<String>> beforeBoneNames=Lists.newArrayList();
+		for(int i=0;i<result.size();i++){
+			Vector4 indices=editingGeometry.getSkinIndices().get(result.get(i));
+			List<String> boneNames=Lists.newArrayList();
+			for(int j=0;j<4;j++){
+				int boneIndex=indices.gwtGet(j);
+				
+				if(boneIndex!=0){//ignore root;
+					boneNames.add(baseCharacterModelGeometry.getBones().get(boneIndex).getName());
+					}
+			}
+			beforeBoneNames.add(boneNames);
+		}
+		
+		
+		Map<Integer,Integer> countMap=Maps.newHashMap();
+		for(List<String> vs:beforeBoneNames){
+			for(String v:vs){
+				if(!v.contains(",")){
+					continue;// no plain style
+				}
+				
+				Vector2 pos=BoneNameUtils.parsePlainBoneName(v);
+				
+				Integer count=countMap.get((int)pos.getX());
+				if(count==null){
+					countMap.put((int)pos.getX(), 1);
+				}else{
+					countMap.put((int)pos.getX(), count+1);
+					//LogUtils.log("?"+((int)pos.getX())+( count+1));
+				}
+			}
+		}
+		
+		if(countMap.size()==0){
+			LogUtils.log("maybe no plain-bone style");
+			return null;
+		}
+		
+		
+		int maxX=0;
+		int maxValue=0;
+		for(int key:countMap.keySet()){
+			int count=countMap.get(key);
+			
+			if(count>maxValue){
+				maxX=key;
+				maxValue=count;
+			}
+		}
+		
+		//apply changes
+		for(int i=0;i<result.size();i++){
+			Vector4 indices=editingGeometry.getSkinIndices().get(result.get(i));
+			
+			for(int j=0;j<4;j++){
+				int boneIndex=indices.gwtGet(j);
+				if(boneIndex!=0){//ignore root;
+					String boneName=baseCharacterModelGeometry.getBones().get(boneIndex).getName();
+					Vector2 boneVec=BoneNameUtils.parsePlainBoneName(boneName);
+						if(boneVec.getX()!=maxX){
+						String newName=BoneNameUtils.makePlainBoneName(maxX,(int)boneVec.getY());
+						
+						int newIndex=BoneNameUtils.findBoneByName(baseCharacterModelGeometry.getBones(),newName);
+						if(newIndex!=-1){
+							indices.gwtSet(j, newIndex);
+							//LogUtils.log("update indices at "+j+" of "+result.get(i)+" name="+newName);
+						}else{
+							LogUtils.log("can't find newBoneName:"+newName);
+						}
+						}
+					}
+			}
+			
+		}
+		return result;
+	}
+	
 	
 	private void findVertexGroup(Geometry geometry,int vertexIndex,List<Integer> vertexs){
 		vertexs.add(vertexIndex);
