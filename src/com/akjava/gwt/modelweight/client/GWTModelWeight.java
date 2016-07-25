@@ -673,11 +673,14 @@ protected void createEditingClothWireframe(){
 			LogUtils.log("No skin indices.it would auto skinning.");
 			Stopwatch watch=LogUtils.stopwatch();
 			editingGeometry.computeBoundingBox();
-			double maxDistance=editingGeometry.getBoundingBox().getMax().distanceTo(editingGeometry.getBoundingBox().getMin());
-			new CloseVertexAutoWeight().autoWeight(editingGeometry, baseCharacterModelGeometry,maxDistance).insertToGeometry(editingGeometry);
+			//double maxDistance=editingGeometry.getBoundingBox().getMax().distanceTo(editingGeometry.getBoundingBox().getMin());
+			int influence=3;
+			WeightResult result= new SimpleAutoWeight(influence).autoWeight(editingGeometry, baseCharacterModelGeometry.getBones());
+			result.insertToGeometry(editingGeometry);
+			//new CloseVertexAutoWeight().autoWeight(editingGeometry, baseCharacterModelGeometry,maxDistance).insertToGeometry(editingGeometry);
 			//LogUtils.millisecond("auto-weight vertex="+editingGeometry.getVertices().length(), watch);
-			editingGeometry.gwtSetInfluencesPerVertex(baseCharacterModelGeometry.gwtGetInfluencesPerVertex());
-			
+			//editingGeometry.gwtSetInfluencesPerVertex(baseCharacterModelGeometry.gwtGetInfluencesPerVertex());
+			editingGeometry.gwtSetInfluencesPerVertex(influence);
 			
 			editingGeometryOrigin.gwtSetInfluencesPerVertex(baseCharacterModelGeometry.gwtGetInfluencesPerVertex());
 			editingGeometry.gwtHardCopyToWeightsAndIndices(editingGeometryOrigin);
@@ -1263,6 +1266,7 @@ tabPanel.addSelectionHandler(new SelectionHandler<Integer>() {
 	private Panel createLoadExportPanel(){
 		VerticalPanel loadExportPanel=new VerticalPanel();
 		loadExportPanel.add(new HTML("<h4>EditingCloth</h4>"));
+		loadExportPanel.add(new Label("auto bone-skinning(influence=3) if no-bone"));
 		editingMeshUpload=new AbstractTextFileUploadPanel("Cloth Model",false) {
 			@Override
 			protected void onTextFileUpload(String text) {
@@ -1581,7 +1585,7 @@ tabPanel.addSelectionHandler(new SelectionHandler<Integer>() {
 			
 		}
 		
-		double mainPercent=(double)maxValue/total;
+		double mainPercent=(double)maxValue/total;//TODO change this strategy not so good
 		//LogUtils.log("main-percent:"+mainPercent);
 		double rootValue=1.0-mainPercent;
 		for(int i=0;i<result.size();i++){
