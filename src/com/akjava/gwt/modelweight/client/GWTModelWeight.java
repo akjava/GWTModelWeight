@@ -642,7 +642,7 @@ protected void createEditingClothWireframe(){
 	public void onEditingClothJsonLoaded(String text){
 
 		JSONObject jsonObject=parseJSONGeometry(text);
-		
+		editingGeometryJsonObject=jsonObject;
 		
 		
 		editingGeometryOrigin=THREE.JSONLoader().parse(jsonObject.getJavaScriptObject()).getGeometry();
@@ -1311,6 +1311,11 @@ tabPanel.addSelectionHandler(new SelectionHandler<Integer>() {
 			@Override
 			public void executeOnClick() {
 				JSONObject object=editingGeometry.gwtJSONWithBone();
+				
+			    JSONValue morphTargets=editingGeometryJsonObject.get("morphTargets");
+				if(morphTargets!=null){
+					object.get("data").isObject().put("morphTargets", morphTargets);
+				}
 				downloadPanel.clear();
 				
 				Anchor a=HTML5Download.get().generateTextDownloadLink(object.toString(), "geometry-weight-modified.json", "geometry to download",true);
@@ -1676,6 +1681,7 @@ tabPanel.addSelectionHandler(new SelectionHandler<Integer>() {
 		}
 	}
 
+	private JSONObject editingGeometryJsonObject;
 	private Geometry editingGeometryOrigin;
 	private Geometry editingGeometry;
 	private SkinnedMesh editingClothModelSkinnedMesh;

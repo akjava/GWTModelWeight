@@ -148,10 +148,11 @@ public class MorphMergeToolPanel extends VerticalPanel{
 	Geometry baseGeometry;
 
 	private boolean applyAxisAngle=true;
+	private boolean force=false;
 	public MorphMergeToolPanel(){
 		
 		
-		CheckBox applyCheck=new CheckBox("applyAxisAngle(for r74 mbl3d)");
+		CheckBox applyCheck=new CheckBox("applyAxisAngle(for r74 mbl3d 1.2)");
 		applyCheck.setValue(true);
 		applyCheck.addValueChangeHandler(new ValueChangeHandler<Boolean>() {
 			
@@ -161,6 +162,16 @@ public class MorphMergeToolPanel extends VerticalPanel{
 			}
 		});
 		add(applyCheck);
+		CheckBox forceCheck=new CheckBox("force applyAxisAngle(for r74 mbl3d 1.3)");
+		forceCheck.setValue(false);
+		forceCheck.addValueChangeHandler(new ValueChangeHandler<Boolean>() {
+			
+			@Override
+			public void onValueChange(ValueChangeEvent<Boolean> event) {
+				force=event.getValue();
+			}
+		});
+		add(forceCheck);
 		
 		//for easy debug
 		/*
@@ -374,7 +385,7 @@ public class MorphMergeToolPanel extends VerticalPanel{
 	
 	JSONModelFile baseModelFile;
 	protected void onLoadBaseGeometry(String fileName, String text) {
-		JSONValue value=new Mbl3dLoader().applyAxisAngle(applyAxisAngle).parse(text, new JSONLoadHandler() {
+		JSONValue value=new Mbl3dLoader().applyAxisAngle(applyAxisAngle).forceApplyAxisAngle(force).parse(text, new JSONLoadHandler() {
 			@Override
 			public void loaded(Geometry geometry, JsArray<Material> materials) {
 				baseGeometry=geometry;
