@@ -7,7 +7,7 @@ import java.util.List;
 
 import com.akjava.gwt.lib.client.JavaScriptUtils;
 import com.akjava.gwt.lib.client.LogUtils;
-import com.akjava.gwt.modelweight.client.animation.SkeletonUtils.BoneData;
+import com.akjava.gwt.modelweight.client.animation.SkeletonUtils.SkeltonBoneData;
 import com.akjava.gwt.three.client.gwt.boneanimation.AnimationBone;
 import com.akjava.gwt.three.client.gwt.ui.LabeledInputRangeWidget2;
 import com.akjava.gwt.three.client.js.THREE;
@@ -37,7 +37,7 @@ import com.google.gwt.user.client.ui.VerticalPanel;
 
 public class QuickBoneAnimationWidget extends Composite implements HasValueChangeHandlers<AnimationClip>{
 
-	private ValueListBox<BoneData> boneIndexBox;
+	private ValueListBox<SkeltonBoneData> boneIndexBox;
 	private int boneIndex;
 	private String name;
 	private CheckBox bothSideCheck;
@@ -60,10 +60,10 @@ public class QuickBoneAnimationWidget extends Composite implements HasValueChang
 		root.add(animationPanel);
 		animationPanel.add(new Label("Quick Animation-"));
 		
-		boneIndexBox = new ValueListBox<BoneData>(new Renderer<BoneData>() {
+		boneIndexBox = new ValueListBox<SkeltonBoneData>(new Renderer<SkeltonBoneData>() {
 
 			@Override
-			public String render(BoneData object) {
+			public String render(SkeltonBoneData object) {
 				if(object==null){
 					return null;
 				}
@@ -72,16 +72,16 @@ public class QuickBoneAnimationWidget extends Composite implements HasValueChang
 			}
 
 			@Override
-			public void render(BoneData object, Appendable appendable) throws IOException {
+			public void render(SkeltonBoneData object, Appendable appendable) throws IOException {
 				// TODO Auto-generated method stub
 				
 			}
 		});
-		boneIndexBox.addValueChangeHandler(new ValueChangeHandler<BoneData>() {
+		boneIndexBox.addValueChangeHandler(new ValueChangeHandler<SkeltonBoneData>() {
 
 
 			@Override
-			public void onValueChange(ValueChangeEvent<BoneData> event) {
+			public void onValueChange(ValueChangeEvent<SkeltonBoneData> event) {
 				boneIndex=event.getValue().getIndex();
 				updateAnimation();
 			}
@@ -218,7 +218,7 @@ public class QuickBoneAnimationWidget extends Composite implements HasValueChang
 
 	public void setSkelton(Skeleton skeleton){
 		checkNotNull(skeleton,"need skelton");
-		List<BoneData> boneDatas=SkeletonUtils.skeltonToBoneData(skeleton);
+		List<SkeltonBoneData> boneDatas=SkeletonUtils.skeltonToBoneData(skeleton);
 		if(boneDatas==null){
 			LogUtils.log("somehow skelton convert faild");
 			return;

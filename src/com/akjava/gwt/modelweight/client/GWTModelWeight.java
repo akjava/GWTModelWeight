@@ -18,6 +18,7 @@ import com.akjava.gwt.lib.client.LogUtils;
 import com.akjava.gwt.lib.client.StorageControler;
 import com.akjava.gwt.lib.client.experimental.ExecuteButton;
 import com.akjava.gwt.modelweight.client.animation.QuickBoneAnimationWidget;
+import com.akjava.gwt.modelweight.client.bonemerge.BoneMergeToolPanel;
 import com.akjava.gwt.modelweight.client.morphmerge.MorphMergeToolPanel;
 import com.akjava.gwt.three.client.examples.js.THREEExp;
 import com.akjava.gwt.three.client.examples.js.controls.OrbitControls;
@@ -1038,6 +1039,7 @@ tabPanel.addSelectionHandler(new SelectionHandler<Integer>() {
 		
 		tabPanel.add(new CopyToolPanel(),"Copy Indices/Weights");
 		tabPanel.add(new MorphMergeToolPanel(),"Fix morphtargets");
+		tabPanel.add(new BoneMergeToolPanel(),"Merge bones");
 		
 		
 		TabPanel tab=new TabPanel();
