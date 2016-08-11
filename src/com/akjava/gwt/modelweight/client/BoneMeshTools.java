@@ -23,8 +23,8 @@ public class BoneMeshTools {
 	private  int boneJointColor=0x888888;
 	private  int boneCoreColor=0x008800;
 	
-	private double boneCoreSize=0.03;
-	private double halfBonecore=0.02;
+	private double boneCoreSize=0.015;
+	private double halfBonecore=0.01;//connect-line
 	private double sitesBonecore=0.02;//TODO
 	
 	
