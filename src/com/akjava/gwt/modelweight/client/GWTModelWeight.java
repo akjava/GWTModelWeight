@@ -25,7 +25,9 @@ import com.akjava.gwt.three.client.examples.js.controls.OrbitControls;
 import com.akjava.gwt.three.client.gwt.GWTParamUtils;
 import com.akjava.gwt.three.client.gwt.JSParameter;
 import com.akjava.gwt.three.client.gwt.boneanimation.AnimationBone;
+import com.akjava.gwt.three.client.gwt.ui.LabeledInputRangeWidget2;
 import com.akjava.gwt.three.client.java.SkinningVertexCalculator;
+import com.akjava.gwt.three.client.java.ThreeLog;
 import com.akjava.gwt.three.client.java.bone.BoneNameUtils;
 import com.akjava.gwt.three.client.java.bone.CloseVertexAutoWeight;
 import com.akjava.gwt.three.client.java.bone.SimpleAutoWeight;
@@ -38,6 +40,8 @@ import com.akjava.gwt.three.client.js.animation.AnimationMixer;
 import com.akjava.gwt.three.client.js.animation.AnimationMixerAction;
 import com.akjava.gwt.three.client.js.core.Face3;
 import com.akjava.gwt.three.client.js.core.Geometry;
+import com.akjava.gwt.three.client.js.core.Object3D;
+import com.akjava.gwt.three.client.js.extras.geometries.SphereGeometry;
 import com.akjava.gwt.three.client.js.extras.helpers.VertexNormalsHelper;
 import com.akjava.gwt.three.client.js.extras.helpers.WireframeHelper;
 import com.akjava.gwt.three.client.js.lights.Light;
@@ -77,6 +81,7 @@ import com.google.gwt.user.client.Window;
 import com.google.gwt.user.client.ui.Anchor;
 import com.google.gwt.user.client.ui.Button;
 import com.google.gwt.user.client.ui.CheckBox;
+import com.google.gwt.user.client.ui.DoubleBox;
 import com.google.gwt.user.client.ui.HTML;
 import com.google.gwt.user.client.ui.HorizontalPanel;
 import com.google.gwt.user.client.ui.Label;
@@ -85,6 +90,7 @@ import com.google.gwt.user.client.ui.Panel;
 import com.google.gwt.user.client.ui.TabPanel;
 import com.google.gwt.user.client.ui.ValueListBox;
 import com.google.gwt.user.client.ui.VerticalPanel;
+import com.google.gwt.user.client.ui.Widget;
 
 
 /**
@@ -376,6 +382,8 @@ baseCharacterModelGeometry.computeBoundingBox();
 		baseCharacterModelBones = JavaScriptUtils.toList(baseCharacterModelGeometry.getBones());
 		boneListBox.setValue(baseCharacterModelBones.get(0));
 		boneListBox.setAcceptableValues(baseCharacterModelBones);
+		
+		updateBoneInfluenceSpheres(baseCharacterModelBones.get(0));//update position
 	}
 
 	protected void createBaseCharacterWireframe(){
@@ -1009,7 +1017,259 @@ Button resetWeightButton=new Button("Reset to default indices & weights",new Cli
 bonePanel.add(resetWeightButton);
 
 
+//add influence
+
+bonePanel.add(createBoneInfluencePanel());
+
+
+
 return bonePanel;
+	}
+	
+	
+	private double coreRadius=0.01;
+	private double totalRadius=0.05;
+	private Mesh boneInfluenceSphere;
+	private DoubleBox totalRadiusBox;
+	
+	private void updateBoneInfluenceSpheres(){
+		boolean checked=enableBoneInfluenceCheck.getValue();
+		boolean selectedBone=boneListBox.getValue()!=null;
+		boneInfluenceCoreSphere.setVisible(checked&&selectedBone);
+		boneInfluenceSphere.setVisible(checked&&selectedBone);
+	}
+	private Widget createBoneInfluencePanel() {
+		Panel panel=new VerticalPanel();
+		final VerticalPanel boneInfluencePanel=new VerticalPanel();
+		enableBoneInfluenceCheck = new CheckBox("enable add editor");
+		panel.add(enableBoneInfluenceCheck);
+		enableBoneInfluenceCheck.addValueChangeHandler(new ValueChangeHandler<Boolean>() {
+
+			@Override
+			public void onValueChange(ValueChangeEvent<Boolean> event) {
+				boneInfluencePanel.setVisible(event.getValue());
+				updateBoneInfluenceSpheres();
+			}
+		});
+		enableBoneInfluenceCheck.setValue(true);
+		
+		panel.add(boneInfluencePanel);
+		
+		HorizontalPanel h1=new HorizontalPanel();
+		boneInfluencePanel.add(h1);
+		h1.setVerticalAlignment(HorizontalPanel.ALIGN_MIDDLE);
+		h1.add(new Label("Core radius"));
+		coreRadiusBox = new DoubleBox();
+		h1.add(coreRadiusBox);
+		coreRadiusBox.setWidth("50px");
+		coreRadiusBox.addValueChangeHandler(new ValueChangeHandler<Double>() {
+			@Override
+			public void onValueChange(ValueChangeEvent<Double> event) {
+				updateScale(boneInfluenceCoreSphere,coreRadiusBox.getValue());
+			}
+
+			
+		});
+		
+		HorizontalPanel h2=new HorizontalPanel();
+		boneInfluencePanel.add(h2);
+		h2.setVerticalAlignment(HorizontalPanel.ALIGN_MIDDLE);
+		h2.add(new Label("Total radius"));
+		totalRadiusBox = new DoubleBox();
+		h2.add(totalRadiusBox);
+		totalRadiusBox.setWidth("50px");
+		totalRadiusBox.addValueChangeHandler(new ValueChangeHandler<Double>() {
+			@Override
+			public void onValueChange(ValueChangeEvent<Double> event) {
+				updateScale(boneInfluenceSphere,totalRadiusBox.getValue());
+			}
+
+			
+		});
+		
+		boneInfluenceSetFromOriginCheck = new CheckBox("set from origin");
+		boneInfluencePanel.add(boneInfluenceSetFromOriginCheck);
+		
+		Button execute=new Button("Add influence",new ClickHandler() {
+			
+			@Override
+			public void onClick(ClickEvent event) {
+				doBoneInfluence();
+				createEditingClothSkin();
+				
+				if(boneListBox.getValue()!=null){//update bone selection;
+					onBoneSelectionChanged(boneListBox.getValue());
+				}
+			}
+		});
+		
+		boneInfluencePanel.add(execute);
+		
+		SphereGeometry coreSphereGeometry=THREE.SphereGeometry(1, 10);
+		boneInfluenceCoreSphere = THREE.Mesh(coreSphereGeometry,THREE.MeshPhongMaterial(GWTParamUtils.MeshPhongMaterial().color(0xffffff).wireframe(true)));
+		scene.add(boneInfluenceCoreSphere);
+		
+		SphereGeometry sphereGeometry=THREE.SphereGeometry(1, 10);
+		boneInfluenceSphere = THREE.Mesh(sphereGeometry,THREE.MeshPhongMaterial(GWTParamUtils.MeshPhongMaterial().color(0x008800).wireframe(true)));
+		scene.add(boneInfluenceSphere);
+		
+		coreRadiusBox.setValue(coreRadius,true);
+		totalRadiusBox.setValue(totalRadius,true);
+		return panel;
+	}
+
+	protected void doBoneInfluence() {
+		if(boneListBox.getValue()==null){
+			LogUtils.log("need select bone");
+			return;
+		}
+		int boneIndex=baseCharacterModelBones.indexOf(boneListBox.getValue());
+		if(boneIndex==-1){
+			LogUtils.log("somehow selection bone can'f find");
+			return;
+		}
+		if(editingGeometry==null){
+			LogUtils.log("no editing geometry");
+			return;
+		}
+		Vector3 centerPosition=boneInfluenceCoreSphere.getPosition();
+		double effectArea=totalRadiusBox.getValue();
+		double coreArea=coreRadiusBox.getValue();
+		for(int i=0;i<editingGeometry.getVertices().length();i++){
+			double distance=centerPosition.distanceTo(editingGeometry.getVertices().get(i));
+			if(distance>effectArea){
+				continue;//skip
+			}
+			boolean useOrigin=boneInfluenceSetFromOriginCheck.getValue();
+			Vector4 indicis;
+			if(useOrigin){
+				indicis=editingGeometryOrigin.getSkinIndices().get(i).clone();
+			}else{
+				indicis=editingGeometry.getSkinIndices().get(i);
+			}
+			Vector4 weights;
+			if(useOrigin){
+				weights=editingGeometryOrigin.getSkinWeights().get(i).clone();
+			}else{
+				weights=editingGeometry.getSkinWeights().get(i);
+			}
+			
+			
+			if(distance<coreArea){//simplly set all
+				indicis.setX(boneIndex);
+				indicis.setY(0);
+				indicis.setZ(0);
+				indicis.setW(0);
+				weights.setX(1);
+				weights.setY(0);
+				weights.setZ(0);
+				weights.setW(0);
+				LogUtils.log("inside core-area:index="+i);
+			}else{
+				//calcurate new value
+				double maxDistance=effectArea-coreArea;
+				double newdistance=distance-coreArea;
+				
+				double ratio=1.0-(newdistance/maxDistance);//0-1.0
+				
+				int minIndex=0;
+				int minValue=weights.gwtGet(0);
+				for(int j=1;j<4;j++){
+					if(weights.gwtGet(j)<minValue){
+						minIndex=j;
+						minValue=weights.gwtGet(j);
+					}
+				}
+				
+				if(ratio>minValue){
+					indicis.gwtSet(minIndex, boneIndex);
+					autoBalanceWeights(weights,minIndex,ratio);
+				}
+				
+				
+			}
+			
+			if(useOrigin){
+				editingGeometry.getSkinIndices().get(i).copy(indicis);
+				editingGeometry.getSkinWeights().get(i).copy(weights);
+			}
+			
+		}
+		//for(int i=0;i<result.size();i++){
+			//Vector4 indices=editingGeometry.getSkinIndices().get(result.get(i));
+		
+		//get selection and position
+		/*
+		 * 
+show add editor
+
+core - size double 
+radius -size double  
+min - value double
+
+from origin - checkbox
+force insert - checkbox TODO
+addButton
+
+すべてのradiusに入るか。
+はいれば、coreかどうか
+そうでない場合、距離を引いて、そのままlerp
+
+元のあれと比べる。originかどうかで異なる
+４つの値とくらべて、min値より大きければ混ぜる
+		 */
+	}
+	
+	
+	protected void autoBalanceWeights(Vector4 weights,int target,double newvalue) {
+			if(newvalue<0 || newvalue>1){
+				LogUtils.log("invalid newvalue(0-1.0):"+newvalue);
+			}
+			if(target<0 || target>3){
+				LogUtils.log("invalid target(0-3):"+target);
+			}
+			//ThreeLog.log("before:",weights);
+			//ThreeLog.log("target="+target+",value="+newvalue);
+			
+			double remain=1.0-newvalue;
+			double total=0;
+			
+			for(int i=0;i<4;i++){
+				if(i!=target){
+					total+=weights.gwtGet(i);
+				}
+			}
+			
+			List<Double> ratios=Lists.newArrayList();
+			for(int i=0;i<4;i++){
+				if(i==target){
+					ratios.add(0.0);
+				}else{
+					if(total==0){
+					ratios.add(1.0/3);
+					}else{
+						if(weights.gwtGet(i)==0){
+							ratios.add(0.0);
+						}else{
+							ratios.add(weights.gwtGet(i)/total);
+						}
+					}
+				}
+			}
+			
+			for(int i=0;i<4;i++){
+				if(i!=target){
+					
+					weights.gwtSet(i, remain*ratios.get(i));
+				}else{
+					weights.gwtSet(i, newvalue);
+				}
+			}
+			//ThreeLog.log("after:",weights);
+	}
+
+	private void updateScale(Mesh boneCoreInfluenceSphere, double value) {
+		boneCoreInfluenceSphere.getScale().setScalar(value);
 	}
 	
 	@Override
@@ -1681,6 +1941,20 @@ tabPanel.addSelectionHandler(new SelectionHandler<Integer>() {
 					editingClothVertexColorTools.updateVertexsColorByBone(baseCharacterModelBones.indexOf(value));
 				}
 		}
+		
+		//for sphere
+		updateBoneInfluenceSpheres(value);
+	}
+	
+	private void updateBoneInfluenceSpheres(@Nullable AnimationBone value){
+		if(value==null){
+			updateBoneInfluenceSpheres();
+		}else{
+			updateBoneInfluenceSpheres();
+			Object3D mesh=boneMeshGroup.getObjectByName("core:"+value.getName());
+			boneInfluenceCoreSphere.getPosition().copy(mesh.getPosition());
+			boneInfluenceSphere.getPosition().copy(mesh.getPosition());
+		}
 	}
 
 	private JSONObject editingGeometryJsonObject;
@@ -1701,6 +1975,10 @@ tabPanel.addSelectionHandler(new SelectionHandler<Integer>() {
 	private Button pauseButton;
 	private Label timeLabel;
 	private QuickBoneAnimationWidget quickBoneAnimationWidget;
+	private Mesh boneInfluenceCoreSphere;
+	private DoubleBox coreRadiusBox;
+	private CheckBox enableBoneInfluenceCheck;
+	private CheckBox boneInfluenceSetFromOriginCheck;
 	
 	private JSONObject parseJSONGeometry(String text){
 		JSONValue json=JSONParser.parseStrict(text);
