@@ -1031,6 +1031,7 @@ return bonePanel;
 	private double totalRadius=0.05;
 	private Mesh boneInfluenceSphere;
 	private DoubleBox totalRadiusBox;
+	private DoubleBox maxValueBox;
 	
 	private void updateBoneInfluenceSpheres(){
 		boolean checked=enableBoneInfluenceCheck.getValue();
@@ -1054,6 +1055,23 @@ return bonePanel;
 		enableBoneInfluenceCheck.setValue(true);
 		
 		panel.add(boneInfluencePanel);
+		
+		HorizontalPanel h0=new HorizontalPanel();
+		boneInfluencePanel.add(h0);
+		h0.setVerticalAlignment(HorizontalPanel.ALIGN_MIDDLE);
+		h0.add(new Label("Max Value"));
+		maxValueBox = new DoubleBox();
+		maxValueBox.setValue(1.0);
+		h0.add(maxValueBox);
+		maxValueBox.setWidth("50px");
+		maxValueBox.addValueChangeHandler(new ValueChangeHandler<Double>() {
+			@Override
+			public void onValueChange(ValueChangeEvent<Double> event) {
+				//
+			}
+
+			
+		});
 		
 		HorizontalPanel h1=new HorizontalPanel();
 		boneInfluencePanel.add(h1);
@@ -1155,39 +1173,33 @@ return bonePanel;
 			}
 			
 			
-			if(distance<coreArea){//simplly set all
-				indicis.setX(boneIndex);
-				indicis.setY(0);
-				indicis.setZ(0);
-				indicis.setW(0);
-				weights.setX(1);
-				weights.setY(0);
-				weights.setZ(0);
-				weights.setW(0);
-				LogUtils.log("inside core-area:index="+i);
-			}else{
-				//calcurate new value
-				double maxDistance=effectArea-coreArea;
-				double newdistance=distance-coreArea;
-				
-				double ratio=1.0-(newdistance/maxDistance);//0-1.0
-				
-				int minIndex=0;
-				int minValue=weights.gwtGet(0);
-				for(int j=1;j<4;j++){
-					if(weights.gwtGet(j)<minValue){
-						minIndex=j;
-						minValue=weights.gwtGet(j);
-					}
-				}
-				
-				if(ratio>minValue){
-					indicis.gwtSet(minIndex, boneIndex);
-					autoBalanceWeights(weights,minIndex,ratio);
-				}
-				
-				
+			
+			//calcurate new value
+			double maxDistance=effectArea-coreArea;
+			double newdistance=distance-coreArea;
+			
+			double newValue=1.0-(newdistance/maxDistance);//0-1.0
+			
+			if(distance<coreArea){
+				newValue=1.0;
 			}
+			
+			newValue*=maxValueBox.getValue();
+			
+			int minIndex=0;
+			int minValue=weights.gwtGet(0);
+			for(int j=1;j<4;j++){
+				if(weights.gwtGet(j)<minValue){
+					minIndex=j;
+					minValue=weights.gwtGet(j);
+				}
+			}
+			
+			if(newValue>minValue){
+				indicis.gwtSet(minIndex, boneIndex);
+				autoBalanceWeights(weights,minIndex,newValue);
+			}
+			
 			
 			if(useOrigin){
 				editingGeometry.getSkinIndices().get(i).copy(indicis);
