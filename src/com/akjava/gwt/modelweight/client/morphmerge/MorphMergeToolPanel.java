@@ -1,27 +1,18 @@
 package com.akjava.gwt.modelweight.client.morphmerge;
 
-import java.util.List;
-import java.util.Map;
-
 import com.akjava.gwt.html5.client.download.HTML5Download;
 import com.akjava.gwt.html5.client.file.File;
 import com.akjava.gwt.html5.client.file.FileUploadForm;
 import com.akjava.gwt.html5.client.file.FileUtils;
 import com.akjava.gwt.html5.client.file.FileUtils.DataURLListener;
 import com.akjava.gwt.lib.client.LogUtils;
-import com.akjava.gwt.modelweight.client.ModelCompare;
 import com.akjava.gwt.three.client.gwt.JSONModelFile;
 import com.akjava.gwt.three.client.gwt.core.MorphTarget;
-import com.akjava.gwt.three.client.java.utils.GWTGeometryUtils;
 import com.akjava.gwt.three.client.java.utils.Mbl3dLoader;
-import com.akjava.gwt.three.client.js.THREE;
 import com.akjava.gwt.three.client.js.core.Geometry;
 import com.akjava.gwt.three.client.js.loaders.JSONLoader.JSONLoadHandler;
-import com.akjava.gwt.three.client.js.loaders.XHRLoader.XHRLoadHandler;
 import com.akjava.gwt.three.client.js.materials.Material;
 import com.akjava.gwt.three.client.js.math.Vector3;
-import com.google.common.base.Joiner;
-import com.google.common.collect.Maps;
 import com.google.gwt.core.client.JavaScriptObject;
 import com.google.gwt.core.client.JsArray;
 import com.google.gwt.core.client.JsArrayNumber;
@@ -29,8 +20,6 @@ import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
 import com.google.gwt.event.logical.shared.ValueChangeEvent;
 import com.google.gwt.event.logical.shared.ValueChangeHandler;
-import com.google.gwt.json.client.JSONArray;
-import com.google.gwt.json.client.JSONObject;
 import com.google.gwt.json.client.JSONValue;
 import com.google.gwt.user.client.Window;
 import com.google.gwt.user.client.ui.Anchor;
@@ -42,7 +31,14 @@ import com.google.gwt.user.client.ui.TextBox;
 import com.google.gwt.user.client.ui.VerticalPanel;
 
 /**
- * i find a way to direct?
+ * for dynamic model merging(having morphtarget model file size is too big.Imagine has just different hair-style models.
+ * On such case convining morph-body-model and hairs extreme reduce model file size.)
+ * baseGeometry morphGeometry + added(like hair or cloth) without morph-target
+ * morphGeometry contain morph-target
+ * 
+ * warning
+ * Every vertex-coordinate must be unique.
+ * baseGeometry's own morphtarget replaced morph-model's one with modify.
  * @author aki
  *
  */
@@ -59,18 +55,43 @@ public class MorphMergeToolPanel extends VerticalPanel{
 	HorizontalPanel downloadPanel;
 	
 
+	/**
+	 * 
+	 * baseGeometry length is bigger than morphGeometry.
+	 * same means same geometry.but possibly different vertex order and would fix it.
+	 * 
+	 * 
+	 */
 	private void doTest2(Geometry morphGeometry) {
 			LogUtils.log(morphGeometry);
 		
 			//Big ArrayList crash easily
 			//JsArrayNumber targetIndexs=JsArrayNumber.createArray().cast();//only array
 			//Uint32ArrayNative targetIndexs=Uint32ArrayNative.create(geometry.getVertices().length());
+			
+			/**
+			 * 
+			 * morphTargetIndexs 
+			 * -1 means not exist in baseGeometry,new added vertex
+			 * number means mapping 
+			 * 
+			 */
 			JsArrayNumber morphTargetIndexs=JsArrayNumber.createArray().cast();
-			//init -1
+			//init as -1
 			for(int i=0;i<baseGeometry.getVertices().length();i++){
 				morphTargetIndexs.set(i, -1);
 			}
 			
+			/**
+			 * validate basegeometry contains morphGeometry
+			 * 
+			 * basegeometry must contain all morphGeometry's vertex.
+			 * but it's allowed not same order
+			 * 
+			 * morphGeometry's vertex is not allowed same cordinate.
+			 * vertex-cordinate used as mapping.
+			 * 
+			 */
 			boolean validate=true;
 			for(int i=0;i<morphGeometry.getVertices().length();i++){
 				Vector3 gv=morphGeometry.getVertices().get(i);
@@ -84,18 +105,20 @@ public class MorphMergeToolPanel extends VerticalPanel{
 					}
 					
 				}
+				//same vertex must be 1
 				if(same==0){
-					LogUtils.log("not exist-at:"+i);
+					LogUtils.log("not exist-at:"+i+" baseGeometry does not contain morphgeometry");
 					validate=false;
 					break;
 				}else if(same>1){
-					LogUtils.log("too much same:"+i+" same="+same);
+					LogUtils.log("too much same:"+i+" same="+same+" faild to mapping.");
 					validate=false;
 					break;
 				}
 			}
 			LogUtils.log("validate:"+validate);
 			LogUtils.log("morphTargetIndexs-length:"+morphTargetIndexs.length());
+			//TODO alert
 		
 			
 			JsArray<JavaScriptObject> morphTargetsJson=JsArray.createArray().cast();

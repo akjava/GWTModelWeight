@@ -320,7 +320,7 @@ public class GWTModelWeight extends SimpleTabDemoEntryPoint{
 	private Mesh baseCharacterModelWireframeMesh;
 	private BoneVertexColorTools baseCharacterVertexColorTools;
 	private BoneVertexColorTools editingClothVertexColorTools;
-	private ValueListBox<AnimationBone> boneListBox;
+	private ValueListBox<AnimationBone> boneListBox,boneReplaceSrcBox,boneReplaceDestBox;
 	private List<AnimationBone> baseCharacterModelBones;
 	private Object3DMouseSelecter mouseSelector;
 	private Group boneMeshGroup;
@@ -384,6 +384,14 @@ baseCharacterModelGeometry.computeBoundingBox();
 		boneListBox.setAcceptableValues(baseCharacterModelBones);
 		
 		updateBoneInfluenceSpheres(baseCharacterModelBones.get(0));//update position
+		
+		//update anothers
+		
+		boneReplaceSrcBox.setValue(baseCharacterModelBones.get(0));
+		boneReplaceSrcBox.setAcceptableValues(baseCharacterModelBones);
+		
+		boneReplaceDestBox.setValue(baseCharacterModelBones.get(0));
+		boneReplaceDestBox.setAcceptableValues(baseCharacterModelBones);
 	}
 
 	protected void createBaseCharacterWireframe(){
@@ -814,10 +822,8 @@ protected void createEditingClothWireframe(){
 	}
 	private int textureSide=THREE.FrontSide;
 	
-	private Panel createBonePanel(){
-		VerticalPanel bonePanel=new VerticalPanel();
-
-		boneListBox = new ValueListBox<AnimationBone>(new Renderer<AnimationBone>() {
+	private ValueListBox<AnimationBone> createBoneListValueBox(){
+		return new ValueListBox<AnimationBone>(new Renderer<AnimationBone>() {
 
 			@Override
 			public String render(AnimationBone object) {
@@ -829,10 +835,15 @@ protected void createEditingClothWireframe(){
 
 			@Override
 			public void render(AnimationBone object, Appendable appendable) throws IOException {
-				// TODO Auto-generated method stub
 				
 			}
 		});
+	}
+	
+	private Panel createBonePanel(){
+		VerticalPanel bonePanel=new VerticalPanel();
+
+		boneListBox = createBoneListValueBox();
 		bonePanel.add(boneListBox);
 		boneListBox.addValueChangeHandler(new ValueChangeHandler<AnimationBone>() {
 			@Override
@@ -1020,13 +1031,82 @@ bonePanel.add(resetWeightButton);
 //add influence
 
 bonePanel.add(createBoneInfluencePanel());
-
+bonePanel.add(createBoneReplacePanel());
 
 
 return bonePanel;
 	}
 	
 	
+	public Panel createBoneReplacePanel(){
+		VerticalPanel panel=new VerticalPanel();
+		Label label=new Label("Bone Indices Replace");
+		panel.add(label);
+		
+		HorizontalPanel h1=new HorizontalPanel();
+		panel.add(h1);
+		Label label1=new Label("src");
+		label1.setWidth("60px");
+		h1.add(label1);
+		boneReplaceSrcBox=createBoneListValueBox();
+		h1.add(boneReplaceSrcBox);
+		
+		HorizontalPanel h2=new HorizontalPanel();
+		panel.add(h2);
+		Label label2=new Label("dest");
+		label2.setWidth("60px");
+		h2.add(label2);
+		boneReplaceDestBox=createBoneListValueBox();
+		h2.add(boneReplaceDestBox);
+		
+		Button executeButton=new Button("Execute Replace",new ClickHandler() {
+			
+			@Override
+			public void onClick(ClickEvent event) {
+				execBoneIndicesReplace();
+			}
+		});
+		
+		panel.add(executeButton);
+		
+		return panel;
+	}
+	
+	
+	protected void execBoneIndicesReplace() {
+		AnimationBone srcBone=boneReplaceSrcBox.getValue();
+		AnimationBone destBone=boneReplaceDestBox.getValue();
+		if(srcBone==null || destBone==null){
+			LogUtils.log("execBoneIndicesReplace:null bone");
+			return;
+		}
+		if(srcBone==destBone){
+			LogUtils.log("execBoneIndicesReplace:same bone");
+			return;
+		}
+		
+		int srcIndex=baseCharacterModelBones.indexOf(srcBone);
+		int destIndex=baseCharacterModelBones.indexOf(destBone);
+		
+		if(srcIndex==-1 || destIndex==-1){
+			LogUtils.log("execBoneIndicesReplace:not indexOf");
+			return;
+		}
+		
+		for(int i=0;i<editingGeometry.getSkinIndices().length();i++){
+			Vector4 vec4=editingGeometry.getSkinIndices().get(i);
+			for(int j=0;j<4;j++){
+				double value=vec4.gwtGet(j);
+				if(value==srcIndex){
+					vec4.gwtSet(j, destIndex);
+				}
+			}
+		}
+		
+		createEditingClothSkin();
+		updateSelectionBoneInfluence();
+	}
+
 	private double coreRadius=0.01;
 	private double totalRadius=0.05;
 	private Mesh boneInfluenceSphere;
@@ -1042,7 +1122,7 @@ return bonePanel;
 	private Widget createBoneInfluencePanel() {
 		Panel panel=new VerticalPanel();
 		final VerticalPanel boneInfluencePanel=new VerticalPanel();
-		enableBoneInfluenceCheck = new CheckBox("enable add editor");
+		enableBoneInfluenceCheck = new CheckBox("Enable Sphere influence add editor");
 		panel.add(enableBoneInfluenceCheck);
 		enableBoneInfluenceCheck.addValueChangeHandler(new ValueChangeHandler<Boolean>() {
 
@@ -1115,9 +1195,7 @@ return bonePanel;
 				doBoneInfluence();
 				createEditingClothSkin();
 				
-				if(boneListBox.getValue()!=null){//update bone selection;
-					onBoneSelectionChanged(boneListBox.getValue());
-				}
+				updateSelectionBoneInfluence();
 			}
 		});
 		
@@ -1135,6 +1213,13 @@ return bonePanel;
 		totalRadiusBox.setValue(totalRadius,true);
 		return panel;
 	}
+	
+	private void updateSelectionBoneInfluence(){
+		if(boneListBox.getValue()!=null){//update bone selection;
+			onBoneSelectionChanged(boneListBox.getValue());
+		}
+	}
+	
 
 	protected void doBoneInfluence() {
 		if(boneListBox.getValue()==null){
