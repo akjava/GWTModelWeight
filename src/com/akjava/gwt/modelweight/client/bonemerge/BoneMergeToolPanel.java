@@ -179,7 +179,7 @@ public class BoneMergeToolPanel extends VerticalPanel{
 		suffixNameBox = new TextBox();
 		fileNames.add(suffixNameBox);
 		suffixNameBox.setText("additional-");//
-		
+		suffixNameBox.setText("breast-");//right now 100% uses this name
 		
 		
 		mergeButton = new Button("Merge two bones");
